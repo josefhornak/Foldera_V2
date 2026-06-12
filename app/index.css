@@ -1,0 +1,115 @@
+@import 'tailwindcss';
+
+/*
+  Foldera V2 — design tokens
+  Trimmed port of the Foldera design system (app/index.css in the v1 app).
+  Light theme only — v1 defined dark values only as comments, never shipped them.
+  Rules: semantic tokens only in components, transitions on transform/opacity
+  (+ colors for state changes), respect prefers-reduced-motion.
+*/
+
+:root {
+  /* -- Text ------------------------------------------------------------ */
+  --text-primary: #1f1f2e;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  --text-placeholder: #9ca3af;
+  --text-disabled: #d1d5db;
+  --text-inverse: #ffffff;
+  --text-link: #3a214a;
+
+  /* -- Surfaces ---------------------------------------------------------- */
+  --surface-ground: #fafafa;
+  --surface-default: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-sunken: #f3f2f5;
+  --surface-interactive: #fafafa;
+  --surface-selected: #f3eff6;
+  --surface-overlay: rgba(0, 0, 0, 0.5);
+
+  /* -- Brand (single purple accent) -------------------------------------- */
+  --brand-primary: #3a214a;
+  --brand-primary-hover: #2d1a3c;
+  --brand-primary-active: #1f1230;
+  --brand-primary-subtle: #f3eff6;
+  --brand-primary-light: #6b4d82;
+  --brand-primary-rgb: 58, 33, 74;
+
+  /* -- Status ------------------------------------------------------------ */
+  --status-success: #059669;
+  --status-success-subtle: #ecfdf5;
+  --status-success-text: #047857;
+  --status-warning: #d97706;
+  --status-warning-subtle: #fffbeb;
+  --status-warning-text: #92400e;
+  --status-error: #dc2626;
+  --status-error-subtle: #fef2f2;
+  --status-error-text: #991b1b;
+  --status-info: #3a214a;
+  --status-info-subtle: #f3eff6;
+  --status-info-text: #2d1a3c;
+
+  /* -- Borders ------------------------------------------------------------ */
+  --border-default: #e3e8ef;
+  --border-strong: #e1dae6;
+  --border-subtle: rgba(227, 232, 239, 0.7);
+  --border-brand: #3a214a;
+  --border-error: #dc2626;
+
+  /* -- Radii --------------------------------------------------------------- */
+  --radius-token-sm: 6px;
+  --radius-token-md: 8px;
+  --radius-token-lg: 12px;
+  --radius-token-xl: 16px;
+  --radius-token-full: 9999px;
+
+  /* -- Motion --------------------------------------------------------------- */
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.22, 1.15, 0.36, 1);
+
+  /* -- Shadows / rings --------------------------------------------------- */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.08), 0 12px 32px rgba(0, 0, 0, 0.1);
+  --ring-brand: 0 0 0 3px rgba(var(--brand-primary-rgb), 0.18);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background: var(--surface-ground);
+    color: var(--text-primary);
+    font-family:
+      'Plus Jakarta Sans',
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      sans-serif;
+  }
+
+  *,
+  ::after,
+  ::before {
+    border-color: var(--border-default);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,171 @@
+{
+  "app": {
+    "tagline": "Automatický most mezi příchozími fakturami a ABRA Flexi"
+  },
+  "common": {
+    "save": "Uložit",
+    "cancel": "Zrušit",
+    "close": "Zavřít",
+    "create": "Vytvořit",
+    "delete": "Smazat",
+    "confirmDelete": "Opravdu smazat?",
+    "loading": "Načítání…",
+    "error": "Něco se pokazilo. Zkuste to prosím znovu.",
+    "retry": "Zkusit znovu",
+    "empty": "Zatím tu nic není"
+  },
+  "errors": {
+    "generic": "Něco se pokazilo",
+    "notFound": "Stránka nenalezena",
+    "backHome": "Zpět na přehled"
+  },
+  "nav": {
+    "main": "Hlavní navigace",
+    "dashboard": "Přehled",
+    "documents": "Dokumenty",
+    "settings": "Nastavení",
+    "logout": "Odhlásit se"
+  },
+  "auth": {
+    "loginTitle": "Přihlášení",
+    "registerTitle": "Registrace",
+    "email": "E-mail",
+    "password": "Heslo",
+    "name": "Jméno",
+    "submitLogin": "Přihlásit se",
+    "submitRegister": "Vytvořit účet",
+    "toggleToRegister": "Nemáte účet? Zaregistrujte se",
+    "toggleToLogin": "Máte už účet? Přihlaste se"
+  },
+  "company": {
+    "select": "Vybrat firmu",
+    "createNew": "Přidat firmu",
+    "name": "Název firmy",
+    "namePlaceholder": "Moje firma s.r.o.",
+    "ico": "IČO",
+    "icoPlaceholder": "12345678",
+    "onboardingTitle": "Vytvořte první firmu",
+    "onboardingHint": "Každá firma má vlastní připojení do ABRA Flexi a vlastní zdroje dokumentů."
+  },
+  "dashboard": {
+    "title": "Přehled",
+    "subtitle": "Automatické zpracování příchozích faktur do ABRA Flexi",
+    "totalProcessed": "Zpracováno dokladů",
+    "last30Days": "za posledních 30 dní",
+    "successRate": "Úspěšnost exportu",
+    "avgConfidence": "Průměrná přesnost",
+    "errorsToResolve": "Chyby k vyřešení",
+    "recentDocuments": "Poslední dokumenty",
+    "noDocuments": "Zatím nebyly zpracovány žádné dokumenty. Nastavte zdroje v Nastavení.",
+    "viewAll": "Zobrazit vše"
+  },
+  "documents": {
+    "title": "Dokumenty",
+    "subtitle": "Doklady zpracované do ABRA Flexi — soubory se v aplikaci neukládají",
+    "searchPlaceholder": "Hledat dodavatele, číslo faktury…",
+    "statusFilter": "Stav",
+    "allStatuses": "Všechny stavy",
+    "date": "Datum",
+    "fileSupplier": "Dodavatel / soubor",
+    "supplier": "Dodavatel",
+    "supplierIco": "IČO dodavatele",
+    "invoiceNumber": "Číslo faktury",
+    "variableSymbol": "Variabilní symbol",
+    "amount": "Částka",
+    "confidence": "Přesnost",
+    "status": "Stav",
+    "actions": "Akce",
+    "openInAbra": "Otevřít v ABRA Flexi",
+    "openInAbraShort": "Abra",
+    "retry": "Opakovat export",
+    "noResults": "Žádné dokumenty neodpovídají filtru",
+    "totalCount": "{{count}} dokumentů",
+    "detailTitle": "Detail dokumentu",
+    "extractedFields": "Vytěžená data",
+    "issueDate": "Datum vystavení",
+    "dueDate": "Datum splatnosti",
+    "createdAt": "Přijato",
+    "processedAt": "Zpracováno",
+    "abraCode": "Doklad v Abře",
+    "errorMessage": "Chyba",
+    "rawStatus": "Stav zpracování"
+  },
+  "status": {
+    "processing": "Zpracovává se",
+    "exported": "Exportováno",
+    "export_failed": "Export selhal",
+    "extraction_failed": "Vytěžení selhalo",
+    "skipped_duplicate": "Duplicita",
+    "skipped_not_invoice": "Není faktura"
+  },
+  "sourceStatus": {
+    "ok": "V pořádku",
+    "error": "Chyba",
+    "pending_auth": "Vyberte složku"
+  },
+  "pagination": {
+    "previous": "Předchozí",
+    "next": "Další",
+    "pageOf": "Strana {{page}} z {{total}}"
+  },
+  "settings": {
+    "title": "Nastavení",
+    "subtitle": "Připojení do ABRA Flexi, zdroje dokumentů a údaje firmy",
+    "saved": "Uloženo",
+    "tabs": {
+      "abraflexi": "ABRA Flexi",
+      "sources": "Zdroje dokumentů",
+      "company": "Firma"
+    },
+    "abra": {
+      "title": "Připojení k ABRA Flexi",
+      "hint": "Faktury přijaté se vytvářejí přímo v této firmě v ABRA Flexi. Zadejte URL včetně firmy, např. https://demo.flexibee.eu/c/firma.",
+      "apiUrl": "URL API (včetně firmy)",
+      "apiUser": "Uživatel",
+      "apiPassword": "Heslo",
+      "passwordKeepHint": "Ponechte prázdné pro zachování stávajícího hesla",
+      "testConnection": "Otestovat připojení",
+      "testOk": "Připojení funguje",
+      "testOkWithName": "Připojení funguje — firma {{name}}",
+      "testFailed": "Připojení se nezdařilo"
+    },
+    "sources": {
+      "title": "Zdroje dokumentů",
+      "hint": "Nakonfigurované zdroje se automaticky kontrolují každých 5 minut. Nové dokumenty se vytěží a rovnou odešlou do ABRA Flexi.",
+      "empty": "Zatím žádné zdroje. Přidejte sběrný e-mail nebo připojte cloudové úložiště.",
+      "addImap": "Přidat sběrný e-mail (IMAP)",
+      "connectOneDrive": "Připojit OneDrive",
+      "connectGoogleDrive": "Připojit Google Drive",
+      "connectedBanner": "Úložiště připojeno. Vyberte složku, kterou má aplikace sledovat.",
+      "typeImap": "IMAP",
+      "typeOneDrive": "OneDrive",
+      "typeGoogleDrive": "Google Drive",
+      "enabled": "Aktivní",
+      "pollNow": "Zkontrolovat nyní",
+      "lastSync": "Naposledy {{time}}",
+      "imapFormTitle": "Nový sběrný e-mail",
+      "imapName": "Název",
+      "imapHost": "IMAP server",
+      "imapPort": "Port",
+      "imapUser": "Uživatel",
+      "imapPassword": "Heslo",
+      "imapFolder": "Složka (výchozí INBOX)",
+      "imapSecure": "Zabezpečené připojení (SSL/TLS)",
+      "createSource": "Přidat zdroj",
+      "testOk": "Připojení funguje",
+      "testFailed": "Připojení se nezdařilo",
+      "chooseFolder": "Vybrat sledovanou složku",
+      "changeFolder": "Změnit složku",
+      "folderPath": "Cesta ke složce",
+      "rootFolder": "Kořenová složka",
+      "noSubfolders": "Žádné podsložky",
+      "selectThisFolder": "Sledovat tuto složku"
+    },
+    "company": {
+      "title": "Údaje firmy",
+      "dangerTitle": "Smazání firmy",
+      "dangerHint": "Smaže firmu včetně všech zdrojů a záznamů o zpracovaných dokumentech. Doklady v ABRA Flexi zůstanou beze změny.",
+      "delete": "Smazat firmu"
+    }
+  }
+}
