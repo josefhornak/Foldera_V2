@@ -11,8 +11,13 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     return;
   }
   if (err instanceof ZodError) {
+    // Surface the first issue's (human-readable) message and the field it
+    // belongs to, so the client can show something better than "Bad Request".
+    const first = err.issues[0];
+    const field = first?.path.join('.') || undefined;
+    const message = first?.message || 'Neplatný požadavek';
     res.status(400).json({
-      error: { code: 'BAD_REQUEST', message: 'Validation failed', details: err.issues },
+      error: { code: 'VALIDATION_ERROR', message, field, details: err.issues },
     });
     return;
   }

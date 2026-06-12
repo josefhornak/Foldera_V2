@@ -22,6 +22,13 @@ interface RequestOptions {
 function extractErrorMessage(data: unknown, status: number): string {
   if (data && typeof data === 'object') {
     const record = data as Record<string, unknown>;
+    // Primary backend shape: { error: { code, message, ... } }
+    const nested = record.error;
+    if (nested && typeof nested === 'object') {
+      const message = (nested as Record<string, unknown>).message;
+      if (typeof message === 'string' && message) return message;
+    }
+    // Fallbacks: { error: "..." } or { message: "..." }
     for (const key of ['error', 'message'] as const) {
       if (typeof record[key] === 'string' && record[key]) return record[key];
     }

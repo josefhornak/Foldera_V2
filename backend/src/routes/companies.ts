@@ -15,8 +15,13 @@ const router = Router();
 router.use(requireAuth);
 
 const companySchema = z.object({
-  name: z.string().min(1).max(200),
-  ico: z.string().regex(/^\d{8}$/).nullish(),
+  name: z.string().min(1, 'Zadejte název firmy').max(200, 'Název firmy může mít nejvýše 200 znaků'),
+  // Treat an empty/whitespace IČO as "not provided" so optional really is optional.
+  ico: z
+    .preprocess(
+      (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+      z.string().regex(/^\d{8}$/, 'IČO musí být přesně 8 číslic').nullish()
+    ),
 });
 
 const abraConfigSchema = z.object({
