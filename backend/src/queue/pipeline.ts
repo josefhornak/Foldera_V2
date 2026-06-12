@@ -28,11 +28,13 @@ import {
   findDuplicateInvoice,
   findSupplierByIco,
   getSupplierDefaults,
+  suggestClenDph,
   uploadInvoiceAttachment,
 } from '../services/abraflexi/index.js';
 import { isKnownCzBankCode } from '../services/abraflexi/helpers.js';
 import { extractInvoice } from '../services/extraction/index.js';
 import type {
+  AbraExportResult,
   AbraFlexiConfig,
   AbraSupplierDefaults,
   ExtractedInvoice,
@@ -136,14 +138,53 @@ async function runAbraExport(
     }
   }
 
-  const result = isReceipt
-    ? await exportReceiptToPokladna(cfg, invoice, supplierCode)
-    : await exportPurchaseInvoice(cfg, invoice, defaults);
-
   // Notes are surfaced to the user on an otherwise successful export (the UI
   // shows them as a non-blocking warning). They explain what was auto-adjusted
   // so a silent omission never looks like missing data.
   const notes: string[] = [];
+
+  // AI accounting fill: history always wins; only when the company opted in and
+  // the supplier history left the VAT row (clenDph) empty do we let the model
+  // pick a code from the company's own číselník.
+  let aiClenDph: string | null = null;
+  if (company.accountingFillMode === 'ai' && !isReceipt && defaults.cleneniDph == null) {
+    try {
+      aiClenDph = await suggestClenDph(cfg, invoice);
+      if (aiClenDph) defaults = { ...defaults, cleneniDph: aiClenDph };
+    } catch (error) {
+      logger.warn(
+        { companyId: company.id, error: toError(error).message },
+        '[Pipeline] AI accounting suggestion failed'
+      );
+    }
+  }
+
+  let result: AbraExportResult;
+  if (isReceipt) {
+    result = await exportReceiptToPokladna(cfg, invoice, supplierCode);
+  } else {
+    try {
+      result = await exportPurchaseInvoice(cfg, invoice, defaults);
+      if (aiClenDph) {
+        notes.push(
+          `Řádek DPH (členění „${aiClenDph}“) navrhla AI — zkontrolujte ho v ABRA Flexi.`
+        );
+      }
+    } catch (error) {
+      // An AI-suggested VAT row must never break an otherwise valid export — if
+      // ABRA rejects it, retry once without it and tell the user.
+      if (!aiClenDph) throw error;
+      logger.warn(
+        { companyId: company.id, aiClenDph, error: toError(error).message },
+        '[Pipeline] AI-suggested clenDph rejected — retrying without it'
+      );
+      result = await exportPurchaseInvoice(cfg, invoice, { ...defaults, cleneniDph: null });
+      notes.push(
+        `AI navrhla řádek DPH „${aiClenDph}“, ABRA ho ale odmítla — doklad byl vytvořen bez něj, ` +
+          `řádek DPH prosím doplňte ručně.`
+      );
+    }
+  }
 
   // smerKod is dropped from the invoice payload when the bank code is not a real
   // ČNB code (see buildInvoicePayload) — tell the user it happened. Receipts

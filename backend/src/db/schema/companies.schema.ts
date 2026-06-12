@@ -22,6 +22,14 @@ export const companies = pgTable(
     abraApiUser: text('abra_api_user'),
     abraApiPasswordEnc: text('abra_api_password_enc'),
 
+    // How accounting fields (řádek DPH …) are filled when the supplier has no
+    // history to harvest from: 'history' = leave empty, 'ai' = let the model
+    // pick a code from the company's ABRA číselník. History always wins.
+    accountingFillMode: text('accounting_fill_mode')
+      .$type<'history' | 'ai'>()
+      .notNull()
+      .default('history'),
+
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

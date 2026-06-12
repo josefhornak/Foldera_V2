@@ -23,7 +23,10 @@ export function createCompany(input: { name: string; ico?: string }) {
   return api<{ company: Company }>('/api/companies', { method: 'POST', body: input });
 }
 
-export function updateCompany(id: string, input: { name?: string; ico?: string | null }) {
+export function updateCompany(
+  id: string,
+  input: { name?: string; ico?: string | null; accountingFillMode?: Company['accountingFillMode'] }
+) {
   return api<{ company: Company }>(`/api/companies/${id}`, { method: 'PATCH', body: input });
 }
 

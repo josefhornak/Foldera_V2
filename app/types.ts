@@ -11,6 +11,8 @@ export interface AuthResponse {
   user: User;
 }
 
+export type AccountingFillMode = 'history' | 'ai';
+
 export interface Company {
   id: string;
   name: string;
@@ -18,6 +20,7 @@ export interface Company {
   abraApiUrl: string | null;
   abraApiUser: string | null;
   abraConfigured: boolean;
+  accountingFillMode: AccountingFillMode;
   createdAt: string;
 }
 

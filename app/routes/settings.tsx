@@ -5,7 +5,7 @@ import { AbraSection } from '~/components/settings/AbraSection';
 import { SourcesSection } from '~/components/settings/SourcesSection';
 import { Button } from '~/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/Card';
-import { Field, Input } from '~/components/ui/Input';
+import { Field, Input, Select } from '~/components/ui/Input';
 import { LogOut } from 'lucide-react';
 import { deleteCompany, updateCompany, useCompanies } from '~/hooks/useCompanies';
 import { ApiError } from '~/lib/api';
@@ -110,6 +110,48 @@ function AccountCard() {
   );
 }
 
+/** How accounting fields are filled when the supplier has no ABRA history. */
+function AccountingCard({ company, onChanged }: { company: Company; onChanged: () => void }) {
+  const { t } = useTranslation();
+  const [mode, setMode] = useState(company.accountingFillMode);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => setMode(company.accountingFillMode), [company.accountingFillMode]);
+
+  async function change(next: Company['accountingFillMode']) {
+    setMode(next);
+    setSaving(true);
+    try {
+      await updateCompany(company.id, { accountingFillMode: next });
+      onChanged();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t('settings.accounting.title')}</CardTitle>
+        <p className="mt-1 text-xs text-[var(--text-tertiary)]">{t('settings.accounting.hint')}</p>
+      </CardHeader>
+      <CardContent>
+        <Field label={t('settings.accounting.mode')} htmlFor="acc-mode" className="max-w-md">
+          <Select
+            id="acc-mode"
+            value={mode}
+            disabled={saving}
+            onChange={(e) => change(e.target.value as Company['accountingFillMode'])}
+          >
+            <option value="history">{t('settings.accounting.history')}</option>
+            <option value="ai">{t('settings.accounting.ai')}</option>
+          </Select>
+        </Field>
+      </CardContent>
+    </Card>
+  );
+}
+
 function CompanySection({ company, onChanged }: { company: Company; onChanged: () => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -163,6 +205,8 @@ function CompanySection({ company, onChanged }: { company: Company; onChanged: (
   return (
     <div className="space-y-6">
       <AccountCard />
+
+      <AccountingCard company={company} onChanged={onChanged} />
 
       <Card>
         <CardHeader>

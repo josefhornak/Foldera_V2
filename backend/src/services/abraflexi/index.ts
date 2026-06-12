@@ -18,6 +18,7 @@ export { findSupplierByIco, getSupplierDefaults } from './suppliers.js';
 export { findDuplicateInvoice } from './duplicates.js';
 export { exportPurchaseInvoice } from './export.js';
 export { exportReceiptToPokladna, ENTITY_POKLADNI_POHYB } from './receipts.js';
+export { suggestClenDph } from './accounting.js';
 export { uploadInvoiceAttachment } from './attachments.js';
 export { buildAbraWebUrl } from './helpers.js';
 
