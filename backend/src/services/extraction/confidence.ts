@@ -93,6 +93,23 @@ export function scoreOcrConfidence(
   invoice: ExtractedInvoice,
   modelConfidence?: number | null,
 ): number {
+  // Receipts (účtenky) have no invoice number / variable symbol / due date /
+  // bank details, so scoring them on the invoice weights caps them ~65 %. Score
+  // them on the fields a receipt actually carries instead.
+  let score =
+    invoice.documentType === 'receipt'
+      ? scoreReceiptFields(invoice)
+      : scoreInvoiceFields(invoice);
+
+  if (modelConfidence != null && modelConfidence >= 0 && modelConfidence <= 1) {
+    score = 0.8 * score + 20 * modelConfidence;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+/** Field score (0–100) for invoices and credit notes. */
+function scoreInvoiceFields(invoice: ExtractedInvoice): number {
   let score = 0;
 
   if (invoice.supplierName != null && invoice.supplierName.trim().length > 1) score += 10;
@@ -112,11 +129,30 @@ export function scoreOcrConfidence(
   if (invoice.currency != null && CURRENCY_PATTERN.test(invoice.currency)) score += 5;
   if ((invoice.bankAccount != null && invoice.bankCode != null) || invoice.iban != null) score += 5;
 
-  if (modelConfidence != null && modelConfidence >= 0 && modelConfidence <= 1) {
-    score = 0.8 * score + 20 * modelConfidence;
+  return score;
+}
+
+/**
+ * Field score (0–100) for receipts — weighted on what a POS receipt carries:
+ * supplier (name + IČO), issue date, total amount + VAT consistency, currency.
+ */
+function scoreReceiptFields(invoice: ExtractedInvoice): number {
+  let score = 0;
+
+  if (invoice.supplierName != null && invoice.supplierName.trim().length > 1) score += 10;
+
+  if (isValidIco(invoice.supplierIco)) {
+    score += 20;
+  } else if (invoice.supplierIco != null && /\d{6,}/.test(invoice.supplierIco)) {
+    score += 10;
   }
 
-  return Math.max(0, Math.min(100, Math.round(score)));
+  if (isIsoDate(invoice.issueDate)) score += 15;
+  if (invoice.totalAmount != null && invoice.totalAmount > 0) score += 30;
+  if (isTotalConsistent(invoice)) score += 15;
+  if (invoice.currency != null && CURRENCY_PATTERN.test(invoice.currency)) score += 10;
+
+  return score;
 }
 
 /**
