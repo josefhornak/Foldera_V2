@@ -123,11 +123,34 @@ export async function createSupplierInAbra(
   }
 
   const { id, kod } = parseWriteResponse(res.text, 'dodavatele');
-  const code = kod ?? normalizedIc ?? id;
+  // The write response often carries only the numeric id. When we have neither a
+  // returned `kod` nor an IČO-derived one, `firma=code:<id>` would NOT resolve
+  // (a code ref is not an id) — so read the ABRA-assigned kód back by id.
+  let code = kod ?? normalizedIc;
+  if (!code) code = (await fetchSupplierCode(cfg, id)) ?? id;
 
   logger.info({ companyId: cfg.companyId, supplierCode: code, supplierId: id }, '[AbraFlexi] Supplier created');
 
   return { code, name, ico: normalizedIc ?? null };
+}
+
+/** Read back the `kod` of a just-created adresar entry by its id. */
+async function fetchSupplierCode(cfg: AbraFlexiConfig, id: string): Promise<string | null> {
+  try {
+    const rows = await abraGetList(
+      cfg,
+      `/adresar/${encodeURIComponent(id)}.json?detail=custom:kod`,
+      'adresar',
+    );
+    const parsed = abraAdresarRowSchema.safeParse(rows[0]);
+    return parsed.success ? (parsed.data.kod ?? null) : null;
+  } catch (error) {
+    logger.warn(
+      { companyId: cfg.companyId, supplierId: id, error: String(error) },
+      '[AbraFlexi] Failed to read back supplier code',
+    );
+    return null;
+  }
 }
 
 /**
