@@ -22,13 +22,15 @@ export function Switch({ checked, onChange, label, disabled }: SwitchProps) {
         'transition-colors duration-200 ease-[var(--ease-default)]',
         'focus-visible:outline-none focus-visible:shadow-[var(--ring-brand)]',
         'disabled:opacity-50 disabled:pointer-events-none',
-        checked ? 'bg-[var(--brand-primary)]' : 'bg-[var(--border-default)]'
+        checked
+          ? 'bg-[var(--brand-primary)] shadow-[0_0_12px_rgba(var(--brand-primary-rgb),0.5)]'
+          : 'bg-[var(--border-strong)]'
       )}
     >
       <span
         aria-hidden="true"
         className={cn(
-          'inline-block h-3.5 w-3.5 rounded-full bg-[var(--surface-default)] shadow-[var(--shadow-xs)]',
+          'inline-block h-3.5 w-3.5 rounded-full bg-white shadow-[var(--shadow-xs)]',
           'transition-transform duration-200 ease-[var(--ease-spring)]',
           checked ? 'translate-x-[18px]' : 'translate-x-[3px]'
         )}

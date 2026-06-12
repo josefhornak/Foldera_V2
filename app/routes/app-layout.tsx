@@ -1,12 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate, NavLink, Outlet } from 'react-router';
-import { FileText, LayoutDashboard, LogOut, Settings } from 'lucide-react';
+import { FileText, LayoutDashboard, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { CompanySwitcher } from '~/components/layout/CompanySwitcher';
 import { Button } from '~/components/ui/Button';
 import { Card } from '~/components/ui/Card';
 import { Field, Input } from '~/components/ui/Input';
-import { Logo } from '~/components/ui/Logo';
 import { StateWrapper } from '~/components/ui/StateWrapper';
 import { createCompany, useCompanies } from '~/hooks/useCompanies';
 import { ApiError } from '~/lib/api';
@@ -52,7 +50,7 @@ function AuthedShell() {
   return (
     <div className="flex min-h-screen bg-[var(--surface-ground)]">
       <Sidebar />
-      <main className="min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8">
+      <main className="min-w-0 flex-1 px-5 py-7 md:px-10 md:py-9">
         <Outlet />
       </main>
     </div>
@@ -65,78 +63,71 @@ const NAV_ITEMS = [
   { to: '/settings', end: false, icon: Settings, key: 'nav.settings' },
 ] as const;
 
+/** Up to two uppercase initials from a name (falls back to "?"). */
+function initials(name?: string | null): string {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
+}
+
 function Sidebar() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
-  const logout = useAuthStore((s) => s.logout);
 
   return (
     <aside
       className={cn(
-        'sticky top-0 flex h-screen w-16 shrink-0 flex-col md:w-60',
+        'sticky top-0 flex h-screen w-[72px] shrink-0 flex-col items-center gap-1 py-5',
         'border-r border-[var(--sidebar-border)] text-[var(--sidebar-text)]',
         '[background:var(--sidebar-bg-gradient)]'
       )}
     >
-      <div className="flex items-center justify-center px-3 py-5 md:justify-start md:px-4">
-        <Logo tone="dark" markOnly className="md:hidden" />
-        <Logo tone="dark" className="hidden md:inline-flex" />
+      {/* Brand mark */}
+      <div
+        className="flex h-[38px] w-[38px] items-center justify-center rounded-[12px] text-[19px] font-bold text-white [background:var(--accent-gradient)]"
+        style={{ boxShadow: 'var(--accent-glow)' }}
+        aria-label="Foldera"
+      >
+        F
       </div>
 
-      <div className="hidden px-3 pb-4 md:block">
-        <CompanySwitcher />
-      </div>
-
-      <nav className="flex-1 space-y-1 px-2 md:px-3" aria-label={t('nav.main')}>
+      <nav className="mt-4 flex flex-1 flex-col items-center gap-1.5" aria-label={t('nav.main')}>
         {NAV_ITEMS.map(({ to, end, icon: Icon, key }) => (
           <NavLink
             key={to}
             to={to}
             end={end}
+            title={t(key)}
+            aria-label={t(key)}
             className={({ isActive }) =>
               cn(
-                'relative flex items-center gap-3 rounded-[var(--radius-token-md)] px-3 py-2 text-[13px] font-medium',
+                'flex h-10 w-10 items-center justify-center rounded-[var(--radius-token-md)]',
                 'transition-colors duration-150',
                 isActive
-                  ? 'bg-[var(--sidebar-active)] text-white'
-                  : 'text-[var(--sidebar-text-muted)] hover:bg-[var(--sidebar-hover)] hover:text-white'
+                  ? 'bg-[var(--sidebar-active)] text-[var(--brand-primary-light)] shadow-[0_0_18px_rgba(var(--brand-primary-rgb),0.18)]'
+                  : 'text-[var(--sidebar-text-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--text-primary)]'
               )
             }
           >
-            {({ isActive }) => (
-              <>
-                {isActive && (
-                  <span
-                    aria-hidden="true"
-                    className="absolute top-1/2 left-0 h-5 w-1 -translate-y-1/2 rounded-r-full bg-[var(--sidebar-indicator)] shadow-[0_0_8px_rgba(var(--brand-secondary-rgb),0.5)]"
-                  />
-                )}
-                <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span className="hidden md:inline">{t(key)}</span>
-              </>
-            )}
+            <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
           </NavLink>
         ))}
       </nav>
 
-      <div className="border-t border-[var(--sidebar-border)] p-3">
-        <div className="hidden px-1 pb-2 md:block">
-          <p className="truncate text-xs font-medium text-white">{user?.name}</p>
-          <p className="truncate text-xs text-[var(--sidebar-text-muted)]">{user?.email}</p>
-        </div>
-        <button
-          type="button"
-          onClick={logout}
-          className={cn(
-            'flex w-full items-center gap-3 rounded-[var(--radius-token-md)] px-3 py-2',
-            'text-[13px] font-medium text-[var(--sidebar-text-muted)]',
-            'transition-colors duration-150 hover:bg-[var(--sidebar-hover)] hover:text-white'
-          )}
-        >
-          <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span className="hidden md:inline">{t('nav.logout')}</span>
-        </button>
-      </div>
+      {/* User avatar → settings */}
+      <NavLink
+        to="/settings"
+        title={user?.name ?? t('nav.settings')}
+        aria-label={user?.name ?? t('nav.settings')}
+        className={cn(
+          'flex h-[34px] w-[34px] items-center justify-center rounded-[10px]',
+          'bg-[var(--surface-interactive)] text-[12px] font-bold text-[var(--text-primary)]',
+          'ring-1 ring-[var(--border-default)] transition-colors duration-150 hover:ring-[var(--border-brand)]'
+        )}
+      >
+        {initials(user?.name)}
+      </NavLink>
     </aside>
   );
 }

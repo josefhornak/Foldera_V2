@@ -27,8 +27,10 @@ export default function DashboardPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       <header>
-        <h1 className="text-lg font-semibold text-[var(--text-primary)]">{t('dashboard.title')}</h1>
-        <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">{t('dashboard.subtitle')}</p>
+        <h1 className="font-heading text-[27px] font-bold tracking-tight text-[var(--text-primary)]">
+          {t('dashboard.title')}
+        </h1>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">{t('dashboard.subtitle')}</p>
       </header>
 
       <StateWrapper loading={isLoading && !stats} error={!stats ? error : undefined} onRetry={() => mutate()}>

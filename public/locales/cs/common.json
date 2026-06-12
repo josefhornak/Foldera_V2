@@ -13,7 +13,8 @@
     "error": "Něco se pokazilo. Zkuste to prosím znovu.",
     "retry": "Zkusit znovu",
     "empty": "Zatím tu nic není",
-    "copy": "Kopírovat"
+    "copy": "Kopírovat",
+    "dismiss": "Zavřít"
   },
   "errors": {
     "generic": "Něco se pokazilo",
@@ -89,6 +90,7 @@
     "processedAt": "Zpracováno",
     "abraCode": "Doklad v Abře",
     "errorMessage": "Chyba",
+    "warningMessage": "Upozornění",
     "rawStatus": "Stav zpracování",
     "upload": {
       "dropHint": "Přetáhněte sem faktury nebo klikněte pro výběr",
@@ -97,7 +99,15 @@
       "resultsTitle": "Výsledky nahrání",
       "queued": "zařazeno ke zpracování",
       "duplicate": "již zpracováno (duplicita)",
-      "unsupported": "nepodporovaný soubor"
+      "unsupported": "nepodporovaný soubor",
+      "dragHint": "nebo přetáhněte soubory kamkoliv na stránku",
+      "button": "Nahrát doklady"
+    },
+    "filter": {
+      "all": "Všechny",
+      "exported": "Zpracováno",
+      "processing": "Čeká",
+      "failed": "Chyba"
     }
   },
   "status": {
@@ -179,6 +189,9 @@
       "dangerTitle": "Smazání firmy",
       "dangerHint": "Smaže firmu včetně všech zdrojů a záznamů o zpracovaných dokumentech. Doklady v ABRA Flexi zůstanou beze změny.",
       "delete": "Smazat firmu"
+    },
+    "account": {
+      "title": "Účet"
     }
   }
 }

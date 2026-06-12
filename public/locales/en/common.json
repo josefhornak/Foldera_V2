@@ -13,7 +13,8 @@
     "error": "Something went wrong. Please try again.",
     "retry": "Retry",
     "empty": "Nothing here yet",
-    "copy": "Copy"
+    "copy": "Copy",
+    "dismiss": "Dismiss"
   },
   "errors": {
     "generic": "Something went wrong",
@@ -89,6 +90,7 @@
     "processedAt": "Processed",
     "abraCode": "Document in Abra",
     "errorMessage": "Error",
+    "warningMessage": "Notice",
     "rawStatus": "Processing status",
     "upload": {
       "dropHint": "Drag invoices here or click to browse",
@@ -97,7 +99,15 @@
       "resultsTitle": "Upload results",
       "queued": "queued for processing",
       "duplicate": "already processed (duplicate)",
-      "unsupported": "unsupported file"
+      "unsupported": "unsupported file",
+      "dragHint": "or drag files anywhere onto the page",
+      "button": "Upload documents"
+    },
+    "filter": {
+      "all": "All",
+      "exported": "Processed",
+      "processing": "Pending",
+      "failed": "Error"
     }
   },
   "status": {
@@ -179,6 +189,9 @@
       "dangerTitle": "Delete company",
       "dangerHint": "Deletes the company including all sources and processed-document records. Documents in ABRA Flexi remain untouched.",
       "delete": "Delete company"
+    },
+    "account": {
+      "title": "Account"
     }
   }
 }

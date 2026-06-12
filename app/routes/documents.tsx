@@ -3,19 +3,72 @@ import { ChevronLeft, ChevronRight, ExternalLink, RefreshCw, Search } from 'luci
 import { useTranslation } from 'react-i18next';
 import { DocumentDetailPanel } from '~/components/documents/DocumentDetailPanel';
 import { UploadDropzone } from '~/components/documents/UploadDropzone';
-import { ConfidenceBadge, DocumentStatusBadge } from '~/components/ui/Badge';
 import { Button } from '~/components/ui/Button';
 import { Card } from '~/components/ui/Card';
-import { Input, Select } from '~/components/ui/Input';
+import { Input } from '~/components/ui/Input';
 import { StateWrapper } from '~/components/ui/StateWrapper';
 import { Table, TBody, Td, Th, THead, Tr } from '~/components/ui/Table';
 import { useDebouncedValue } from '~/hooks/useDebouncedValue';
 import { retryDocument, useDocuments } from '~/hooks/useDocuments';
+import { useStats } from '~/hooks/useStats';
+import { confidenceLevel, normalizeConfidence } from '~/lib/confidence';
 import { formatCurrency, formatDate } from '~/lib/format';
+import { documentStatusVariant, type BadgeVariant } from '~/lib/status';
+import { cn } from '~/lib/utils';
 import { useCompanyStore } from '~/stores/company';
-import { DOCUMENT_STATUSES } from '~/types';
+import type { DocumentStatus } from '~/types';
 
 const PAGE_SIZE = 20;
+
+/** Maps a status variant to its themed colour variable (dot + accuracy bar). */
+const VARIANT_COLOR: Record<BadgeVariant, string> = {
+  success: 'var(--status-success)',
+  warning: 'var(--status-warning)',
+  error: 'var(--status-error)',
+  info: 'var(--status-info)',
+  default: 'var(--text-tertiary)',
+};
+
+const CONFIDENCE_COLOR = {
+  high: 'var(--status-success)',
+  medium: 'var(--status-warning)',
+  low: 'var(--status-error)',
+} as const;
+
+/** Glowing status dot + localized label, matching the design. */
+function StatusCell({ status }: { status: DocumentStatus }) {
+  const { t } = useTranslation();
+  const color = VARIANT_COLOR[documentStatusVariant(status)];
+  return (
+    <span className="inline-flex items-center gap-2 text-[13px] font-medium text-[var(--text-secondary)]">
+      <span className="status-dot" style={{ color }} aria-hidden="true" />
+      {t(`status.${status}`)}
+    </span>
+  );
+}
+
+/** Accuracy percentage + mini progress bar (or em-dash when unknown). */
+function AccuracyCell({ confidence }: { confidence: number | null }) {
+  if (confidence === null || confidence === undefined) {
+    return <span className="text-[var(--text-tertiary)]">—</span>;
+  }
+  const pct = normalizeConfidence(confidence);
+  const color = CONFIDENCE_COLOR[confidenceLevel(confidence)];
+  return (
+    <span className="inline-flex items-center gap-2 tabular-nums">
+      <span className="text-[13px] font-semibold text-[var(--text-primary)]">{pct} %</span>
+      <span className="h-1 w-[38px] overflow-hidden rounded-full bg-[var(--surface-interactive)]">
+        <span className="block h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+      </span>
+    </span>
+  );
+}
+
+interface FilterTab {
+  key: string;
+  status: string;
+  count: number;
+}
 
 export default function DocumentsPage() {
   const { t } = useTranslation();
@@ -28,6 +81,7 @@ export default function DocumentsPage() {
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
 
+  const { stats } = useStats(companyId);
   const { documents, total, error, isLoading, mutate } = useDocuments(companyId, {
     page,
     pageSize: PAGE_SIZE,
@@ -36,6 +90,14 @@ export default function DocumentsPage() {
   });
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const bucket = stats?.allTime;
+
+  const tabs: FilterTab[] = [
+    { key: 'documents.filter.all', status: '', count: bucket?.total ?? 0 },
+    { key: 'documents.filter.exported', status: 'exported', count: bucket?.exported ?? 0 },
+    { key: 'documents.filter.processing', status: 'processing', count: bucket?.processing ?? 0 },
+    { key: 'documents.filter.failed', status: 'export_failed', count: bucket?.failed ?? 0 },
+  ];
 
   async function handleRetry(docId: string) {
     setRetryingId(docId);
@@ -48,22 +110,27 @@ export default function DocumentsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <header>
-        <h1 className="text-lg font-semibold text-[var(--text-primary)]">{t('documents.title')}</h1>
-        <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">{t('documents.subtitle')}</p>
+    <div className="mx-auto max-w-[1280px] space-y-6">
+      {/* Header */}
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-heading text-[27px] font-bold tracking-tight text-[var(--text-primary)]">
+            {t('documents.title')}
+          </h1>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">{t('documents.subtitle')}</p>
+        </div>
+        {companyId && <UploadDropzone companyId={companyId} onUploaded={() => mutate()} />}
       </header>
 
-      {companyId && <UploadDropzone companyId={companyId} onUploaded={() => mutate()} />}
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1 sm:max-w-xs">
+      {/* Toolbar: search + filter tabs */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-xs">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-placeholder)]"
+            className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--text-placeholder)]"
             aria-hidden="true"
           />
           <Input
-            className="pl-9"
+            className="border-transparent bg-[var(--surface-interactive)] pl-9"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -73,24 +140,48 @@ export default function DocumentsPage() {
             aria-label={t('documents.searchPlaceholder')}
           />
         </div>
-        <Select
-          value={status}
-          onChange={(e) => {
-            setStatus(e.target.value);
-            setPage(1);
-          }}
+        <div
+          className="-mx-1 flex items-center gap-1 overflow-x-auto px-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          role="tablist"
           aria-label={t('documents.statusFilter')}
         >
-          <option value="">{t('documents.allStatuses')}</option>
-          {DOCUMENT_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {t(`status.${s}`)}
-            </option>
-          ))}
-        </Select>
+          {tabs.map((tab) => {
+            const active = status === tab.status;
+            return (
+              <button
+                key={tab.status || 'all'}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => {
+                  setStatus(tab.status);
+                  setPage(1);
+                }}
+                className={cn(
+                  'inline-flex shrink-0 items-center gap-1.5 rounded-[var(--radius-token-md)] px-3 py-1.5 text-[13px] font-semibold',
+                  'transition-colors duration-150',
+                  active
+                    ? 'bg-[var(--surface-interactive)] text-[var(--text-primary)]'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                )}
+              >
+                {t(tab.key)}
+                <span
+                  className={cn(
+                    'text-[11px] font-semibold tabular-nums',
+                    active ? 'text-[var(--brand-primary)]' : 'text-[var(--text-tertiary)]'
+                  )}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <Card>
+      {/* Table card */}
+      <Card className="overflow-hidden shadow-[var(--shadow-lg)]">
         <StateWrapper
           loading={isLoading && !documents}
           error={!documents ? error : undefined}
@@ -101,41 +192,44 @@ export default function DocumentsPage() {
           <Table>
             <THead>
               <Tr>
-                <Th>{t('documents.date')}</Th>
-                <Th>{t('documents.fileSupplier')}</Th>
-                <Th>{t('documents.invoiceNumber')}</Th>
-                <Th className="text-right">{t('documents.amount')}</Th>
-                <Th>{t('documents.confidence')}</Th>
-                <Th>{t('documents.status')}</Th>
-                <Th className="text-right">{t('documents.actions')}</Th>
+                <Th className="hidden text-[11px] tracking-wide uppercase sm:table-cell">{t('documents.date')}</Th>
+                <Th className="text-[11px] tracking-wide uppercase">{t('documents.fileSupplier')}</Th>
+                <Th className="hidden text-[11px] tracking-wide uppercase md:table-cell">{t('documents.invoiceNumber')}</Th>
+                <Th className="text-right text-[11px] tracking-wide uppercase">{t('documents.amount')}</Th>
+                <Th className="hidden text-[11px] tracking-wide uppercase lg:table-cell">{t('documents.confidence')}</Th>
+                <Th className="text-[11px] tracking-wide uppercase">{t('documents.status')}</Th>
+                <Th className="w-12 text-right text-[11px] tracking-wide uppercase">
+                  <span className="sr-only">{t('documents.actions')}</span>
+                </Th>
               </Tr>
             </THead>
             <TBody>
               {(documents ?? []).map((doc) => (
                 <Tr key={doc.id} onClick={() => setSelectedDocId(doc.id)}>
-                  <Td className="whitespace-nowrap text-[var(--text-secondary)]">
+                  <Td className="hidden whitespace-nowrap text-[var(--text-secondary)] sm:table-cell">
                     {formatDate(doc.createdAt)}
                   </Td>
-                  <Td className="max-w-[260px]">
-                    <p className="truncate font-medium">{doc.supplierName || doc.fileName}</p>
+                  <Td className="max-w-[180px] sm:max-w-[300px]">
+                    <p className="truncate font-semibold text-[var(--text-primary)]">
+                      {doc.supplierName || doc.fileName}
+                    </p>
                     {doc.supplierName && (
                       <p className="truncate text-xs text-[var(--text-tertiary)]">{doc.fileName}</p>
                     )}
                   </Td>
-                  <Td className="whitespace-nowrap">{doc.invoiceNumber || '—'}</Td>
-                  <Td className="whitespace-nowrap text-right tabular-nums">
+                  <Td className="hidden whitespace-nowrap text-[var(--text-secondary)] md:table-cell">
+                    {doc.invoiceNumber || '—'}
+                  </Td>
+                  <Td className="whitespace-nowrap text-right font-semibold tabular-nums">
                     {formatCurrency(doc.totalAmount, doc.currency)}
                   </Td>
-                  <Td>
-                    <ConfidenceBadge confidence={doc.confidence} />
+                  <Td className="hidden lg:table-cell">
+                    <AccuracyCell confidence={doc.confidence} />
                   </Td>
                   <Td>
-                    <DocumentStatusBadge status={doc.status} />
+                    <StatusCell status={doc.status} />
                   </Td>
-                  <Td
-                    className="whitespace-nowrap text-right"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <Td className="whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="inline-flex items-center gap-1">
                       {doc.abraUrl && (
                         <a
@@ -143,10 +237,9 @@ export default function DocumentsPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           title={t('documents.openInAbra')}
-                          className="inline-flex items-center gap-1 rounded-[var(--radius-token-sm)] px-2 py-1 text-xs font-medium text-[var(--text-link)] transition-colors duration-150 hover:bg-[var(--brand-primary-subtle)]"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-[var(--radius-token-sm)] text-[var(--text-tertiary)] transition-colors duration-150 hover:bg-[var(--surface-interactive)] hover:text-[var(--brand-primary-light)]"
                         >
-                          {t('documents.openInAbraShort')}
-                          <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                         </a>
                       )}
                       {doc.status === 'export_failed' && (
@@ -157,9 +250,8 @@ export default function DocumentsPage() {
                           onClick={() => handleRetry(doc.id)}
                           icon={<RefreshCw />}
                           title={t('documents.retry')}
-                        >
-                          {t('documents.retry')}
-                        </Button>
+                          aria-label={t('documents.retry')}
+                        />
                       )}
                     </div>
                   </Td>

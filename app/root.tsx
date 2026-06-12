@@ -25,7 +25,7 @@ export function links() {
     { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' as const },
     {
       rel: 'stylesheet',
-      href: 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap&subset=latin,latin-ext',
+      href: 'https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap&subset=latin,latin-ext',
     },
   ];
 }
@@ -44,7 +44,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <meta name="theme-color" content="#3a214a" />
+        <meta name="theme-color" content="#0b0b10" />
         <meta
           name="description"
           content="Foldera — automatický most mezi příchozími fakturami a ABRA Flexi. Vytěžení, kontrola duplicit a export faktur přijatých bez ručního zásahu."

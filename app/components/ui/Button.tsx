@@ -35,10 +35,9 @@ export function Button({
 
         variant === 'primary' && [
           'text-[var(--text-inverse)]',
-          'bg-[radial-gradient(ellipse_at_30%_0%,var(--brand-primary-light)_0%,var(--brand-primary)_70%)]',
-          'border border-[var(--brand-primary-active)] shadow-[var(--shadow-sm)]',
-          'hover:shadow-[var(--shadow-md)] hover:-translate-y-px',
-          'transition-[transform,box-shadow,background] duration-150 ease-[var(--ease-default)]',
+          '[background:var(--accent-gradient)] shadow-[var(--accent-glow)]',
+          'hover:-translate-y-px hover:brightness-110',
+          'transition-[transform,box-shadow,filter] duration-150 ease-[var(--ease-default)]',
         ],
         variant === 'secondary' && [
           'bg-[var(--surface-default)] text-[var(--text-primary)]',
