@@ -207,6 +207,7 @@ const EMPTY_DEFAULTS: AbraSupplierDefaults = {
   documentType: null,
   predpisZauctovani: null,
   cleneniDph: null,
+  cleneniKonVykDph: null,
   stredisko: null,
   formaUhrady: null,
 };
@@ -219,6 +220,7 @@ export function harvestDefaultsFromRows(rows: AbraInvoiceRow[]): AbraSupplierDef
     documentType: mostFrequent(sorted.map((r) => extractCode(r.typDokl))),
     predpisZauctovani: mostFrequent(sorted.map((r) => extractCode(r.typUcOp))),
     cleneniDph: mostFrequent(sorted.map((r) => extractCode(r.clenDph))),
+    cleneniKonVykDph: mostFrequent(sorted.map((r) => extractCode(r.clenKonVykDph))),
     stredisko: mostFrequent(sorted.map((r) => extractCode(r.stredisko))),
     formaUhrady: mostFrequent(sorted.map((r) => extractCode(r.formaUhradyCis))),
   };

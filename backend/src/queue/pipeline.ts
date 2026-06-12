@@ -29,6 +29,8 @@ import {
   findSupplierByIco,
   getSupplierDefaults,
   suggestClenDph,
+  suggestTypUcOp,
+  suggestClenKonVykDph,
   uploadInvoiceAttachment,
 } from '../services/abraflexi/index.js';
 import { isKnownCzBankCode } from '../services/abraflexi/helpers.js';
@@ -49,6 +51,7 @@ const EMPTY_DEFAULTS: AbraSupplierDefaults = {
   documentType: null,
   predpisZauctovani: null,
   cleneniDph: null,
+  cleneniKonVykDph: null,
   stredisko: null,
   formaUhrady: null,
 };
@@ -143,20 +146,23 @@ async function runAbraExport(
   // so a silent omission never looks like missing data.
   const notes: string[] = [];
 
-  // AI accounting fill: history always wins; only when the company opted in and
-  // the supplier history left the VAT row (clenDph) empty do we let the model
-  // pick a code from the company's own číselník.
-  let aiClenDph: string | null = null;
-  if (company.accountingFillMode === 'ai' && !isReceipt && defaults.cleneniDph == null) {
-    try {
-      aiClenDph = await suggestClenDph(cfg, invoice);
-      if (aiClenDph) defaults = { ...defaults, cleneniDph: aiClenDph };
-    } catch (error) {
-      logger.warn(
-        { companyId: company.id, error: toError(error).message },
-        '[Pipeline] AI accounting suggestion failed'
-      );
-    }
+  // AI accounting fill: history always wins (the values harvested above are
+  // kept). Only when the company opted in and a field is still empty do we let
+  // the model pick a code from the company's OWN číselník. The model never sees
+  // hardcoded codes, and a suggestion never breaks the export (see below).
+  const historyDefaults = defaults;
+  const aiFilled: string[] = [];
+  if (company.accountingFillMode === 'ai' && !isReceipt) {
+    const merged = { ...defaults };
+    const [clenDph, typUcOp, clenKonVyk] = await Promise.all([
+      defaults.cleneniDph == null ? suggestClenDph(cfg, invoice).catch(() => null) : null,
+      defaults.predpisZauctovani == null ? suggestTypUcOp(cfg, invoice).catch(() => null) : null,
+      defaults.cleneniKonVykDph == null ? suggestClenKonVykDph(cfg, invoice).catch(() => null) : null,
+    ]);
+    if (clenDph) { merged.cleneniDph = clenDph; aiFilled.push(`řádek DPH „${clenDph}“`); }
+    if (typUcOp) { merged.predpisZauctovani = typUcOp; aiFilled.push(`předpis zaúčtování „${typUcOp}“`); }
+    if (clenKonVyk) { merged.cleneniKonVykDph = clenKonVyk; aiFilled.push(`řádek KH „${clenKonVyk}“`); }
+    defaults = merged;
   }
 
   let result: AbraExportResult;
@@ -165,23 +171,21 @@ async function runAbraExport(
   } else {
     try {
       result = await exportPurchaseInvoice(cfg, invoice, defaults);
-      if (aiClenDph) {
-        notes.push(
-          `Řádek DPH (členění „${aiClenDph}“) navrhla AI — zkontrolujte ho v ABRA Flexi.`
-        );
+      if (aiFilled.length > 0) {
+        notes.push(`Zaúčtování navrhla AI (${aiFilled.join(', ')}) — zkontrolujte ho v ABRA Flexi.`);
       }
     } catch (error) {
-      // An AI-suggested VAT row must never break an otherwise valid export — if
-      // ABRA rejects it, retry once without it and tell the user.
-      if (!aiClenDph) throw error;
+      // An AI-suggested code must never break an otherwise valid export — if ABRA
+      // rejects the payload, retry once with history-only defaults and tell the user.
+      if (aiFilled.length === 0) throw error;
       logger.warn(
-        { companyId: company.id, aiClenDph, error: toError(error).message },
-        '[Pipeline] AI-suggested clenDph rejected — retrying without it'
+        { companyId: company.id, aiFilled, error: toError(error).message },
+        '[Pipeline] AI-suggested accounting rejected — retrying without it'
       );
-      result = await exportPurchaseInvoice(cfg, invoice, { ...defaults, cleneniDph: null });
+      result = await exportPurchaseInvoice(cfg, invoice, historyDefaults);
       notes.push(
-        `AI navrhla řádek DPH „${aiClenDph}“, ABRA ho ale odmítla — doklad byl vytvořen bez něj, ` +
-          `řádek DPH prosím doplňte ručně.`
+        `Zaúčtování navržené AI (${aiFilled.join(', ')}) ABRA odmítla — doklad byl vytvořen bez něj, ` +
+          `doplňte ho prosím ručně.`
       );
     }
   }

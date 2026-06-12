@@ -5,7 +5,8 @@
  * into `accountingFillMode = 'ai'` and there is no history for a field, the model
  * picks the best-matching code from the company's OWN ABRA číselník — so we never
  * hardcode installation/country-specific codes (the demo, for instance, is a
- * Slovak setup with §8/§9/§11 rows). The result is always flagged for review.
+ * Slovak setup with §8/§9/§11 rows). The result is always flagged for review,
+ * and the caller drops it if ABRA later rejects it.
  */
 
 import { logger } from '../../utils/logger.js';
@@ -54,32 +55,27 @@ function invoiceFacts(invoice: ExtractedInvoice): Record<string, unknown> {
   };
 }
 
-const CLEN_DPH_PROMPT = `Jsi zkušený účetní. Jde o fakturu PŘIJATOU (nákup) — tedy DPH na VSTUPU s nárokem na odpočet, NE o vydané/dodané plnění.
-Vyber JEDEN nejvhodnější kód členění DPH ("řádek DPH") ze seznamu, který používá daná účetní jednotka v ABRA Flexi.
-Preferuj řádky pro PŘIJATÁ plnění / nárok na odpočet / pořízení (nadobudnutie), NE pro dodání/vývoz.
-Rozhoduj podle: sazeb DPH, zda jde o přenesenou daňovou povinnost (§ 92 / reverse charge), tuzemské / pořízení z EU / dovoz, a popisu.
-Vrať POUZE JSON: {"kod": "<kod ze seznamu nebo null>", "confidence": <0-1>, "reason": "<krátké zdůvodnění>"}.
-Kód MUSÍ být přesně jeden z "kod" ze seznamu možností. Pokud nic jednoznačně nesedí, vrať {"kod": null}.`;
-
 /**
- * Suggest a `cleneni-dph` (řádek DPH) code for an invoice by letting the model
- * choose from the company's own číselník. Returns null on any uncertainty,
- * missing config, or empty číselník — the caller then leaves the field empty.
+ * Ask the model to pick a single code from a company's číselník. Returns null on
+ * any uncertainty, missing Mistral config, empty číselník, or a code that is not
+ * actually in the list — the caller then leaves the field empty.
  */
-export async function suggestClenDph(
+async function suggestCode(
   cfg: AbraFlexiConfig,
   invoice: ExtractedInvoice,
+  evidence: string,
+  prompt: string,
 ): Promise<string | null> {
   const mistral = getMistralConfig();
   if (!mistral) return null;
 
   let options: CodeOption[];
   try {
-    options = await fetchCodeList(cfg, 'cleneni-dph');
+    options = await fetchCodeList(cfg, evidence);
   } catch (error) {
     logger.warn(
-      { companyId: cfg.companyId, error: toError(error).message },
-      '[AbraFlexi] Failed to load cleneni-dph číselník for AI suggestion',
+      { companyId: cfg.companyId, evidence, error: toError(error).message },
+      '[AbraFlexi] Failed to load číselník for AI suggestion',
     );
     return null;
   }
@@ -87,27 +83,61 @@ export async function suggestClenDph(
 
   try {
     const payload = JSON.stringify({ faktura: invoiceFacts(invoice), moznosti: options });
-    const result = await chatCompleteJson(mistral, CLEN_DPH_PROMPT, payload);
+    const result = await chatCompleteJson(mistral, prompt, payload);
     const kod = result.kod;
     if (typeof kod !== 'string' || kod === '') return null;
-    // Only accept a code that really exists in the company's číselník.
     if (!options.some((o) => o.kod === kod)) {
       logger.warn(
-        { companyId: cfg.companyId, kod },
-        '[AbraFlexi] AI suggested a clenDph code not in the číselník — ignoring',
+        { companyId: cfg.companyId, evidence, kod },
+        '[AbraFlexi] AI suggested a code not in the číselník — ignoring',
       );
       return null;
     }
     logger.info(
-      { companyId: cfg.companyId, kod, confidence: result.confidence },
-      '[AbraFlexi] AI suggested clenDph',
+      { companyId: cfg.companyId, evidence, kod, confidence: result.confidence },
+      '[AbraFlexi] AI suggested accounting code',
     );
     return kod;
   } catch (error) {
     logger.warn(
-      { companyId: cfg.companyId, error: toError(error).message },
-      '[AbraFlexi] AI clenDph suggestion failed',
+      { companyId: cfg.companyId, evidence, error: toError(error).message },
+      '[AbraFlexi] AI accounting suggestion failed',
     );
     return null;
   }
+}
+
+const CLEN_DPH_PROMPT = `Jsi zkušený účetní. Jde o fakturu PŘIJATOU (nákup) — tedy DPH na VSTUPU s nárokem na odpočet, NE o vydané/dodané plnění.
+Vyber JEDEN nejvhodnější kód členění DPH ("řádek DPH") ze seznamu, který používá daná účetní jednotka v ABRA Flexi.
+Preferuj řádky pro PŘIJATÁ plnění / nárok na odpočet / pořízení (nadobudnutie), NE pro dodání/vývoz.
+Rozhoduj podle: sazeb DPH, zda jde o přenesenou daňovou povinnost (§ 92 / reverse charge), tuzemské / pořízení z EU / dovoz, a popisu.
+Vrať POUZE JSON: {"kod": "<kod ze seznamu nebo null>", "confidence": <0-1>, "reason": "<krátké zdůvodnění>"}.
+Kód MUSÍ být přesně jeden z "kod" ze seznamu možností. Pokud nic jednoznačně nesedí, vrať {"kod": null}.`;
+
+const TYP_UC_OP_PROMPT = `Jsi zkušený účetní. Jde o fakturu PŘIJATOU. Vyber JEDEN nejvhodnější předpis zaúčtování (předkontaci) ze seznamu, který používá daná účetní jednotka v ABRA Flexi.
+Rozhoduj podle povahy plnění (popis, sazby DPH, přenesená daňová povinnost, tuzemsko/EU/dovoz).
+Vrať POUZE JSON: {"kod": "<kod ze seznamu nebo null>", "confidence": <0-1>, "reason": "<krátké zdůvodnění>"}.
+Kód MUSÍ být přesně jeden z "kod" ze seznamu. Pokud nic jednoznačně nesedí, vrať {"kod": null}.`;
+
+const KON_VYK_DPH_PROMPT = `Jsi zkušený účetní. Jde o fakturu PŘIJATOU (nákup) — řádek kontrolního hlášení DPH proto patří do oddílu B, NIKDY ne A.
+Vyber JEDEN nejvhodnější řádek kontrolního hlášení ze seznamu firmy:
+- B.1 = přijatá plnění v režimu přenesené daňové povinnosti (§ 92),
+- B.2 = přijatá zdanitelná plnění s nárokem na odpočet, kde základ + DPH je NAD 10 000 Kč (dodavatel je plátce, má DIČ),
+- B.3 = ostatní přijatá plnění do 10 000 Kč včetně daně / zjednodušený daňový doklad.
+Vrať POUZE JSON: {"kod": "<kod ze seznamu nebo null>", "confidence": <0-1>, "reason": "<krátké zdůvodnění>"}.
+Kód MUSÍ být přesně jeden z "kod" ze seznamu. Pokud nic jednoznačně nesedí (nebo firma kontrolní hlášení nepoužívá), vrať {"kod": null}.`;
+
+export function suggestClenDph(cfg: AbraFlexiConfig, invoice: ExtractedInvoice): Promise<string | null> {
+  return suggestCode(cfg, invoice, 'cleneni-dph', CLEN_DPH_PROMPT);
+}
+
+export function suggestTypUcOp(cfg: AbraFlexiConfig, invoice: ExtractedInvoice): Promise<string | null> {
+  return suggestCode(cfg, invoice, 'predpis-zauctovani', TYP_UC_OP_PROMPT);
+}
+
+export function suggestClenKonVykDph(
+  cfg: AbraFlexiConfig,
+  invoice: ExtractedInvoice,
+): Promise<string | null> {
+  return suggestCode(cfg, invoice, 'cleneni-kontrolni-hlaseni', KON_VYK_DPH_PROMPT);
 }

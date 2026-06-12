@@ -153,6 +153,7 @@ describe('harvestDefaultsFromRows', () => {
       documentType: 'FAKTURA',
       predpisZauctovani: 'SLUZBY',
       cleneniDph: 'P21',
+      cleneniKonVykDph: null,
       stredisko: 'PRAHA',
       formaUhrady: 'PREVOD',
     });
@@ -171,6 +172,7 @@ describe('harvestDefaultsFromRows', () => {
       documentType: null,
       predpisZauctovani: null,
       cleneniDph: null,
+      cleneniKonVykDph: null,
       stredisko: null,
       formaUhrady: null,
     });

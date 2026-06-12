@@ -307,6 +307,7 @@ export function buildInvoicePayload(
   // --- Accounting defaults from supplier history (header level) ---
   setCodeField(faktura, 'typUcOp', defaults.predpisZauctovani);
   setCodeField(faktura, 'clenDph', defaults.cleneniDph);
+  setCodeField(faktura, 'clenKonVykDph', defaults.cleneniKonVykDph);
   setCodeField(faktura, 'stredisko', defaults.stredisko);
   setCodeField(faktura, 'formaUhradyCis', defaults.formaUhrady);
 

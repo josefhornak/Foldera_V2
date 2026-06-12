@@ -69,6 +69,7 @@ export interface AbraFlexiFakturaPrijata {
   bezPolozek?: string;
   // Accounting defaults (header-level)
   clenDph?: string;
+  clenKonVykDph?: string;
   stredisko?: string;
   typUcOp?: string;
   // Payment
@@ -153,6 +154,7 @@ export const abraInvoiceRowSchema = z.object({
   typDokl: z.unknown().optional(),
   typUcOp: z.unknown().optional(),
   clenDph: z.unknown().optional(),
+  clenKonVykDph: z.unknown().optional(),
   stredisko: z.unknown().optional(),
   formaUhradyCis: z.unknown().optional(),
 });

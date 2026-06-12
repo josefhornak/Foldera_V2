@@ -124,8 +124,10 @@ export interface AbraSupplierDefaults {
   documentType: string | null;
   /** predpis-zauctovani kod */
   predpisZauctovani: string | null;
-  /** cleneni-dph kod */
+  /** cleneni-dph kod (řádek DPH) */
   cleneniDph: string | null;
+  /** cleneni-kontrolni-hlaseni kod (řádek kontrolního hlášení) */
+  cleneniKonVykDph: string | null;
   /** stredisko kod */
   stredisko: string | null;
   /** forma-uhrady kod */
