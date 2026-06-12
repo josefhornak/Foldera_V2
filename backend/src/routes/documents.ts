@@ -89,11 +89,22 @@ async function queueFile(
  * manual multipart splitter (handles bare multipart bodies with no envelope,
  * various transfer encodings). Returns [] when nothing usable is found.
  */
-async function extractMimeAttachments(buffer: Buffer): Promise<ReadyFile[]> {
+async function extractMimeAttachments(buffer: Buffer, fallbackName: string): Promise<ReadyFile[]> {
   const head = buffer.subarray(0, 512).toString('latin1');
   const looksMime = /^\s*--\S/.test(head) || /content-(type|disposition)\s*:/i.test(head);
-  if (!looksMime) return [];
+  if (looksMime) {
+    const fromMime = await extractViaMimeParsers(buffer, head);
+    if (fromMime.length > 0) return fromMime;
+  }
 
+  // Final fallback: carve a raw-embedded PDF out of an arbitrary wrapper
+  // (e.g. nested multipart/form-data bodies that embed the PDF uncompressed).
+  const carved = carveEmbeddedPdf(buffer, fallbackName);
+  return carved ? [carved] : [];
+}
+
+/** mailparser (raw + synthesized header) then a tolerant manual multipart split. */
+async function extractViaMimeParsers(buffer: Buffer, head: string): Promise<ReadyFile[]> {
   // Attempt 1+2: mailparser, raw then with a synthesized multipart header.
   try {
     const collect = async (raw: Buffer): Promise<ReadyFile[]> => {
@@ -200,6 +211,22 @@ function manualMultipartExtract(buffer: Buffer): ReadyFile[] {
 }
 
 /**
+ * Locate and slice out a raw (uncompressed) PDF embedded in an arbitrary
+ * wrapper — handles oddities like nested multipart/form-data bodies that carry
+ * the PDF verbatim. Returns null when no PDF is present.
+ */
+function carveEmbeddedPdf(buffer: Buffer, fallbackName: string): ReadyFile | null {
+  const start = buffer.indexOf(Buffer.from('%PDF-', 'latin1'));
+  if (start === -1) return null;
+  const eof = buffer.lastIndexOf(Buffer.from('%%EOF', 'latin1'));
+  if (eof === -1 || eof < start) return null;
+  const content = buffer.subarray(start, eof + 5); // include the %%EOF marker
+  if (content.length < 64) return null;
+  const base = fallbackName.replace(/\.[^.]+$/, '').trim() || 'dokument';
+  return { content, fileName: `${base}.pdf`, mimeType: 'application/pdf' };
+}
+
+/**
  * Manual upload (drag & drop in the UI). Files go through the exact same
  * pipeline as documents from polled sources: written to the shared temp dir,
  * queued for processing, deleted afterwards — never stored by the app.
@@ -227,7 +254,7 @@ router.post('/upload', upload.array('files', MAX_UPLOAD_FILES), async (req, res,
 
       // Not a supported file as-is — it may be a MIME container (email/EML or a
       // MIME-wrapped invoice). Parse it and queue any real attachments inside.
-      const inner = await extractMimeAttachments(file.buffer);
+      const inner = await extractMimeAttachments(file.buffer, fileName);
       if (inner.length > 0) {
         logger.info({ fileName, count: inner.length }, '[Upload] Unwrapped MIME container');
         for (const att of inner) {
