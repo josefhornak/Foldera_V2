@@ -241,7 +241,12 @@ export function buildInvoicePayload(
   } else if (isForeign) {
     setForeignAmounts(faktura, invoice, vat, currency);
   } else {
-    setDomesticAmounts(faktura, vat, !hasRealItems);
+    // With real line items ABRA derives every base/VAT sum from them. Sending
+    // header sums computed from the OCR vatBreakdown — which can disagree with
+    // the items (e.g. items at 21 % but the breakdown says 12 %) — triggers
+    // "Zadaná hodnota … se liší od vypočtené". Only send header sums in the
+    // no-items recap path, where they match the generated recap lines.
+    if (!hasRealItems) setDomesticAmounts(faktura, vat, true);
     faktura.typObchodu = 'TUZEMSKO';
   }
 
