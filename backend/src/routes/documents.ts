@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { and, count, desc, eq, gte, ilike, or, sql } from 'drizzle-orm';
 import { Router } from 'express';
+import { simpleParser } from 'mailparser';
 import multer from 'multer';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
@@ -13,9 +14,12 @@ import { requireAuth } from '../middleware/auth.js';
 import { requireCompany } from '../middleware/companyScope.js';
 import { enqueueExportRetry, enqueueProcessDocument } from '../queue/queues.js';
 import {
+  filterInvoiceAttachments,
   resolveMimeType,
   validateMagicNumber,
+  type SupportedMimeType,
 } from '../services/sources/attachmentFilter.js';
+import { logger } from '../utils/logger.js';
 import { sha256Hex } from '../utils/crypto.js';
 import { AppError, ErrorCodes } from '../utils/errors.js';
 import { escapeLikePattern } from '../utils/sqlUtils.js';
@@ -36,6 +40,91 @@ interface UploadResult {
   fileName: string;
   status: 'queued' | 'duplicate' | 'unsupported';
   documentId?: string;
+}
+
+interface ReadyFile {
+  content: Buffer;
+  fileName: string;
+  mimeType: SupportedMimeType;
+}
+
+/** Dedup, persist to the temp dir and enqueue a single ready file. */
+async function queueFile(
+  companyId: string,
+  tmpDir: string,
+  file: ReadyFile
+): Promise<UploadResult> {
+  const contentHash = sha256Hex(file.content);
+  const [existing] = await db
+    .select({ id: documents.id })
+    .from(documents)
+    .where(and(eq(documents.companyId, companyId), eq(documents.contentHash, contentHash)))
+    .limit(1);
+  if (existing) return { fileName: file.fileName, status: 'duplicate', documentId: existing.id };
+
+  const ext = path.extname(file.fileName);
+  const filePath = path.join(tmpDir, `upload-${nanoid(16)}${ext}`);
+  await fs.writeFile(filePath, file.content);
+
+  await enqueueProcessDocument({
+    companyId,
+    sourceId: null,
+    file: {
+      externalRef: `upload:${contentHash}`,
+      fileName: file.fileName,
+      mimeType: file.mimeType,
+      filePath,
+      receivedAt: new Date().toISOString(),
+    },
+  });
+  return { fileName: file.fileName, status: 'queued' };
+}
+
+/**
+ * Some "documents" are actually MIME containers — an email (.eml) saved with a
+ * .pdf name, or a MIME-wrapped invoice. When a raw file isn't a supported type,
+ * try to parse it as MIME and pull out the real invoice attachments inside.
+ * Returns [] when it isn't a parseable container.
+ */
+async function extractMimeAttachments(buffer: Buffer): Promise<ReadyFile[]> {
+  const head = buffer.subarray(0, 512).toString('latin1');
+  const looksMime = /^\s*--\S/.test(head) || /content-(type|disposition)\s*:/i.test(head);
+  if (!looksMime) return [];
+
+  const collect = async (raw: Buffer): Promise<ReadyFile[]> => {
+    const parsed = await simpleParser(raw);
+    const out: ReadyFile[] = [];
+    for (const [i, att] of filterInvoiceAttachments(parsed.attachments).entries()) {
+      const mimeType = resolveMimeType(att.contentType, att.filename);
+      if (!mimeType || !att.content) continue;
+      out.push({ content: att.content, fileName: att.filename || `priloha-${i + 1}`, mimeType });
+    }
+    return out;
+  };
+
+  try {
+    // Attempt 1: parse as-is (full RFC822 message / .eml).
+    let found = await collect(buffer);
+    // Attempt 2: bare multipart body — synthesize a top-level MIME header using
+    // the boundary from the opening delimiter line.
+    if (found.length === 0) {
+      const firstLine = (head.split(/\r?\n/)[0] ?? '').trim();
+      if (firstLine.startsWith('--') && firstLine.length > 2) {
+        const boundary = firstLine.slice(2);
+        const wrapped = Buffer.concat([
+          Buffer.from(
+            `MIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary="${boundary}"\r\n\r\n`,
+            'utf8'
+          ),
+          buffer,
+        ]);
+        found = await collect(wrapped);
+      }
+    }
+    return found;
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -59,38 +148,23 @@ router.post('/upload', upload.array('files', MAX_UPLOAD_FILES), async (req, res,
       const fileName = Buffer.from(file.originalname, 'latin1').toString('utf8');
 
       const mimeType = resolveMimeType(file.mimetype, fileName);
-      if (!mimeType || !validateMagicNumber(file.buffer, mimeType)) {
-        results.push({ fileName, status: 'unsupported' });
+      if (mimeType && validateMagicNumber(file.buffer, mimeType)) {
+        results.push(await queueFile(companyId, tmpDir, { content: file.buffer, fileName, mimeType }));
         continue;
       }
 
-      const contentHash = sha256Hex(file.buffer);
-      const [existing] = await db
-        .select({ id: documents.id })
-        .from(documents)
-        .where(and(eq(documents.companyId, companyId), eq(documents.contentHash, contentHash)))
-        .limit(1);
-      if (existing) {
-        results.push({ fileName, status: 'duplicate', documentId: existing.id });
+      // Not a supported file as-is — it may be a MIME container (email/EML or a
+      // MIME-wrapped invoice). Parse it and queue any real attachments inside.
+      const inner = await extractMimeAttachments(file.buffer);
+      if (inner.length > 0) {
+        logger.info({ fileName, count: inner.length }, '[Upload] Unwrapped MIME container');
+        for (const att of inner) {
+          results.push(await queueFile(companyId, tmpDir, att));
+        }
         continue;
       }
 
-      const ext = path.extname(fileName);
-      const filePath = path.join(tmpDir, `upload-${nanoid(16)}${ext}`);
-      await fs.writeFile(filePath, file.buffer);
-
-      await enqueueProcessDocument({
-        companyId,
-        sourceId: null,
-        file: {
-          externalRef: `upload:${contentHash}`,
-          fileName,
-          mimeType,
-          filePath,
-          receivedAt: new Date().toISOString(),
-        },
-      });
-      results.push({ fileName, status: 'queued' });
+      results.push({ fileName, status: 'unsupported' });
     }
 
     res.status(202).json({ results });

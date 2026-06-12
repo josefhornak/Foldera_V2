@@ -134,10 +134,16 @@ export function validateMagicNumber(content: Buffer, mimeType: SupportedMimeType
     return validateXmlContent(content);
   }
 
-  // PDF: tolerate leading bytes (BOM / junk) before the %PDF header, exactly as
-  // real PDF readers do — many valid PDFs do not start at byte 0.
+  // PDF: allow only a UTF-8 BOM and leading whitespace before %PDF (real PDFs
+  // may start with a newline). A larger scan would wrongly accept MIME/email
+  // containers that embed a PDF further down — those must be unwrapped, not OCR'd.
   if (mimeType === 'application/pdf') {
-    return content.subarray(0, 1024).includes(Buffer.from('%PDF', 'ascii'));
+    let i = 0;
+    if (byteAt(content, 0) === 0xef && byteAt(content, 1) === 0xbb && byteAt(content, 2) === 0xbf) {
+      i = 3;
+    }
+    while (i < content.length && WHITESPACE.has(byteAt(content, i))) i++;
+    return [0x25, 0x50, 0x44, 0x46].every((b, k) => byteAt(content, i + k) === b); // %PDF
   }
 
   const signatures = MAGIC_SIGNATURES[mimeType];
