@@ -83,37 +83,37 @@ async function queueFile(
 /**
  * Some "documents" are actually MIME containers — an email (.eml) saved with a
  * .pdf name, or a MIME-wrapped invoice. When a raw file isn't a supported type,
- * try to parse it as MIME and pull out the real invoice attachments inside.
- * Returns [] when it isn't a parseable container.
+ * try to pull out the real invoice attachments inside.
+ *
+ * Strategy: mailparser first (handles real .eml / RFC822 well), then a tolerant
+ * manual multipart splitter (handles bare multipart bodies with no envelope,
+ * various transfer encodings). Returns [] when nothing usable is found.
  */
 async function extractMimeAttachments(buffer: Buffer): Promise<ReadyFile[]> {
   const head = buffer.subarray(0, 512).toString('latin1');
   const looksMime = /^\s*--\S/.test(head) || /content-(type|disposition)\s*:/i.test(head);
   if (!looksMime) return [];
 
-  const collect = async (raw: Buffer): Promise<ReadyFile[]> => {
-    const parsed = await simpleParser(raw);
-    const out: ReadyFile[] = [];
-    for (const [i, att] of filterInvoiceAttachments(parsed.attachments).entries()) {
-      const mimeType = resolveMimeType(att.contentType, att.filename);
-      if (!mimeType || !att.content) continue;
-      out.push({ content: att.content, fileName: att.filename || `priloha-${i + 1}`, mimeType });
-    }
-    return out;
-  };
-
+  // Attempt 1+2: mailparser, raw then with a synthesized multipart header.
   try {
-    // Attempt 1: parse as-is (full RFC822 message / .eml).
+    const collect = async (raw: Buffer): Promise<ReadyFile[]> => {
+      const parsed = await simpleParser(raw);
+      const out: ReadyFile[] = [];
+      for (const [i, att] of filterInvoiceAttachments(parsed.attachments).entries()) {
+        const mimeType = resolveMimeType(att.contentType, att.filename);
+        if (mimeType && att.content) {
+          out.push({ content: att.content, fileName: att.filename || `priloha-${i + 1}`, mimeType });
+        }
+      }
+      return out;
+    };
     let found = await collect(buffer);
-    // Attempt 2: bare multipart body — synthesize a top-level MIME header using
-    // the boundary from the opening delimiter line.
     if (found.length === 0) {
       const firstLine = (head.split(/\r?\n/)[0] ?? '').trim();
       if (firstLine.startsWith('--') && firstLine.length > 2) {
-        const boundary = firstLine.slice(2);
         const wrapped = Buffer.concat([
           Buffer.from(
-            `MIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary="${boundary}"\r\n\r\n`,
+            `MIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary="${firstLine.slice(2)}"\r\n\r\n`,
             'utf8'
           ),
           buffer,
@@ -121,10 +121,82 @@ async function extractMimeAttachments(buffer: Buffer): Promise<ReadyFile[]> {
         found = await collect(wrapped);
       }
     }
-    return found;
+    if (found.length > 0) return found;
   } catch {
-    return [];
+    /* fall through to the manual splitter */
   }
+
+  // Attempt 3: tolerant manual multipart split.
+  return manualMultipartExtract(buffer);
+}
+
+/** Parse RFC822-style headers (with folded-line continuation) into a map. */
+function parseMimeHeaders(block: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  let lastKey = '';
+  for (const line of block.split(/\r?\n/)) {
+    if (/^[ \t]/.test(line) && lastKey) {
+      out[lastKey] += ' ' + line.trim();
+      continue;
+    }
+    const m = /^([^:]+):\s*(.*)$/.exec(line);
+    if (m) {
+      lastKey = m[1]!.toLowerCase().trim();
+      out[lastKey] = m[2]!;
+    }
+  }
+  return out;
+}
+
+function decodeQuotedPrintable(s: string): Buffer {
+  const t = s
+    .replace(/=\r?\n/g, '')
+    .replace(/=([0-9A-Fa-f]{2})/g, (_, h: string) => String.fromCharCode(parseInt(h, 16)));
+  return Buffer.from(t, 'latin1');
+}
+
+/**
+ * Tolerant multipart extractor: derives the boundary from the first delimiter
+ * line, splits parts, decodes each by its Content-Transfer-Encoding and keeps
+ * the ones that are valid supported documents (magic-number checked).
+ */
+function manualMultipartExtract(buffer: Buffer): ReadyFile[] {
+  const text = buffer.toString('latin1');
+  const firstDelim = text.split(/\r?\n/).find((l) => l.startsWith('--') && l.trim().length > 2);
+  if (!firstDelim) return [];
+  const boundary = firstDelim.trim().slice(2);
+  if (!boundary) return [];
+
+  const out: ReadyFile[] = [];
+  for (const segment of text.split('--' + boundary).slice(1)) {
+    const part = segment.replace(/^\r?\n/, '');
+    if (!part || part.startsWith('--')) continue; // closing delimiter / epilogue
+    const sepMatch = /\r?\n\r?\n/.exec(part);
+    if (!sepMatch) continue;
+    const headers = parseMimeHeaders(part.slice(0, sepMatch.index));
+    let body = part.slice(sepMatch.index + sepMatch[0].length).replace(/\r?\n$/, '');
+
+    const ctype = (headers['content-type'] ?? '').split(';')[0]!.trim();
+    const disposition = headers['content-disposition'] ?? '';
+    const filename = /filename\*?=(?:"([^"]+)"|([^;\r\n]+))/i.exec(
+      disposition + ';' + (headers['content-type'] ?? '')
+    );
+    const fileName = (filename?.[1] ?? filename?.[2])?.trim();
+
+    const mimeType = resolveMimeType(ctype, fileName);
+    if (!mimeType) continue;
+
+    const enc = (headers['content-transfer-encoding'] ?? '7bit').toLowerCase().trim();
+    let content: Buffer;
+    if (enc === 'base64') content = Buffer.from(body.replace(/\s+/g, ''), 'base64');
+    else if (enc === 'quoted-printable') content = decodeQuotedPrintable(body);
+    else content = Buffer.from(body, 'latin1');
+
+    if (content.length > 0 && validateMagicNumber(content, mimeType)) {
+      out.push({ content, fileName: fileName || `priloha-${out.length + 1}`, mimeType });
+    }
+  }
+  return out;
 }
 
 /**
@@ -164,6 +236,19 @@ router.post('/upload', upload.array('files', MAX_UPLOAD_FILES), async (req, res,
         continue;
       }
 
+      // Diagnostic: capture why a file was rejected (helps support odd formats).
+      logger.warn(
+        {
+          fileName,
+          declaredMime: file.mimetype,
+          size: file.buffer.length,
+          head: file.buffer
+            .subarray(0, 400)
+            .toString('latin1')
+            .replace(/[^\x20-\x7e]/g, '.'),
+        },
+        '[Upload] Unsupported file'
+      );
       results.push({ fileName, status: 'unsupported' });
     }
 
