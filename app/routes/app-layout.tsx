@@ -48,11 +48,12 @@ function AuthedShell() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[var(--surface-ground)]">
+    <div className="flex min-h-screen overflow-x-hidden bg-[var(--surface-ground)]">
       <Sidebar />
-      <main className="min-w-0 flex-1 px-5 py-7 md:px-10 md:py-9">
+      <main className="min-w-0 flex-1 px-4 py-6 pb-24 sm:px-5 md:px-10 md:py-9 md:pb-9">
         <Outlet />
       </main>
+      <MobileNav />
     </div>
   );
 }
@@ -78,7 +79,7 @@ function Sidebar() {
   return (
     <aside
       className={cn(
-        'sticky top-0 flex h-screen w-[72px] shrink-0 flex-col items-center gap-1 py-5',
+        'sticky top-0 hidden h-screen w-[72px] shrink-0 flex-col items-center gap-1 py-5 md:flex',
         'border-r border-[var(--sidebar-border)] text-[var(--sidebar-text)]',
         '[background:var(--sidebar-bg-gradient)]'
       )}
@@ -129,6 +130,42 @@ function Sidebar() {
         {initials(user?.name)}
       </NavLink>
     </aside>
+  );
+}
+
+/** Bottom navigation bar shown on phones (the side rail is hidden below md). */
+function MobileNav() {
+  const { t } = useTranslation();
+  return (
+    <nav
+      aria-label={t('nav.main')}
+      className={cn(
+        'fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around md:hidden',
+        'border-t border-[var(--sidebar-border)] bg-[var(--surface-raised)]/95 backdrop-blur',
+        'pb-[env(safe-area-inset-bottom)]'
+      )}
+    >
+      {NAV_ITEMS.map(({ to, end, icon: Icon, key }) => (
+        <NavLink
+          key={to}
+          to={to}
+          end={end}
+          aria-label={t(key)}
+          className={({ isActive }) =>
+            cn(
+              'flex flex-1 flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-medium',
+              'transition-colors duration-150',
+              isActive
+                ? 'text-[var(--brand-primary-light)]'
+                : 'text-[var(--sidebar-text-muted)]'
+            )
+          }
+        >
+          <Icon className="h-5 w-5" aria-hidden="true" />
+          {t(key)}
+        </NavLink>
+      ))}
+    </nav>
   );
 }
 

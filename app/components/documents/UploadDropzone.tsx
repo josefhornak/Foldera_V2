@@ -135,7 +135,7 @@ export function UploadDropzone({ companyId, onUploaded }: UploadDropzoneProps) {
 
       {/* Results / error toast */}
       {(results || error) && (
-        <div className="fixed right-6 bottom-6 z-50 w-80 max-w-[calc(100vw-3rem)] rounded-[var(--radius-token-lg)] border border-[var(--border-default)] bg-[var(--surface-raised)] p-4 shadow-[var(--shadow-lg)]">
+        <div className="fixed right-4 bottom-24 z-50 w-80 max-w-[calc(100vw-2rem)] rounded-[var(--radius-token-lg)] border border-[var(--border-default)] bg-[var(--surface-raised)] p-4 shadow-[var(--shadow-lg)] sm:right-6 sm:bottom-6">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs font-semibold text-[var(--text-primary)]">
               {t('documents.upload.resultsTitle')}
