@@ -1,0 +1,315 @@
+/**
+ * Source management routes.
+ *
+ * Mounted at /api/companies/:companyId/sources (mergeParams).
+ * All queries are company-scoped (defense-in-depth on top of requireCompany).
+ * Encrypted secrets / tokens are NEVER returned to the client.
+ */
+import { and, asc, eq } from 'drizzle-orm';
+import { Router } from 'express';
+import type { Request } from 'express';
+import { z } from 'zod';
+
+import { db } from '../db/client.js';
+import {
+  SOURCE_STATUS,
+  SOURCE_TYPE,
+  sources,
+  type DriveSourceConfig,
+  type ImapSourceConfig,
+  type Source,
+} from '../db/schema/sources.schema.js';
+import { requireAuth } from '../middleware/auth.js';
+import { requireCompany } from '../middleware/companyScope.js';
+import { enqueuePollSource } from '../queue/queues.js';
+import { listDriveFolders, testImapConnection } from '../services/sources/index.js';
+import { encryptSecret } from '../utils/crypto.js';
+import { AppError, ErrorCodes } from '../utils/errors.js';
+import { generateId } from '../utils/ids.js';
+
+const router = Router({ mergeParams: true });
+router.use(requireAuth);
+router.use(requireCompany);
+
+// ---------------------------------------------------------------------------
+// Validation schemas
+// ---------------------------------------------------------------------------
+
+const imapConnectionSchema = z.object({
+  host: z.string().min(1).max(255),
+  port: z.coerce.number().int().min(1).max(65535),
+  secure: z.boolean(),
+  user: z.string().min(1).max(255),
+  password: z.string().min(1),
+  folder: z.string().min(1).max(255).optional(),
+});
+
+const imapCreateSchema = imapConnectionSchema.extend({
+  name: z.string().min(1).max(200),
+});
+
+const sourceUpdateSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  enabled: z.boolean().optional(),
+  // IMAP connection fields (only valid for imap sources)
+  host: z.string().min(1).max(255).optional(),
+  port: z.coerce.number().int().min(1).max(65535).optional(),
+  secure: z.boolean().optional(),
+  user: z.string().min(1).max(255).optional(),
+  /** Omitted/empty = keep existing password */
+  password: z.string().optional(),
+  folder: z.string().min(1).max(255).optional(),
+});
+
+const watchedFolderSchema = z.object({
+  folderId: z.string().min(1),
+  folderPath: z.string().min(1).max(1024),
+});
+
+const folderQuerySchema = z.object({
+  parentId: z.string().min(1).optional(),
+});
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Public projection of a source — never includes encrypted secrets/tokens */
+function toPublicSource(source: Source) {
+  const detail =
+    source.type === SOURCE_TYPE.IMAP
+      ? (({ host, port, user, folder }: ImapSourceConfig) => ({ host, port, user, folder }))(
+          source.config as ImapSourceConfig
+        )
+      : (({ accountEmail, folderPath }: DriveSourceConfig) => ({ accountEmail, folderPath }))(
+          source.config as DriveSourceConfig
+        );
+
+  return {
+    id: source.id,
+    type: source.type,
+    name: source.name,
+    enabled: source.enabled,
+    status: source.status,
+    lastError: source.lastError,
+    lastSyncAt: source.lastSyncAt,
+    detail,
+  };
+}
+
+/** Load a source scoped to the request company; 404 when not found */
+async function loadSource(req: Request): Promise<Source> {
+  const sourceId = req.params.sourceId;
+  if (typeof sourceId !== 'string' || !sourceId) {
+    throw new AppError(ErrorCodes.BAD_REQUEST, 'Missing sourceId', 400);
+  }
+
+  const [source] = await db
+    .select()
+    .from(sources)
+    .where(and(eq(sources.id, sourceId), eq(sources.companyId, req.company!.id)))
+    .limit(1);
+
+  if (!source) throw new AppError(ErrorCodes.NOT_FOUND, 'Source not found', 404);
+  return source;
+}
+
+// ---------------------------------------------------------------------------
+// Routes
+// ---------------------------------------------------------------------------
+
+/** GET / — list sources of the company */
+router.get('/', async (req, res, next) => {
+  try {
+    const rows = await db
+      .select()
+      .from(sources)
+      .where(eq(sources.companyId, req.company!.id))
+      .orderBy(asc(sources.createdAt));
+    res.json({ sources: rows.map(toPublicSource) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** POST /imap/test — test an IMAP connection without creating a source */
+router.post('/imap/test', async (req, res, next) => {
+  try {
+    const body = imapConnectionSchema.parse(req.body);
+    const result = await testImapConnection(body);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** POST /imap — create an IMAP source (connection is validated first) */
+router.post('/imap', async (req, res, next) => {
+  try {
+    const body = imapCreateSchema.parse(req.body);
+
+    const test = await testImapConnection(body);
+    if (!test.ok) {
+      throw new AppError(
+        ErrorCodes.BAD_REQUEST,
+        `IMAP connection failed: ${test.error ?? 'unknown error'}`,
+        400
+      );
+    }
+
+    const config: ImapSourceConfig = {
+      host: body.host,
+      port: body.port,
+      secure: body.secure,
+      user: body.user,
+      passwordEnc: encryptSecret(body.password),
+      folder: body.folder ?? 'INBOX',
+    };
+
+    const id = generateId('src');
+    await db.insert(sources).values({
+      id,
+      companyId: req.company!.id,
+      type: SOURCE_TYPE.IMAP,
+      name: body.name,
+      enabled: true,
+      config,
+      cursor: {},
+      status: SOURCE_STATUS.OK,
+    });
+
+    const [row] = await db.select().from(sources).where(eq(sources.id, id)).limit(1);
+    res.status(201).json({ source: toPublicSource(row!) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** PATCH /:sourceId — update name/enabled; for IMAP also connection fields */
+router.patch('/:sourceId', async (req, res, next) => {
+  try {
+    const source = await loadSource(req);
+    const body = sourceUpdateSchema.parse(req.body);
+
+    const connectionFieldsTouched =
+      body.host !== undefined ||
+      body.port !== undefined ||
+      body.secure !== undefined ||
+      body.user !== undefined ||
+      (body.password !== undefined && body.password !== '') ||
+      body.folder !== undefined;
+
+    const updates: Partial<typeof sources.$inferInsert> = { updatedAt: new Date() };
+    if (body.name !== undefined) updates.name = body.name;
+    if (body.enabled !== undefined) updates.enabled = body.enabled;
+
+    if (connectionFieldsTouched) {
+      if (source.type !== SOURCE_TYPE.IMAP) {
+        throw new AppError(
+          ErrorCodes.BAD_REQUEST,
+          'Connection fields can only be updated on IMAP sources',
+          400
+        );
+      }
+      const current = source.config as ImapSourceConfig;
+      const newConfig: ImapSourceConfig = {
+        host: body.host ?? current.host,
+        port: body.port ?? current.port,
+        secure: body.secure ?? current.secure,
+        user: body.user ?? current.user,
+        // Omitted/empty password = keep existing
+        passwordEnc: body.password ? encryptSecret(body.password) : current.passwordEnc,
+        folder: body.folder ?? current.folder,
+      };
+      updates.config = newConfig;
+      updates.status = SOURCE_STATUS.OK;
+      updates.lastError = null;
+    }
+
+    await db
+      .update(sources)
+      .set(updates)
+      .where(and(eq(sources.id, source.id), eq(sources.companyId, req.company!.id)));
+
+    const [row] = await db.select().from(sources).where(eq(sources.id, source.id)).limit(1);
+    res.json({ source: toPublicSource(row!) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** DELETE /:sourceId */
+router.delete('/:sourceId', async (req, res, next) => {
+  try {
+    const source = await loadSource(req);
+    await db
+      .delete(sources)
+      .where(and(eq(sources.id, source.id), eq(sources.companyId, req.company!.id)));
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** POST /:sourceId/poll — enqueue an on-demand poll job */
+router.post('/:sourceId/poll', async (req, res, next) => {
+  try {
+    const source = await loadSource(req);
+    await enqueuePollSource(source.id);
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** GET /:sourceId/folders?parentId= — drive folder listing for the picker */
+router.get('/:sourceId/folders', async (req, res, next) => {
+  try {
+    const source = await loadSource(req);
+    const { parentId } = folderQuerySchema.parse(req.query);
+    const folders = await listDriveFolders(source, parentId);
+    res.json({ folders });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** PATCH /:sourceId/folder — set the watched drive folder, reset cursor */
+router.patch('/:sourceId/folder', async (req, res, next) => {
+  try {
+    const source = await loadSource(req);
+    if (source.type !== SOURCE_TYPE.ONEDRIVE && source.type !== SOURCE_TYPE.GOOGLE_DRIVE) {
+      throw new AppError(
+        ErrorCodes.BAD_REQUEST,
+        'Watched folder can only be set on drive sources',
+        400
+      );
+    }
+    const body = watchedFolderSchema.parse(req.body);
+
+    const current = source.config as DriveSourceConfig;
+    const newConfig: DriveSourceConfig = {
+      ...current,
+      folderId: body.folderId,
+      folderPath: body.folderPath,
+    };
+
+    await db
+      .update(sources)
+      .set({
+        config: newConfig,
+        cursor: {},
+        status: SOURCE_STATUS.OK,
+        lastError: null,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(sources.id, source.id), eq(sources.companyId, req.company!.id)));
+
+    const [row] = await db.select().from(sources).where(eq(sources.id, source.id)).limit(1);
+    res.json({ source: toPublicSource(row!) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+export default router;

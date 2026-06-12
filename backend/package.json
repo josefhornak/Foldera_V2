@@ -33,7 +33,7 @@
     "mailparser": "^3.6.5",
     "nanoid": "^5.1.7",
     "pino": "^10.3.1",
-    "pino-http": "^9.0.0",
+    "pino-http": "^11.0.0",
     "postgres": "^3.4.3",
     "zod": "^4.3.6"
   },

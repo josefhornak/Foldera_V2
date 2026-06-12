@@ -17,7 +17,8 @@ declare module 'express-serve-static-core' {
  */
 export async function requireCompany(req: Request, _res: Response, next: NextFunction): Promise<void> {
   try {
-    const companyId = req.params.companyId;
+    const rawCompanyId = req.params.companyId;
+    const companyId = Array.isArray(rawCompanyId) ? rawCompanyId[0] : rawCompanyId;
     if (!req.auth) throw new AppError(ErrorCodes.UNAUTHORIZED, 'Not authenticated', 401);
     if (!companyId) throw new AppError(ErrorCodes.BAD_REQUEST, 'Missing companyId', 400);
 
