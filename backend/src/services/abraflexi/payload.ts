@@ -20,7 +20,13 @@
 
 import type { ExtractedInvoice, AbraSupplierDefaults, VatBucket } from '../../types/contracts.js';
 import type { AbraFlexiFakturaPrijata, AbraFlexiLineItem, FakturaPrijataEnvelope } from './types.js';
-import { ENTITY_FAKTURA_PRIJATA, formatNumber, isoDateOrNull, roundCurrency } from './helpers.js';
+import {
+  ENTITY_FAKTURA_PRIJATA,
+  formatNumber,
+  isKnownCzBankCode,
+  isoDateOrNull,
+  roundCurrency,
+} from './helpers.js';
 
 /** Current Czech VAT rates (2024+): standard 21 %, reduced 12 %. */
 export const STANDARD_VAT_RATE = 21;
@@ -262,9 +268,14 @@ export function buildInvoicePayload(
   setCodeField(faktura, 'formaUhradyCis', defaults.formaUhrady);
 
   // --- Bank details ---
+  // buc (account number) and iban are free-text and always safe to send.
+  // smerKod is a reference into ABRA's bank číselník — only send it for a real
+  // bank code, else an OCR misread (e.g. 3830) makes ABRA reject the invoice.
   if (invoice.iban) faktura.iban = invoice.iban;
   if (invoice.bankAccount) faktura.buc = invoice.bankAccount;
-  setCodeField(faktura, 'smerKod', invoice.bankCode);
+  if (isKnownCzBankCode(invoice.bankCode)) {
+    faktura.smerKod = `code:${invoice.bankCode}`;
+  }
 
   // --- Currency ---
   if (!isForeign) faktura.mena = 'code:CZK';

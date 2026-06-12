@@ -19,6 +19,7 @@ import {
   ENTITY_FAKTURA_PRIJATA,
   escapeWql,
   extractCode,
+  isKnownCzBankCode,
   mostFrequent,
   normalizeIco,
 } from './helpers.js';
@@ -139,7 +140,9 @@ export async function addBankAccountToSupplier(
   supplierCode: string,
   invoice: ExtractedInvoice,
 ): Promise<void> {
-  if (!invoice.bankAccount || !invoice.bankCode) return;
+  // Need a real bank code to link the account to ABRA's bank číselník; an OCR
+  // misread would just make this (already non-critical) call fail.
+  if (!invoice.bankAccount || !isKnownCzBankCode(invoice.bankCode)) return;
 
   const ucet: Record<string, unknown> = {
     firma: `code:${supplierCode}`,

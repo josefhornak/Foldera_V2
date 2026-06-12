@@ -61,6 +61,28 @@ export function escapeWql(value: string): string {
   return value.replace(/'/g, "''");
 }
 
+/**
+ * Active Czech bank codes (ČNB register). Used to guard the `smerKod` reference
+ * on exports: an OCR-misread code (e.g. 3830) is not in the ABRA bank číselník
+ * and would make ABRA reject the whole invoice. Kept deliberately broad; an
+ * unlisted-but-valid code only means the směrový kód is omitted (the account
+ * number and IBAN are still kept), never a failed export.
+ */
+const KNOWN_CZ_BANK_CODES = new Set([
+  '0100', '0300', '0600', '0710', '0800', '2010', '2020', '2060', '2070', '2100',
+  '2200', '2220', '2250', '2260', '2275', '2600', '2700', '3030', '3050', '3060',
+  '3500', '4000', '4300', '5500', '5800', '6000', '6100', '6200', '6210', '6300',
+  '6700', '6800', '7910', '7950', '7960', '7970', '7980', '7990', '8030', '8040',
+  '8060', '8090', '8150', '8190', '8198', '8199', '8200', '8215', '8220', '8225',
+  '8230', '8240', '8250', '8255', '8265', '8270', '8272', '8280', '8283', '8291',
+  '8293', '8294', '8296', '8298', '8299',
+]);
+
+/** True when `code` is a real Czech bank (směrový) code in the ČNB register. */
+export function isKnownCzBankCode(code: string | null | undefined): boolean {
+  return code != null && KNOWN_CZ_BANK_CODES.has(code.trim());
+}
+
 /** Return an ISO date (YYYY-MM-DD) or null when the input is missing/malformed. */
 export function isoDateOrNull(value: string | null): string | null {
   if (!value) return null;
