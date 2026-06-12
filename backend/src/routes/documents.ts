@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import { and, count, desc, eq, gte, ilike, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, ilike, inArray, or, sql } from 'drizzle-orm';
 import { Router } from 'express';
 import { simpleParser } from 'mailparser';
 import multer from 'multer';
@@ -285,10 +285,16 @@ router.post('/upload', upload.array('files', MAX_UPLOAD_FILES), async (req, res,
   }
 });
 
+/** Statuses grouped under the UI "Chyba" (error) filter / stats `failed` bucket. */
+const FAILED_STATUSES = [DOCUMENT_STATUS.EXPORT_FAILED, DOCUMENT_STATUS.EXTRACTION_FAILED] as const;
+
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
-  status: z.enum(Object.values(DOCUMENT_STATUS) as [DocumentStatus, ...DocumentStatus[]]).optional(),
+  // 'failed' is a virtual group matching both error statuses (mirrors stats.failed).
+  status: z
+    .enum([...(Object.values(DOCUMENT_STATUS) as [DocumentStatus, ...DocumentStatus[]]), 'failed'])
+    .optional(),
   search: z.string().max(200).optional(),
 });
 
@@ -298,7 +304,8 @@ router.get('/', async (req, res, next) => {
     const companyId = req.company!.id;
 
     const conditions = [eq(documents.companyId, companyId)];
-    if (q.status) conditions.push(eq(documents.status, q.status));
+    if (q.status === 'failed') conditions.push(inArray(documents.status, [...FAILED_STATUSES]));
+    else if (q.status) conditions.push(eq(documents.status, q.status));
     if (q.search) {
       const pattern = `%${escapeLikePattern(q.search)}%`;
       const searchCond = or(
@@ -440,6 +447,20 @@ router.post('/:documentId/retry', async (req, res, next) => {
 
     await enqueueExportRetry({ documentId: row.id, companyId: req.company!.id });
     res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Delete a document record (metadata only — files are never stored anyway). */
+router.delete('/:documentId', async (req, res, next) => {
+  try {
+    const [row] = await db
+      .delete(documents)
+      .where(and(eq(documents.id, req.params.documentId!), eq(documents.companyId, req.company!.id)))
+      .returning({ id: documents.id });
+    if (!row) throw new AppError(ErrorCodes.NOT_FOUND, 'Document not found', 404);
+    res.status(204).end();
   } catch (err) {
     next(err);
   }

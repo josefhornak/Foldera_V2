@@ -108,7 +108,8 @@
       "exported": "Processed",
       "processing": "Pending",
       "failed": "Error"
-    }
+    },
+    "delete": "Delete document"
   },
   "status": {
     "processing": "Processing",

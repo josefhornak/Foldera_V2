@@ -52,3 +52,9 @@ export function retryDocument(companyId: string, docId: string) {
     method: 'POST',
   });
 }
+
+export function deleteDocument(companyId: string, docId: string) {
+  return api<void>(`/api/companies/${companyId}/documents/${docId}`, {
+    method: 'DELETE',
+  });
+}

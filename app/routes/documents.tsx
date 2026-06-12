@@ -96,7 +96,7 @@ export default function DocumentsPage() {
     { key: 'documents.filter.all', status: '', count: bucket?.total ?? 0 },
     { key: 'documents.filter.exported', status: 'exported', count: bucket?.exported ?? 0 },
     { key: 'documents.filter.processing', status: 'processing', count: bucket?.processing ?? 0 },
-    { key: 'documents.filter.failed', status: 'export_failed', count: bucket?.failed ?? 0 },
+    { key: 'documents.filter.failed', status: 'failed', count: bucket?.failed ?? 0 },
   ];
 
   async function handleRetry(docId: string) {
@@ -189,7 +189,40 @@ export default function DocumentsPage() {
           emptyMessage={t('documents.noResults')}
           onRetry={() => mutate()}
         >
-          <Table>
+          {/* Mobile: card list */}
+          <ul className="divide-y divide-[var(--border-subtle)] md:hidden">
+            {(documents ?? []).map((doc) => (
+              <li key={doc.id}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDocId(doc.id)}
+                  className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors duration-150 hover:bg-[var(--surface-interactive)]"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-[var(--text-primary)]">
+                      {doc.supplierName || doc.fileName}
+                    </p>
+                    <p className="truncate text-xs text-[var(--text-tertiary)]">
+                      {doc.supplierName ? doc.fileName : doc.invoiceNumber || ''}
+                    </p>
+                    <div className="mt-2">
+                      <StatusCell status={doc.status} />
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="font-semibold tabular-nums text-[var(--text-primary)]">
+                      {formatCurrency(doc.totalAmount, doc.currency)}
+                    </span>
+                    <span className="text-xs text-[var(--text-tertiary)]">{formatDate(doc.createdAt)}</span>
+                    <AccuracyCell confidence={doc.confidence} />
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          {/* Desktop: table */}
+          <Table className="hidden md:table">
             <THead>
               <Tr>
                 <Th className="hidden text-[11px] tracking-wide uppercase sm:table-cell">{t('documents.date')}</Th>
@@ -297,6 +330,7 @@ export default function DocumentsPage() {
           docId={selectedDocId}
           onClose={() => setSelectedDocId(null)}
           onRetried={() => mutate()}
+          onDeleted={() => mutate()}
         />
       )}
     </div>

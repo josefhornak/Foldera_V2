@@ -108,7 +108,8 @@
       "exported": "Zpracováno",
       "processing": "Čeká",
       "failed": "Chyba"
-    }
+    },
+    "delete": "Smazat doklad"
   },
   "status": {
     "processing": "Zpracovává se",

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { ExternalLink, RefreshCw, X } from 'lucide-react';
+import { ExternalLink, RefreshCw, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ConfidenceBadge, DocumentStatusBadge } from '~/components/ui/Badge';
 import { Button } from '~/components/ui/Button';
 import { StateWrapper } from '~/components/ui/StateWrapper';
-import { retryDocument, useDocumentDetail } from '~/hooks/useDocuments';
+import { deleteDocument, retryDocument, useDocumentDetail } from '~/hooks/useDocuments';
 import { formatCurrency, formatDate, formatDateTime } from '~/lib/format';
 import { cn } from '~/lib/utils';
 
@@ -13,12 +13,15 @@ interface DocumentDetailPanelProps {
   docId: string;
   onClose: () => void;
   onRetried: () => void;
+  onDeleted?: () => void;
 }
 
-export function DocumentDetailPanel({ companyId, docId, onClose, onRetried }: DocumentDetailPanelProps) {
+export function DocumentDetailPanel({ companyId, docId, onClose, onRetried, onDeleted }: DocumentDetailPanelProps) {
   const { t } = useTranslation();
   const { document: doc, error, isLoading, mutate } = useDocumentDetail(companyId, docId);
   const [retrying, setRetrying] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -36,6 +39,17 @@ export function DocumentDetailPanel({ companyId, docId, onClose, onRetried }: Do
       onRetried();
     } finally {
       setRetrying(false);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await deleteDocument(companyId, docId);
+      onDeleted?.();
+      onClose();
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -176,6 +190,20 @@ export function DocumentDetailPanel({ companyId, docId, onClose, onRetried }: Do
                       icon={<RefreshCw />}
                     >
                       {t('documents.retry')}
+                    </Button>
+                  )}
+                  {confirmingDelete ? (
+                    <>
+                      <Button variant="danger" loading={deleting} onClick={handleDelete} icon={<Trash2 />}>
+                        {t('common.confirmDelete')}
+                      </Button>
+                      <Button variant="ghost" onClick={() => setConfirmingDelete(false)}>
+                        {t('common.cancel')}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button variant="ghost" onClick={() => setConfirmingDelete(true)} icon={<Trash2 />}>
+                      {t('documents.delete')}
                     </Button>
                   )}
                 </div>
