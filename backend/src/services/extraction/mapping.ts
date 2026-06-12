@@ -149,7 +149,17 @@ export function mapModelOutputToInvoice(
   rawText: string | null,
 ): ExtractedInvoice {
   const documentType = asDocumentType(raw.document_type);
-  const isInvoice = raw.is_invoice === true || documentType === 'invoice';
+  // Safety net for misclassification: the model sometimes labels a real invoice
+  // as "receipt"/"other" (e.g. an Alza "daňový doklad"). EET receipts/paragony
+  // never carry a variable symbol or a due date, so either of those is a strong
+  // invoice marker — upgrade the type when present.
+  const hasInvoiceMarkers =
+    asNumericSymbol(raw.variable_symbol) != null || asIsoDate(raw.due_date) != null;
+  const effectiveType: ExtractedInvoice['documentType'] =
+    (documentType === 'receipt' || documentType === 'other') && hasInvoiceMarkers
+      ? 'invoice'
+      : documentType;
+  const isInvoice = raw.is_invoice === true || effectiveType === 'invoice';
 
   const { account, code } = splitBankAccount(
     asString(raw.vendor_bank_account),
@@ -163,7 +173,7 @@ export function mapModelOutputToInvoice(
   const invoice: ExtractedInvoice = {
     ...emptyInvoice(),
     isInvoice,
-    documentType: isInvoice && documentType === 'other' ? 'invoice' : documentType,
+    documentType: isInvoice && effectiveType === 'other' ? 'invoice' : effectiveType,
     supplierName: asString(raw.vendor_name),
     supplierIco: asString(raw.vendor_ic)?.replace(/\s/g, '') ?? null,
     supplierDic: asString(raw.vendor_dic)?.replace(/\s/g, '') ?? null,

@@ -29,6 +29,7 @@ DOCUMENT CLASSIFICATION (always perform first):
 - "receipt": "Účtenka", "Paragon" — retail receipt with EET codes (FIK, BKP), POS format. Receipts have no variable symbol and no professional letterhead
 - "credit_note": "Dobropis", "Opravný daňový doklad", "Credit note", "Gutschrift" — corrective document, often with negative amounts
 - "other": anything else (order, contract, delivery note, quote, letter, ...)
+DECISIVE RULE: a document that has a variable symbol OR a due date (datum splatnosti) is an "invoice", never a "receipt" — even if titled "Účtenka", "Daňový doklad k objednávce", or formatted like an e-shop order (e.g. Alza, Mall). Classify as "receipt" ONLY for true EET paragony (FIK/BKP, no variable symbol, no due date).
 Set is_invoice = true ONLY for "invoice". For non-invoice documents still fill in any fields that are clearly present, use null elsewhere.
 
 INVOICE NUMBER (priority):

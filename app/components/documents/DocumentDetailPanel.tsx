@@ -150,7 +150,7 @@ export function DocumentDetailPanel({ companyId, docId, onClose, onRetried, onDe
                   <DetailRow label={t('documents.abraCode')} value={doc.abraCode} />
                   <DetailRow label={t('documents.processedAt')} value={formatDateTime(doc.processedAt)} />
                   <DetailRow label={t('documents.createdAt')} value={formatDateTime(doc.createdAt)} />
-                  <DetailRow label={t('documents.rawStatus')} value={doc.status} mono />
+                  <DetailRow label={t('documents.rawStatus')} value={t(`status.${doc.status}`)} />
                 </dl>
 
                 {extractedEntries.length > 0 && (
