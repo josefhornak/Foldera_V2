@@ -22,8 +22,9 @@ import { ENTITY_FAKTURA_PRIJATA } from './helpers.js';
 const ATTACHMENT_TIMEOUT_MS = 60_000;
 
 /**
- * Upload the original document file as an attachment of an existing ABRA
- * Flexi received invoice.
+ * Upload the original document file as an attachment of an existing ABRA Flexi
+ * document. Defaults to a received invoice; pass `entity` (e.g. pokladni-pohyb)
+ * to attach to another evidence.
  *
  * @throws {AppError} when the file cannot be read or ABRA rejects the upload
  */
@@ -33,6 +34,7 @@ export async function uploadInvoiceAttachment(
   filePath: string,
   fileName: string,
   mimeType: string,
+  entity: string = ENTITY_FAKTURA_PRIJATA,
 ): Promise<void> {
   let content: Buffer;
   try {
@@ -46,10 +48,10 @@ export async function uploadInvoiceAttachment(
   }
 
   const safeName = encodeURIComponent(fileName || 'document.pdf');
-  const path = `/${ENTITY_FAKTURA_PRIJATA}/${encodeURIComponent(abraInvoiceId)}/prilohy/new/${safeName}`;
+  const path = `/${entity}/${encodeURIComponent(abraInvoiceId)}/prilohy/new/${safeName}`;
 
   logger.info(
-    { companyId: cfg.companyId, abraInvoiceId, fileName, mimeType, sizeBytes: content.length },
+    { companyId: cfg.companyId, abraInvoiceId, entity, fileName, mimeType, sizeBytes: content.length },
     '[AbraFlexi] Uploading invoice attachment',
   );
 

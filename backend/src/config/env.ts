@@ -32,6 +32,14 @@ const envSchema = z.object({
   // daňový doklad") is the standard one; override per deployment if needed.
   ABRA_DEFAULT_TYP_DOBROPIS: z.string().default('ODD'),
 
+  // Receipts (účtenky) are exported as a cash-register movement (pokladni-pohyb)
+  // into this cash register. Must be an existing pokladna code.
+  ABRA_DEFAULT_POKLADNA: z.string().default('CASH-CZK'),
+  // typDokl for the cash movement. The export first tries to resolve an expense
+  // (výdej) movement type from typ-pokladni-pohyb; this is the fallback when the
+  // company has none configured (e.g. the demo only ships income types).
+  ABRA_DEFAULT_TYP_POKLADNA: z.string().default('DKL_UCTENKA'),
+
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   MICROSOFT_CLIENT_ID: z.string().optional(),

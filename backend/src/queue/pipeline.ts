@@ -23,6 +23,8 @@ import {
 } from '../db/schema/index.js';
 import {
   exportPurchaseInvoice,
+  exportReceiptToPokladna,
+  ENTITY_POKLADNI_POHYB,
   findDuplicateInvoice,
   findSupplierByIco,
   getSupplierDefaults,
@@ -93,28 +95,38 @@ async function runAbraExport(
     };
   }
 
-  const duplicate = await findDuplicateInvoice(cfg, {
-    supplierIco: invoice.supplierIco,
-    variableSymbol: invoice.variableSymbol,
-    invoiceNumber: invoice.invoiceNumber,
-  });
-  if (duplicate) {
-    logger.info(
-      { companyId: company.id, abraCode: duplicate.code },
-      '[Pipeline] Invoice already exists in ABRA Flexi — skipping'
-    );
-    return {
-      status: DOCUMENT_STATUS.SKIPPED_DUPLICATE,
-      abraId: duplicate.id,
-      abraCode: duplicate.code,
-    };
+  const isReceipt = invoice.documentType === 'receipt';
+
+  // Receipts live in the pokladni-pohyb evidence; the invoice duplicate check
+  // only covers faktura-prijata, so skip it for receipts.
+  if (!isReceipt) {
+    const duplicate = await findDuplicateInvoice(cfg, {
+      supplierIco: invoice.supplierIco,
+      variableSymbol: invoice.variableSymbol,
+      invoiceNumber: invoice.invoiceNumber,
+    });
+    if (duplicate) {
+      logger.info(
+        { companyId: company.id, abraCode: duplicate.code },
+        '[Pipeline] Invoice already exists in ABRA Flexi — skipping'
+      );
+      return {
+        status: DOCUMENT_STATUS.SKIPPED_DUPLICATE,
+        abraId: duplicate.id,
+        abraCode: duplicate.code,
+      };
+    }
   }
 
   let defaults = EMPTY_DEFAULTS;
+  let supplierCode: string | null = null;
   if (invoice.supplierIco) {
     try {
       const supplier = await findSupplierByIco(cfg, invoice.supplierIco);
-      if (supplier) defaults = await getSupplierDefaults(cfg, supplier.code);
+      if (supplier) {
+        supplierCode = supplier.code;
+        defaults = await getSupplierDefaults(cfg, supplier.code);
+      }
     } catch (error) {
       // Context enrichment is best-effort — export proceeds without defaults
       logger.warn(
@@ -124,16 +136,19 @@ async function runAbraExport(
     }
   }
 
-  const result = await exportPurchaseInvoice(cfg, invoice, defaults);
+  const result = isReceipt
+    ? await exportReceiptToPokladna(cfg, invoice, supplierCode)
+    : await exportPurchaseInvoice(cfg, invoice, defaults);
 
   // Notes are surfaced to the user on an otherwise successful export (the UI
   // shows them as a non-blocking warning). They explain what was auto-adjusted
   // so a silent omission never looks like missing data.
   const notes: string[] = [];
 
-  // smerKod is dropped from the payload when the bank code is not a real ČNB
-  // code (see buildInvoicePayload) — tell the user it happened.
-  if (invoice.bankCode && !isKnownCzBankCode(invoice.bankCode)) {
+  // smerKod is dropped from the invoice payload when the bank code is not a real
+  // ČNB code (see buildInvoicePayload) — tell the user it happened. Receipts
+  // never carry a smerKod, so this only applies to invoices.
+  if (!isReceipt && invoice.bankCode && !isKnownCzBankCode(invoice.bankCode)) {
     notes.push(
       `Kód banky „${invoice.bankCode}“ nebyl rozpoznán v registru bank ABRA Flexi, ` +
         `proto nebyl k faktuře připojen. Číslo účtu zůstalo zachováno — kód banky ` +
@@ -148,11 +163,12 @@ async function runAbraExport(
         result.id,
         attachmentPath.filePath,
         attachmentPath.fileName,
-        attachmentPath.mimeType
+        attachmentPath.mimeType,
+        isReceipt ? ENTITY_POKLADNI_POHYB : undefined
       );
     } catch (error) {
       // Attachment failure must never flip a successful export
-      notes.push(`Faktura byla vytvořena, ale nahrání přílohy selhalo: ${toError(error).message}`);
+      notes.push(`Doklad byl vytvořen, ale nahrání přílohy selhalo: ${toError(error).message}`);
       logger.warn(
         { companyId: company.id, abraId: result.id, error: toError(error).message },
         '[Pipeline] Attachment upload failed'
@@ -239,9 +255,13 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
       extracted: invoice,
     };
 
-    // Received invoices and credit notes (dobropisy) are exportable; everything
-    // else (receipts, orders, …) is skipped.
-    const exportable = invoice.isInvoice || invoice.documentType === 'credit_note';
+    // Received invoices and credit notes export to faktura-prijata; receipts
+    // (účtenky) export to the cash register (pokladni-pohyb). Everything else
+    // (orders, delivery notes, …) is skipped.
+    const exportable =
+      invoice.isInvoice ||
+      invoice.documentType === 'credit_note' ||
+      invoice.documentType === 'receipt';
     if (!exportable) {
       await db
         .update(documents)
