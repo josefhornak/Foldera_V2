@@ -1,0 +1,151 @@
+/**
+ * Background worker process — runs separately from the API server.
+ *
+ * - poll-sources: repeatable job (every SOURCE_POLL_INTERVAL_MIN) walks all
+ *   enabled sources, downloads new files to a temp dir and enqueues
+ *   process-document jobs. Manual per-source polls arrive on the same queue.
+ * - process-document: full pipeline (extract → ABRA Flexi → cleanup).
+ * - export-retry: re-export from stored extraction after an ABRA failure.
+ */
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+
+import { Worker } from 'bullmq';
+import { and, eq } from 'drizzle-orm';
+
+import env from './config/env.js';
+import { db } from './db/client.js';
+import { sources, SOURCE_STATUS } from './db/schema/index.js';
+import { pollSource } from './services/sources/index.js';
+import { createRedisConnection } from './queue/connection.js';
+import { processIncomingFile, retryExport } from './queue/pipeline.js';
+import {
+  getPollQueue,
+  enqueueProcessDocument,
+  QUEUE_NAMES,
+  type ExportRetryJobData,
+  type PollSourcesJobData,
+  type ProcessDocumentJobData,
+} from './queue/queues.js';
+import { toError } from './utils/errors.js';
+import { logger } from './utils/logger.js';
+
+const TMP_DIR = path.join(os.tmpdir(), 'foldera-v2');
+
+async function pollOneSource(sourceId: string): Promise<void> {
+  const [source] = await db.select().from(sources).where(eq(sources.id, sourceId)).limit(1);
+  if (!source || !source.enabled) return;
+  if (source.status === SOURCE_STATUS.PENDING_AUTH) return;
+
+  const log = logger.child({ sourceId: source.id, type: source.type, companyId: source.companyId });
+  try {
+    const result = await pollSource(source, TMP_DIR);
+
+    for (const file of result.files) {
+      await enqueueProcessDocument({
+        companyId: source.companyId,
+        sourceId: source.id,
+        file: {
+          externalRef: file.externalRef,
+          fileName: file.fileName,
+          mimeType: file.mimeType,
+          filePath: file.filePath,
+          receivedAt: file.receivedAt.toISOString(),
+        },
+      });
+    }
+
+    await db
+      .update(sources)
+      .set({
+        cursor: result.cursor,
+        status: SOURCE_STATUS.OK,
+        lastError: null,
+        lastSyncAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(sources.id, source.id), eq(sources.companyId, source.companyId)));
+
+    if (result.files.length > 0) {
+      log.info({ count: result.files.length }, '[Worker] New files queued for processing');
+    }
+  } catch (error) {
+    const message = toError(error).message;
+    log.error({ error: message }, '[Worker] Source poll failed');
+    await db
+      .update(sources)
+      .set({ status: SOURCE_STATUS.ERROR, lastError: message, updatedAt: new Date() })
+      .where(and(eq(sources.id, source.id), eq(sources.companyId, source.companyId)));
+  }
+}
+
+async function pollAllSources(): Promise<void> {
+  const rows = await db
+    .select({ id: sources.id })
+    .from(sources)
+    .where(eq(sources.enabled, true));
+  for (const row of rows) {
+    await pollOneSource(row.id);
+  }
+}
+
+async function main(): Promise<void> {
+  await fs.mkdir(TMP_DIR, { recursive: true });
+
+  const pollWorker = new Worker<PollSourcesJobData>(
+    QUEUE_NAMES.POLL_SOURCES,
+    async (job) => {
+      if (job.data.sourceId) await pollOneSource(job.data.sourceId);
+      else await pollAllSources();
+    },
+    { connection: createRedisConnection(), concurrency: 1 }
+  );
+
+  const processWorker = new Worker<ProcessDocumentJobData>(
+    QUEUE_NAMES.PROCESS_DOCUMENT,
+    async (job) => {
+      await processIncomingFile(job.data);
+    },
+    { connection: createRedisConnection(), concurrency: 2 }
+  );
+
+  const retryWorker = new Worker<ExportRetryJobData>(
+    QUEUE_NAMES.EXPORT_RETRY,
+    async (job) => {
+      await retryExport(job.data.documentId, job.data.companyId);
+    },
+    { connection: createRedisConnection(), concurrency: 2 }
+  );
+
+  for (const w of [pollWorker, processWorker, retryWorker]) {
+    w.on('failed', (job, err) => {
+      logger.error({ queue: w.name, jobId: job?.id, error: err.message }, '[Worker] Job failed');
+    });
+  }
+
+  // Repeatable schedule: poll all sources every N minutes
+  await getPollQueue().upsertJobScheduler(
+    'poll-all-sources',
+    { every: env.SOURCE_POLL_INTERVAL_MIN * 60 * 1000 },
+    { name: 'poll-all', data: {} }
+  );
+
+  logger.info(
+    { pollIntervalMin: env.SOURCE_POLL_INTERVAL_MIN, tmpDir: TMP_DIR },
+    'Foldera V2 worker started'
+  );
+
+  const shutdown = async () => {
+    logger.info('Worker shutting down…');
+    await Promise.all([pollWorker.close(), processWorker.close(), retryWorker.close()]);
+    process.exit(0);
+  };
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+}
+
+main().catch((error) => {
+  logger.error({ error: toError(error).message }, 'Worker failed to start');
+  process.exit(1);
+});

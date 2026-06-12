@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: foldera
+      POSTGRES_PASSWORD: foldera
+      POSTGRES_DB: foldera_v2
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  valkey:
+    image: valkey/valkey:8
+    ports:
+      - '6379:6379'
+    volumes:
+      - valkeydata:/data
+
+volumes:
+  pgdata:
+  valkeydata:

@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+.react-router/
+*.log
+.env
+.env.local
+.env.production
+backend/.env
+backend/dist/
+tmp/
+coverage/
+.DS_Store

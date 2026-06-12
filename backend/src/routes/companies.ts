@@ -1,0 +1,134 @@
+import { and, eq } from 'drizzle-orm';
+import { Router } from 'express';
+import { z } from 'zod';
+
+import { db } from '../db/client.js';
+import { companies } from '../db/schema/index.js';
+import { requireAuth } from '../middleware/auth.js';
+import { requireCompany } from '../middleware/companyScope.js';
+import { testAbraConnection } from '../services/abraflexi/index.js';
+import { decryptSecret, encryptSecret } from '../utils/crypto.js';
+import { AppError, ErrorCodes } from '../utils/errors.js';
+import { generateId } from '../utils/ids.js';
+
+const router = Router();
+router.use(requireAuth);
+
+const companySchema = z.object({
+  name: z.string().min(1).max(200),
+  ico: z.string().regex(/^\d{8}$/).nullish(),
+});
+
+const abraConfigSchema = z.object({
+  apiUrl: z.string().url(),
+  apiUser: z.string().min(1),
+  /** Omitted/empty = keep existing password */
+  apiPassword: z.string().optional(),
+});
+
+function toPublicCompany(c: typeof companies.$inferSelect) {
+  return {
+    id: c.id,
+    name: c.name,
+    ico: c.ico,
+    abraApiUrl: c.abraApiUrl,
+    abraApiUser: c.abraApiUser,
+    abraConfigured: Boolean(c.abraApiUrl && c.abraApiUser && c.abraApiPasswordEnc),
+    createdAt: c.createdAt,
+  };
+}
+
+router.get('/', async (req, res, next) => {
+  try {
+    const rows = await db.select().from(companies).where(eq(companies.userId, req.auth!.userId));
+    res.json({ companies: rows.map(toPublicCompany) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/', async (req, res, next) => {
+  try {
+    const body = companySchema.parse(req.body);
+    const id = generateId('cmp');
+    await db.insert(companies).values({
+      id,
+      userId: req.auth!.userId,
+      name: body.name,
+      ico: body.ico ?? null,
+    });
+    const [row] = await db.select().from(companies).where(eq(companies.id, id)).limit(1);
+    res.status(201).json({ company: toPublicCompany(row!) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch('/:companyId', requireCompany, async (req, res, next) => {
+  try {
+    const body = companySchema.partial().parse(req.body);
+    await db
+      .update(companies)
+      .set({ ...body, updatedAt: new Date() })
+      .where(and(eq(companies.id, req.company!.id), eq(companies.userId, req.auth!.userId)));
+    const [row] = await db.select().from(companies).where(eq(companies.id, req.company!.id)).limit(1);
+    res.json({ company: toPublicCompany(row!) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/:companyId', requireCompany, async (req, res, next) => {
+  try {
+    await db
+      .delete(companies)
+      .where(and(eq(companies.id, req.company!.id), eq(companies.userId, req.auth!.userId)));
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put('/:companyId/abraflexi', requireCompany, async (req, res, next) => {
+  try {
+    const body = abraConfigSchema.parse(req.body);
+    const passwordEnc = body.apiPassword
+      ? encryptSecret(body.apiPassword)
+      : req.company!.abraApiPasswordEnc;
+    if (!passwordEnc) {
+      throw new AppError(ErrorCodes.BAD_REQUEST, 'API password is required', 400);
+    }
+    await db
+      .update(companies)
+      .set({
+        abraApiUrl: body.apiUrl,
+        abraApiUser: body.apiUser,
+        abraApiPasswordEnc: passwordEnc,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(companies.id, req.company!.id), eq(companies.userId, req.auth!.userId)));
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/:companyId/abraflexi/test', requireCompany, async (req, res, next) => {
+  try {
+    const c = req.company!;
+    if (!c.abraApiUrl || !c.abraApiUser || !c.abraApiPasswordEnc) {
+      throw new AppError(ErrorCodes.BAD_REQUEST, 'ABRA Flexi connection is not configured', 400);
+    }
+    const result = await testAbraConnection({
+      apiUrl: c.abraApiUrl,
+      apiUser: c.abraApiUser,
+      apiPassword: decryptSecret(c.abraApiPasswordEnc),
+      companyId: c.id,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+export default router;

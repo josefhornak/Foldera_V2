@@ -1,0 +1,47 @@
+services:
+  api:
+    build: .
+    restart: unless-stopped
+    env_file: backend/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://foldera:${POSTGRES_PASSWORD:?}@postgres:5432/foldera_v2
+      REDIS_URL: redis://valkey:6379
+    depends_on:
+      - postgres
+      - valkey
+    ports:
+      - '127.0.0.1:3000:3000'
+
+  worker:
+    build: .
+    restart: unless-stopped
+    command: ['node', 'dist/worker.js']
+    env_file: backend/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://foldera:${POSTGRES_PASSWORD:?}@postgres:5432/foldera_v2
+      REDIS_URL: redis://valkey:6379
+    depends_on:
+      - postgres
+      - valkey
+
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: foldera
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: foldera_v2
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  valkey:
+    image: valkey/valkey:8
+    restart: unless-stopped
+    volumes:
+      - valkeydata:/data
+
+volumes:
+  pgdata:
+  valkeydata:

@@ -1,0 +1,308 @@
+/**
+ * Document processing pipeline — the heart of Foldera V2.
+ *
+ * For every incoming file: dedup by content hash → extract (Mistral OCR /
+ * ISDOC) → consult ABRA Flexi (duplicate check, supplier defaults from
+ * previous documents) → create faktura-prijata → upload the original as an
+ * attachment → record metadata. The file itself is deleted afterwards and is
+ * never stored by the application.
+ *
+ * Everything is automatic: low-confidence documents are exported too and only
+ * flagged in the list. Only hard failures (ABRA rejection) end up retryable.
+ */
+import fs from 'node:fs/promises';
+
+import { and, eq } from 'drizzle-orm';
+
+import { db } from '../db/client.js';
+import {
+  companies,
+  documents,
+  DOCUMENT_STATUS,
+  type Company,
+} from '../db/schema/index.js';
+import {
+  exportPurchaseInvoice,
+  findDuplicateInvoice,
+  findSupplierByIco,
+  getSupplierDefaults,
+  uploadInvoiceAttachment,
+} from '../services/abraflexi/index.js';
+import { extractInvoice } from '../services/extraction/index.js';
+import type {
+  AbraFlexiConfig,
+  AbraSupplierDefaults,
+  ExtractedInvoice,
+} from '../types/contracts.js';
+import { decryptSecret, sha256Hex } from '../utils/crypto.js';
+import { toError } from '../utils/errors.js';
+import { generateId } from '../utils/ids.js';
+import { logger } from '../utils/logger.js';
+import type { ProcessDocumentJobData } from './queues.js';
+
+const EMPTY_DEFAULTS: AbraSupplierDefaults = {
+  documentType: null,
+  predpisZauctovani: null,
+  cleneniDph: null,
+  stredisko: null,
+  formaUhrady: null,
+};
+
+function getAbraConfig(company: Company): AbraFlexiConfig | null {
+  if (!company.abraApiUrl || !company.abraApiUser || !company.abraApiPasswordEnc) return null;
+  return {
+    apiUrl: company.abraApiUrl,
+    apiUser: company.abraApiUser,
+    apiPassword: decryptSecret(company.abraApiPasswordEnc),
+    companyId: company.id,
+  };
+}
+
+async function safeUnlink(filePath: string): Promise<void> {
+  try {
+    await fs.unlink(filePath);
+  } catch {
+    // already gone — fine, we never keep files around
+  }
+}
+
+interface ExportOutcome {
+  status: (typeof DOCUMENT_STATUS)[keyof typeof DOCUMENT_STATUS];
+  errorMessage?: string | null;
+  abraId?: string | null;
+  abraCode?: string | null;
+  abraUrl?: string | null;
+}
+
+/**
+ * Export an extracted invoice to ABRA Flexi: duplicate check → supplier
+ * context → create document. Shared by the main pipeline and the retry path.
+ * `attachmentPath` is null on retry (the original file no longer exists).
+ */
+async function runAbraExport(
+  company: Company,
+  invoice: ExtractedInvoice,
+  attachmentPath: { filePath: string; fileName: string; mimeType: string } | null
+): Promise<ExportOutcome> {
+  const cfg = getAbraConfig(company);
+  if (!cfg) {
+    return {
+      status: DOCUMENT_STATUS.EXPORT_FAILED,
+      errorMessage: 'ABRA Flexi connection is not configured',
+    };
+  }
+
+  const duplicate = await findDuplicateInvoice(cfg, {
+    supplierIco: invoice.supplierIco,
+    variableSymbol: invoice.variableSymbol,
+    invoiceNumber: invoice.invoiceNumber,
+  });
+  if (duplicate) {
+    logger.info(
+      { companyId: company.id, abraCode: duplicate.code },
+      '[Pipeline] Invoice already exists in ABRA Flexi — skipping'
+    );
+    return {
+      status: DOCUMENT_STATUS.SKIPPED_DUPLICATE,
+      abraId: duplicate.id,
+      abraCode: duplicate.code,
+    };
+  }
+
+  let defaults = EMPTY_DEFAULTS;
+  if (invoice.supplierIco) {
+    try {
+      const supplier = await findSupplierByIco(cfg, invoice.supplierIco);
+      if (supplier) defaults = await getSupplierDefaults(cfg, supplier.code);
+    } catch (error) {
+      // Context enrichment is best-effort — export proceeds without defaults
+      logger.warn(
+        { companyId: company.id, error: toError(error).message },
+        '[Pipeline] Failed to load supplier defaults from ABRA Flexi'
+      );
+    }
+  }
+
+  const result = await exportPurchaseInvoice(cfg, invoice, defaults);
+
+  let attachmentNote: string | null = null;
+  if (attachmentPath) {
+    try {
+      await uploadInvoiceAttachment(
+        cfg,
+        result.id,
+        attachmentPath.filePath,
+        attachmentPath.fileName,
+        attachmentPath.mimeType
+      );
+    } catch (error) {
+      // Attachment failure must never flip a successful export
+      attachmentNote = `Document created, but attachment upload failed: ${toError(error).message}`;
+      logger.warn(
+        { companyId: company.id, abraId: result.id, error: toError(error).message },
+        '[Pipeline] Attachment upload failed'
+      );
+    }
+  }
+
+  return {
+    status: DOCUMENT_STATUS.EXPORTED,
+    abraId: result.id,
+    abraCode: result.code,
+    abraUrl: result.webUrl,
+    errorMessage: attachmentNote,
+  };
+}
+
+/** Main pipeline entry — one incoming file from a source. */
+export async function processIncomingFile(data: ProcessDocumentJobData): Promise<void> {
+  const { companyId, sourceId, file } = data;
+  const log = logger.child({ companyId, sourceId, fileName: file.fileName });
+
+  try {
+    const buffer = await fs.readFile(file.filePath);
+    const contentHash = sha256Hex(buffer);
+
+    const [existing] = await db
+      .select({ id: documents.id })
+      .from(documents)
+      .where(and(eq(documents.companyId, companyId), eq(documents.contentHash, contentHash)))
+      .limit(1);
+    if (existing) {
+      log.info({ documentId: existing.id }, '[Pipeline] Duplicate content — already processed, skipping');
+      return;
+    }
+
+    const [company] = await db.select().from(companies).where(eq(companies.id, companyId)).limit(1);
+    if (!company) {
+      log.warn('[Pipeline] Company no longer exists — dropping file');
+      return;
+    }
+
+    const documentId = generateId('doc');
+    await db.insert(documents).values({
+      id: documentId,
+      companyId,
+      sourceId,
+      fileName: file.fileName,
+      mimeType: file.mimeType,
+      contentHash,
+      externalRef: file.externalRef,
+      status: DOCUMENT_STATUS.PROCESSING,
+    });
+
+    const extraction = await extractInvoice({
+      filePath: file.filePath,
+      mimeType: file.mimeType,
+      fileName: file.fileName,
+    });
+
+    if (!extraction.success || !extraction.fields) {
+      await db
+        .update(documents)
+        .set({
+          status: DOCUMENT_STATUS.EXTRACTION_FAILED,
+          errorMessage: extraction.error ?? 'Extraction failed',
+          processedAt: new Date(),
+        })
+        .where(and(eq(documents.id, documentId), eq(documents.companyId, companyId)));
+      log.warn({ documentId, error: extraction.error }, '[Pipeline] Extraction failed');
+      return;
+    }
+
+    const invoice = extraction.fields;
+    const baseFields = {
+      supplierName: invoice.supplierName,
+      supplierIco: invoice.supplierIco,
+      invoiceNumber: invoice.invoiceNumber,
+      variableSymbol: invoice.variableSymbol,
+      issueDate: invoice.issueDate,
+      dueDate: invoice.dueDate,
+      totalAmount: invoice.totalAmount != null ? String(invoice.totalAmount) : null,
+      currency: invoice.currency,
+      confidence: extraction.confidence,
+      extracted: invoice,
+    };
+
+    if (!invoice.isInvoice) {
+      await db
+        .update(documents)
+        .set({ ...baseFields, status: DOCUMENT_STATUS.SKIPPED_NOT_INVOICE, processedAt: new Date() })
+        .where(and(eq(documents.id, documentId), eq(documents.companyId, companyId)));
+      log.info({ documentId, documentType: invoice.documentType }, '[Pipeline] Not a purchase invoice — skipped');
+      return;
+    }
+
+    let outcome: ExportOutcome;
+    try {
+      outcome = await runAbraExport(company, invoice, {
+        filePath: file.filePath,
+        fileName: file.fileName,
+        mimeType: file.mimeType,
+      });
+    } catch (error) {
+      outcome = {
+        status: DOCUMENT_STATUS.EXPORT_FAILED,
+        errorMessage: toError(error).message,
+      };
+    }
+
+    await db
+      .update(documents)
+      .set({
+        ...baseFields,
+        status: outcome.status,
+        errorMessage: outcome.errorMessage ?? null,
+        abraId: outcome.abraId ?? null,
+        abraCode: outcome.abraCode ?? null,
+        abraUrl: outcome.abraUrl ?? null,
+        processedAt: new Date(),
+      })
+      .where(and(eq(documents.id, documentId), eq(documents.companyId, companyId)));
+
+    log.info(
+      { documentId, status: outcome.status, abraCode: outcome.abraCode, confidence: extraction.confidence },
+      '[Pipeline] Document processed'
+    );
+  } finally {
+    await safeUnlink(file.filePath);
+  }
+}
+
+/** Retry path — re-export from stored extracted data (file no longer exists). */
+export async function retryExport(documentId: string, companyId: string): Promise<void> {
+  const [row] = await db
+    .select()
+    .from(documents)
+    .where(and(eq(documents.id, documentId), eq(documents.companyId, companyId)))
+    .limit(1);
+  if (!row || !row.extracted) return;
+
+  const [company] = await db.select().from(companies).where(eq(companies.id, companyId)).limit(1);
+  if (!company) return;
+
+  let outcome: ExportOutcome;
+  try {
+    outcome = await runAbraExport(company, row.extracted, null);
+    if (outcome.status === DOCUMENT_STATUS.EXPORTED && !outcome.errorMessage) {
+      // Original file is gone on retry — note the missing attachment
+      outcome.errorMessage = null;
+    }
+  } catch (error) {
+    outcome = { status: DOCUMENT_STATUS.EXPORT_FAILED, errorMessage: toError(error).message };
+  }
+
+  await db
+    .update(documents)
+    .set({
+      status: outcome.status,
+      errorMessage: outcome.errorMessage ?? null,
+      abraId: outcome.abraId ?? row.abraId,
+      abraCode: outcome.abraCode ?? row.abraCode,
+      abraUrl: outcome.abraUrl ?? row.abraUrl,
+      processedAt: new Date(),
+    })
+    .where(and(eq(documents.id, documentId), eq(documents.companyId, companyId)));
+
+  logger.info({ documentId, companyId, status: outcome.status }, '[Pipeline] Export retry finished');
+}
