@@ -381,12 +381,17 @@ router.get('/stats', async (req, res, next) => {
       let confidenceCount = 0;
       for (const row of rows) {
         total += row.count;
+        const isSkipped =
+          row.status === DOCUMENT_STATUS.SKIPPED_DUPLICATE ||
+          row.status === DOCUMENT_STATUS.SKIPPED_NOT_INVOICE;
         if (row.status === DOCUMENT_STATUS.EXPORTED) exported += row.count;
         else if (row.status === DOCUMENT_STATUS.EXPORT_FAILED || row.status === DOCUMENT_STATUS.EXTRACTION_FAILED)
           failed += row.count;
         else if (row.status === DOCUMENT_STATUS.PROCESSING) processing += row.count;
         else skipped += row.count;
-        if (row.avgConfidence != null) {
+        // Average accuracy reflects only real invoices — skip non-invoice and
+        // duplicate documents so they don't distort the percentage.
+        if (row.avgConfidence != null && !isSkipped) {
           confidenceSum += Number(row.avgConfidence) * row.count;
           confidenceCount += row.count;
         }
