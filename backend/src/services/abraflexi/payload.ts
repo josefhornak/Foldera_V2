@@ -229,7 +229,8 @@ export function buildInvoicePayload(
   const hasRealItems = invoice.lineItems.length > 0;
 
   if (invoice.reverseCharge && isForeign) {
-    setForeignAmounts(faktura, invoice, vat, currency);
+    faktura.mena = `code:${currency}`;
+    if (!hasRealItems) setForeignAmounts(faktura, invoice, vat, currency);
     faktura.typObchodu = 'TUZEMSKO';
   } else if (invoice.reverseCharge) {
     setDomesticAmounts(faktura, vat, false);
@@ -239,7 +240,11 @@ export function buildInvoicePayload(
     if (totalBase !== 0) faktura.sumCelkem = formatNumber(totalBase);
     faktura.typObchodu = 'TUZEMSKO';
   } else if (isForeign) {
-    setForeignAmounts(faktura, invoice, vat, currency);
+    // Same rule as the domestic path: with real line items ABRA derives the
+    // foreign-currency (*Men) sums from them, so only send header sums in the
+    // no-items recap path. `mena` must always be set.
+    faktura.mena = `code:${currency}`;
+    if (!hasRealItems) setForeignAmounts(faktura, invoice, vat, currency);
   } else {
     // With real line items ABRA derives every base/VAT sum from them. Sending
     // header sums computed from the OCR vatBreakdown — which can disagree with
