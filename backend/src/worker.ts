@@ -15,11 +15,13 @@ import env from './config/env.js';
 import { db } from './db/client.js';
 import { sources, SOURCE_STATUS } from './db/schema/index.js';
 import { pollSource } from './services/sources/index.js';
+import { startMaildirWatchers } from './services/sources/maildirWatcher.js';
 import { createRedisConnection } from './queue/connection.js';
 import { processIncomingFile, retryExport } from './queue/pipeline.js';
 import {
   getPollQueue,
   enqueueProcessDocument,
+  enqueuePollSource,
   QUEUE_NAMES,
   type ExportRetryJobData,
   type PollSourcesJobData,
@@ -128,6 +130,13 @@ async function main(): Promise<void> {
     { name: 'poll-all', data: {} }
   );
 
+  // Near-instant collection-email ingestion: watch each mailbox's maildir and
+  // enqueue a poll the moment Postfix delivers a message (the 5-min schedule
+  // remains the fallback / handles Drive sources).
+  const stopMaildirWatchers = startMaildirWatchers((sourceId) => {
+    void enqueuePollSource(sourceId);
+  });
+
   logger.info(
     { pollIntervalMin: env.SOURCE_POLL_INTERVAL_MIN, tmpDir: TMP_DIR },
     'Foldera V2 worker started'
@@ -135,6 +144,7 @@ async function main(): Promise<void> {
 
   const shutdown = async () => {
     logger.info('Worker shutting down…');
+    stopMaildirWatchers();
     await Promise.all([pollWorker.close(), processWorker.close(), retryWorker.close()]);
     process.exit(0);
   };
