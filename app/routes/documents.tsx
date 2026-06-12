@@ -81,13 +81,22 @@ export default function DocumentsPage() {
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
 
-  const { stats } = useStats(companyId);
+  // Poll while the page is open so processing → exported transitions and the
+  // tab counts stay live without a manual refresh.
+  const LIVE_REFRESH_MS = 5000;
+  const { stats, mutate: mutateStats } = useStats(companyId, LIVE_REFRESH_MS);
   const { documents, total, error, isLoading, mutate } = useDocuments(companyId, {
     page,
     pageSize: PAGE_SIZE,
     status: status || undefined,
     search: debouncedSearch || undefined,
+    refreshInterval: LIVE_REFRESH_MS,
   });
+
+  const refresh = () => {
+    void mutate();
+    void mutateStats();
+  };
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const bucket = stats?.allTime;
@@ -103,7 +112,7 @@ export default function DocumentsPage() {
     setRetryingId(docId);
     try {
       await retryDocument(companyId as string, docId);
-      await mutate();
+      refresh();
     } finally {
       setRetryingId(null);
     }
@@ -119,7 +128,7 @@ export default function DocumentsPage() {
           </h1>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">{t('documents.subtitle')}</p>
         </div>
-        {companyId && <UploadDropzone companyId={companyId} onUploaded={() => mutate()} />}
+        {companyId && <UploadDropzone companyId={companyId} onUploaded={refresh} />}
       </header>
 
       {/* Toolbar: search + filter tabs */}
@@ -329,8 +338,8 @@ export default function DocumentsPage() {
           companyId={companyId}
           docId={selectedDocId}
           onClose={() => setSelectedDocId(null)}
-          onRetried={() => mutate()}
-          onDeleted={() => mutate()}
+          onRetried={refresh}
+          onDeleted={refresh}
         />
       )}
     </div>
