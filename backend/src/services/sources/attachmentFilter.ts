@@ -47,9 +47,6 @@ const EXTENSION_MIME_MAP: Record<string, SupportedMimeType> = {
   '.isdoc': 'application/x-isdoc',
 };
 
-/** Content types that carry no real information — fall back to the extension */
-const GENERIC_CONTENT_TYPES = new Set(['', 'application/octet-stream', 'binary/octet-stream']);
-
 // ---------------------------------------------------------------------------
 // Magic number signatures
 // ---------------------------------------------------------------------------
@@ -113,11 +110,11 @@ export function resolveMimeType(contentType?: string, filename?: string): Suppor
     return normalized as SupportedMimeType;
   }
 
-  // Generic content types: fall back to the file extension
-  if (GENERIC_CONTENT_TYPES.has(declared)) {
-    const ext = extensionOf(filename);
-    if (ext && EXTENSION_MIME_MAP[ext]) return EXTENSION_MIME_MAP[ext];
-  }
+  // Declared type unrecognised (generic, missing, or an odd browser/mailer
+  // value like "application/download") — fall back to the file extension.
+  // The magic-number check still guards against mislabelled content.
+  const ext = extensionOf(filename);
+  if (ext && EXTENSION_MIME_MAP[ext]) return EXTENSION_MIME_MAP[ext];
 
   return null;
 }
@@ -135,6 +132,12 @@ export function mimeTypeForFileName(fileName: string): SupportedMimeType | null 
 export function validateMagicNumber(content: Buffer, mimeType: SupportedMimeType): boolean {
   if (XML_MIME_TYPES.has(mimeType)) {
     return validateXmlContent(content);
+  }
+
+  // PDF: tolerate leading bytes (BOM / junk) before the %PDF header, exactly as
+  // real PDF readers do — many valid PDFs do not start at byte 0.
+  if (mimeType === 'application/pdf') {
+    return content.subarray(0, 1024).includes(Buffer.from('%PDF', 'ascii'));
   }
 
   const signatures = MAGIC_SIGNATURES[mimeType];

@@ -39,6 +39,9 @@ interface SourcesSectionProps {
   companyId: string;
 }
 
+// Cloud-drive sources are temporarily hidden — flip to re-enable the buttons.
+const SHOW_DRIVE_SOURCES = false;
+
 export function SourcesSection({ companyId }: SourcesSectionProps) {
   const { t } = useTranslation();
   const { sources, capabilities, error, isLoading, mutate } = useSources(companyId);
@@ -105,24 +108,28 @@ export function SourcesSection({ companyId }: SourcesSectionProps) {
               {t('settings.sources.createCollectionEmail')}
             </Button>
           )}
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<Cloud />}
-            loading={oauthLoading === 'onedrive'}
-            onClick={() => handleConnect('onedrive')}
-          >
-            {t('settings.sources.connectOneDrive')}
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<HardDrive />}
-            loading={oauthLoading === 'google_drive'}
-            onClick={() => handleConnect('google_drive')}
-          >
-            {t('settings.sources.connectGoogleDrive')}
-          </Button>
+          {SHOW_DRIVE_SOURCES && (
+            <>
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<Cloud />}
+                loading={oauthLoading === 'onedrive'}
+                onClick={() => handleConnect('onedrive')}
+              >
+                {t('settings.sources.connectOneDrive')}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<HardDrive />}
+                loading={oauthLoading === 'google_drive'}
+                onClick={() => handleConnect('google_drive')}
+              >
+                {t('settings.sources.connectGoogleDrive')}
+              </Button>
+            </>
+          )}
         </div>
 
         {actionError && (

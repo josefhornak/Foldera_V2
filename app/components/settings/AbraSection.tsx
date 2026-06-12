@@ -69,6 +69,11 @@ export function AbraSection({ company, onSaved }: AbraSectionProps) {
     try {
       const result = await api<TestResult>(`/api/companies/${company.id}/abraflexi/test`, {
         method: 'POST',
+        body: {
+          apiUrl,
+          apiUser,
+          ...(apiPassword ? { apiPassword } : {}),
+        },
       });
       setTestResult(result);
     } catch (err) {

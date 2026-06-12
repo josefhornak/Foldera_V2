@@ -54,7 +54,20 @@ app.use('/api/oauth', oauthRouter);
 // In production the API container also serves the built SPA (see Dockerfile)
 if (env.NODE_ENV === 'production') {
   const publicDir = path.resolve(process.cwd(), 'public');
-  app.use(express.static(publicDir, { maxAge: '1h', index: false }));
+  app.use(
+    express.static(publicDir, {
+      index: false,
+      setHeaders: (res, filePath) => {
+        // i18n JSON must always revalidate so translation updates land
+        // immediately; hashed build assets stay long-lived.
+        if (filePath.includes(`${path.sep}locales${path.sep}`)) {
+          res.setHeader('Cache-Control', 'no-cache');
+        } else {
+          res.setHeader('Cache-Control', 'public, max-age=3600');
+        }
+      },
+    })
+  );
   app.get(/^(?!\/api\/).*/, (_req, res) => {
     res.sendFile(path.join(publicDir, 'index.html'));
   });

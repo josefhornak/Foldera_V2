@@ -31,6 +31,13 @@ const abraConfigSchema = z.object({
   apiPassword: z.string().optional(),
 });
 
+/** Test body — all optional; missing fields fall back to the saved config. */
+const abraTestSchema = z.object({
+  apiUrl: z.string().url().optional(),
+  apiUser: z.string().min(1).optional(),
+  apiPassword: z.string().optional(),
+});
+
 function toPublicCompany(c: typeof companies.$inferSelect) {
   return {
     id: c.id,
@@ -121,15 +128,28 @@ router.put('/:companyId/abraflexi', requireCompany, async (req, res, next) => {
 router.post('/:companyId/abraflexi/test', requireCompany, async (req, res, next) => {
   try {
     const c = req.company!;
-    if (!c.abraApiUrl || !c.abraApiUser || !c.abraApiPasswordEnc) {
-      throw new AppError(ErrorCodes.BAD_REQUEST, 'ABRA Flexi connection is not configured', 400);
+    const body = abraTestSchema.parse(req.body ?? {});
+
+    // Test the values the user just entered; fall back to the saved config for
+    // any field left blank (e.g. re-testing without re-typing the password).
+    const apiUrl = body.apiUrl ?? c.abraApiUrl ?? undefined;
+    const apiUser = body.apiUser ?? c.abraApiUser ?? undefined;
+    const apiPassword =
+      body.apiPassword && body.apiPassword.length > 0
+        ? body.apiPassword
+        : c.abraApiPasswordEnc
+          ? decryptSecret(c.abraApiPasswordEnc)
+          : undefined;
+
+    if (!apiUrl || !apiUser || !apiPassword) {
+      throw new AppError(
+        ErrorCodes.BAD_REQUEST,
+        'Vyplňte adresu API, uživatele a heslo připojení',
+        400
+      );
     }
-    const result = await testAbraConnection({
-      apiUrl: c.abraApiUrl,
-      apiUser: c.abraApiUser,
-      apiPassword: decryptSecret(c.abraApiPasswordEnc),
-      companyId: c.id,
-    });
+
+    const result = await testAbraConnection({ apiUrl, apiUser, apiPassword, companyId: c.id });
     res.json(result);
   } catch (err) {
     next(err);
