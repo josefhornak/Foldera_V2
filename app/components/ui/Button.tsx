@@ -34,8 +34,11 @@ export function Button({
         'active:translate-y-px',
 
         variant === 'primary' && [
-          'bg-[var(--brand-primary)] text-[var(--text-inverse)]',
-          'hover:bg-[var(--brand-primary-hover)]',
+          'text-[var(--text-inverse)]',
+          'bg-[radial-gradient(ellipse_at_30%_0%,var(--brand-primary-light)_0%,var(--brand-primary)_70%)]',
+          'border border-[var(--brand-primary-active)] shadow-[var(--shadow-sm)]',
+          'hover:shadow-[var(--shadow-md)] hover:-translate-y-px',
+          'transition-[transform,box-shadow,background] duration-150 ease-[var(--ease-default)]',
         ],
         variant === 'secondary' && [
           'bg-[var(--surface-default)] text-[var(--text-primary)]',

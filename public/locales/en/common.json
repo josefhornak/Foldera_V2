@@ -12,7 +12,8 @@
     "loading": "Loading…",
     "error": "Something went wrong. Please try again.",
     "retry": "Retry",
-    "empty": "Nothing here yet"
+    "empty": "Nothing here yet",
+    "copy": "Copy"
   },
   "errors": {
     "generic": "Something went wrong",
@@ -141,11 +142,14 @@
     "sources": {
       "title": "Document sources",
       "hint": "Configured sources are checked automatically every 5 minutes. New documents are extracted and sent straight to ABRA Flexi.",
-      "empty": "No sources yet. Add a collection mailbox or connect a cloud drive.",
+      "empty": "No sources yet. Create a collection email or connect a cloud drive.",
+      "createCollectionEmail": "Create collection email",
+      "collectionEmailHint": "Forward invoices to this address — the mailbox is checked every 5 minutes and attachments are extracted and sent to ABRA Flexi automatically.",
       "addImap": "Add collection email (IMAP)",
       "connectOneDrive": "Connect OneDrive",
       "connectGoogleDrive": "Connect Google Drive",
       "connectedBanner": "Drive connected. Choose the folder the app should watch.",
+      "typeCollectionEmail": "Collection email",
       "typeImap": "IMAP",
       "typeOneDrive": "OneDrive",
       "typeGoogleDrive": "Google Drive",

@@ -6,7 +6,20 @@ export function useSources(companyId: string | null) {
   const key = companyId ? `/api/companies/${companyId}/sources` : null;
   const { data, error, isLoading, mutate } = useSWR<SourcesResponse>(key);
 
-  return { sources: data?.sources, error, isLoading, mutate };
+  return {
+    sources: data?.sources,
+    capabilities: data?.capabilities,
+    error,
+    isLoading,
+    mutate,
+  };
+}
+
+/** Provision an app-managed collection mailbox for the company. */
+export function createCollectionEmailSource(companyId: string) {
+  return api<{ source: Source }>(`/api/companies/${companyId}/sources/collection-email`, {
+    method: 'POST',
+  });
 }
 
 export interface ImapInput {

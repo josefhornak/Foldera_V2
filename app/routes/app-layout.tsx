@@ -6,6 +6,7 @@ import { CompanySwitcher } from '~/components/layout/CompanySwitcher';
 import { Button } from '~/components/ui/Button';
 import { Card } from '~/components/ui/Card';
 import { Field, Input } from '~/components/ui/Input';
+import { Logo } from '~/components/ui/Logo';
 import { StateWrapper } from '~/components/ui/StateWrapper';
 import { createCompany, useCompanies } from '~/hooks/useCompanies';
 import { ApiError } from '~/lib/api';
@@ -73,16 +74,13 @@ function Sidebar() {
     <aside
       className={cn(
         'sticky top-0 flex h-screen w-16 shrink-0 flex-col md:w-60',
-        'border-r border-[var(--border-default)] bg-[var(--surface-default)]'
+        'border-r border-[var(--sidebar-border)] text-[var(--sidebar-text)]',
+        '[background:var(--sidebar-bg-gradient)]'
       )}
     >
-      <div className="px-3 py-5 md:px-4">
-        <span className="hidden text-lg font-extrabold tracking-tight text-[var(--brand-primary)] md:block">
-          foldera
-        </span>
-        <span className="block text-center text-lg font-extrabold text-[var(--brand-primary)] md:hidden">
-          f
-        </span>
+      <div className="flex items-center justify-center px-3 py-5 md:justify-start md:px-4">
+        <Logo tone="dark" markOnly className="md:hidden" />
+        <Logo tone="dark" className="hidden md:inline-flex" />
       </div>
 
       <div className="hidden px-3 pb-4 md:block">
@@ -97,32 +95,42 @@ function Sidebar() {
             end={end}
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-3 rounded-[var(--radius-token-md)] px-3 py-2 text-[13px] font-medium',
+                'relative flex items-center gap-3 rounded-[var(--radius-token-md)] px-3 py-2 text-[13px] font-medium',
                 'transition-colors duration-150',
                 isActive
-                  ? 'bg-[var(--brand-primary-subtle)] text-[var(--brand-primary)]'
-                  : 'text-[var(--text-secondary)] hover:bg-[var(--surface-interactive)] hover:text-[var(--text-primary)]'
+                  ? 'bg-[var(--sidebar-active)] text-white'
+                  : 'text-[var(--sidebar-text-muted)] hover:bg-[var(--sidebar-hover)] hover:text-white'
               )
             }
           >
-            <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-            <span className="hidden md:inline">{t(key)}</span>
+            {({ isActive }) => (
+              <>
+                {isActive && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute top-1/2 left-0 h-5 w-1 -translate-y-1/2 rounded-r-full bg-[var(--sidebar-indicator)] shadow-[0_0_8px_rgba(var(--brand-secondary-rgb),0.5)]"
+                  />
+                )}
+                <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="hidden md:inline">{t(key)}</span>
+              </>
+            )}
           </NavLink>
         ))}
       </nav>
 
-      <div className="border-t border-[var(--border-subtle)] p-3">
+      <div className="border-t border-[var(--sidebar-border)] p-3">
         <div className="hidden px-1 pb-2 md:block">
-          <p className="truncate text-xs font-medium text-[var(--text-primary)]">{user?.name}</p>
-          <p className="truncate text-xs text-[var(--text-tertiary)]">{user?.email}</p>
+          <p className="truncate text-xs font-medium text-white">{user?.name}</p>
+          <p className="truncate text-xs text-[var(--sidebar-text-muted)]">{user?.email}</p>
         </div>
         <button
           type="button"
           onClick={logout}
           className={cn(
             'flex w-full items-center gap-3 rounded-[var(--radius-token-md)] px-3 py-2',
-            'text-[13px] font-medium text-[var(--text-secondary)]',
-            'transition-colors duration-150 hover:bg-[var(--surface-interactive)] hover:text-[var(--text-primary)]'
+            'text-[13px] font-medium text-[var(--sidebar-text-muted)]',
+            'transition-colors duration-150 hover:bg-[var(--sidebar-hover)] hover:text-white'
           )}
         >
           <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />

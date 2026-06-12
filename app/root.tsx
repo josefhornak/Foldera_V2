@@ -16,11 +16,16 @@ import './index.css';
 
 export function links() {
   return [
+    { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+    { rel: 'icon', type: 'image/png', href: '/favicon.png' },
+    { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+    { rel: 'apple-touch-icon', href: '/icons/icon-192x192.png' },
+    { rel: 'manifest', href: '/manifest.json' },
     { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
     { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' as const },
     {
       rel: 'stylesheet',
-      href: 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap',
+      href: 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap&subset=latin,latin-ext',
     },
   ];
 }
@@ -38,8 +43,13 @@ export function Layout({ children }: { children: ReactNode }) {
     <html lang="cs">
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Foldera</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="theme-color" content="#3a214a" />
+        <meta
+          name="description"
+          content="Foldera — automatický most mezi příchozími fakturami a ABRA Flexi. Vytěžení, kontrola duplicit a export faktur přijatých bez ručního zásahu."
+        />
+        <title>Foldera — faktury do ABRA Flexi</title>
         <Meta />
         <Links />
       </head>

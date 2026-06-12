@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '~/components/ui/Button';
 import { Card } from '~/components/ui/Card';
 import { Field, Input } from '~/components/ui/Input';
+import { Logo } from '~/components/ui/Logo';
 import { api, ApiError } from '~/lib/api';
 import { useAuthStore } from '~/stores/auth';
 import type { AuthResponse } from '~/types';
@@ -47,11 +48,9 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--surface-ground)] px-4">
       <Card className="w-full max-w-sm p-8">
-        <div className="mb-8 text-center">
-          <span className="text-2xl font-extrabold tracking-tight text-[var(--brand-primary)]">
-            foldera
-          </span>
-          <p className="mt-1 text-xs text-[var(--text-tertiary)]">{t('app.tagline')}</p>
+        <div className="mb-8 flex flex-col items-center text-center">
+          <Logo className="scale-125" />
+          <p className="mt-3 text-xs text-[var(--text-tertiary)]">{t('app.tagline')}</p>
         </div>
 
         <h1 className="mb-5 text-sm font-semibold text-[var(--text-primary)]">

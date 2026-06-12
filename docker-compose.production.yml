@@ -13,9 +13,18 @@ services:
       - valkey
     ports:
       - '127.0.0.1:3000:3000'
+    # Collection-email provisioning writes to the host Postfix virtual map and
+    # creates maildirs (owned by the vhosts group, gid 5000). The host
+    # postfix-watcher runs postmap + fixes permissions.
+    group_add:
+      - '5000'
+    cap_add:
+      - CHOWN
     volumes:
       # Manual uploads land here on the API and are processed by the worker
       - tmpfiles:/tmp/foldera-v2
+      - /etc/postfix:/etc/postfix:rw
+      - /var/mail/vhosts:/var/mail/vhosts
 
   worker:
     build: .
@@ -30,8 +39,15 @@ services:
     depends_on:
       - postgres
       - valkey
+    # Reads incoming mail from the maildir (gid 5000) — see api service above.
+    group_add:
+      - '5000'
+    cap_add:
+      - CHOWN
     volumes:
       - tmpfiles:/tmp/foldera-v2
+      - /etc/postfix:/etc/postfix:rw
+      - /var/mail/vhosts:/var/mail/vhosts
 
   postgres:
     image: postgres:18

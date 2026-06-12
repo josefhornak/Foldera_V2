@@ -1,5 +1,9 @@
 @import 'tailwindcss';
 
+@theme {
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+}
+
 /*
   Foldera V2 — design tokens
   Trimmed port of the Foldera design system (app/index.css in the v1 app).
@@ -34,6 +38,22 @@
   --brand-primary-subtle: #f3eff6;
   --brand-primary-light: #6b4d82;
   --brand-primary-rgb: 58, 33, 74;
+
+  /* -- Brand secondary (lime accent — matches the logo glyph) ------------- */
+  --brand-secondary: #dce88a;
+  --brand-secondary-muted: #afc96a;
+  --brand-secondary-deep: #6f8835;
+  --brand-secondary-rgb: 220, 232, 138;
+
+  /* -- Sidebar (dark purple gradient, like v1) --------------------------- */
+  --sidebar-bg: #1f1230;
+  --sidebar-bg-gradient: linear-gradient(180deg, #2d1a3c 0%, #150c22 100%);
+  --sidebar-text: #ffffff;
+  --sidebar-text-muted: rgba(255, 255, 255, 0.55);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-active: rgba(255, 255, 255, 0.1);
+  --sidebar-indicator: #dce88a;
 
   /* -- Status ------------------------------------------------------------ */
   --status-success: #059669;

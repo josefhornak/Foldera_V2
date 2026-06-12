@@ -24,6 +24,12 @@ const envSchema = z.object({
   MICROSOFT_CLIENT_SECRET: z.string().optional(),
 
   SOURCE_POLL_INTERVAL_MIN: z.coerce.number().default(5),
+
+  // Collection email (app-provisioned mailbox on the host Postfix). The feature
+  // self-detects availability by checking these paths are writable at runtime.
+  COLLECTION_EMAIL_DOMAIN: z.string().default('inbox.foldera.cz'),
+  POSTFIX_VIRTUAL_MAILBOXES_FILE: z.string().default('/etc/postfix/virtual_mailboxes'),
+  MAILDIR_BASE: z.string().default('/var/mail/vhosts'),
 });
 
 const parsed = envSchema.safeParse(process.env);

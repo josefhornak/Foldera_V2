@@ -7,6 +7,7 @@
 import { SOURCE_TYPE, type Source } from '../../db/schema/sources.schema.js';
 import type { PollResult, PollSourceFn } from '../../types/contracts.js';
 import { AppError, ErrorCodes } from '../../utils/errors.js';
+import { pollCollectionEmailSource } from './collectionEmail.js';
 import { getValidAccessToken, type DriveFolder } from './common.js';
 import { pollGoogleDriveSource, listGoogleDriveFolders, refreshGoogleToken } from './googleDrive.js';
 import { pollImapSource } from './imap.js';
@@ -15,6 +16,8 @@ import { pollOneDriveSource, listOneDriveFolders, refreshOneDriveToken } from '.
 /** Poll a source for new files, dispatching by source type. */
 export const pollSource: PollSourceFn = async (source: Source, tmpDir: string): Promise<PollResult> => {
   switch (source.type) {
+    case SOURCE_TYPE.COLLECTION_EMAIL:
+      return pollCollectionEmailSource(source, tmpDir);
     case SOURCE_TYPE.IMAP:
       return pollImapSource(source, tmpDir);
     case SOURCE_TYPE.ONEDRIVE:
@@ -43,6 +46,14 @@ export async function listDriveFolders(source: Source, parentId?: string): Promi
   }
   throw new AppError(ErrorCodes.BAD_REQUEST, 'Folder listing is only available for drive sources', 400);
 }
+
+// Collection email (app-provisioned mailbox)
+export {
+  pollCollectionEmailSource,
+  provisionCollectionMailbox,
+  deprovisionCollectionMailbox,
+  isCollectionEmailAvailable,
+} from './collectionEmail.js';
 
 // IMAP
 export { pollImapSource, testImapConnection, type ImapConnectionConfig } from './imap.js';

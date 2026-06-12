@@ -1,14 +1,15 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import {
+  Check,
   CheckCircle2,
   ChevronRight,
   Cloud,
+  Copy,
   FolderOpen,
   HardDrive,
   Loader2,
   Mail,
-  Plus,
   RefreshCw,
   Trash2,
   XCircle,
@@ -18,19 +19,16 @@ import useSWR from 'swr';
 import { SourceStatusBadge } from '~/components/ui/Badge';
 import { Button } from '~/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/Card';
-import { Field, Input } from '~/components/ui/Input';
 import { StateWrapper } from '~/components/ui/StateWrapper';
 import { Switch } from '~/components/ui/Switch';
 import {
-  createImapSource,
+  createCollectionEmailSource,
   deleteSource,
   pollSource,
   setSourceFolder,
   startOAuth,
-  testImapSource,
   updateSource,
   useSources,
-  type ImapInput,
 } from '~/hooks/useSources';
 import { ApiError } from '~/lib/api';
 import { formatRelative } from '~/lib/format';
@@ -43,13 +41,15 @@ interface SourcesSectionProps {
 
 export function SourcesSection({ companyId }: SourcesSectionProps) {
   const { t } = useTranslation();
-  const { sources, error, isLoading, mutate } = useSources(companyId);
+  const { sources, capabilities, error, isLoading, mutate } = useSources(companyId);
   const [searchParams] = useSearchParams();
   const connected = searchParams.get('connected');
 
-  const [showImapForm, setShowImapForm] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
+  const [creatingEmail, setCreatingEmail] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const hasCollectionEmail = (sources ?? []).some((s) => s.type === 'collection_email');
 
   async function handleConnect(provider: 'onedrive' | 'google_drive') {
     setOauthLoading(provider);
@@ -60,6 +60,19 @@ export function SourcesSection({ companyId }: SourcesSectionProps) {
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : t('common.error'));
       setOauthLoading(null);
+    }
+  }
+
+  async function handleCreateEmail() {
+    setCreatingEmail(true);
+    setActionError(null);
+    try {
+      await createCollectionEmailSource(companyId);
+      await mutate();
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : t('common.error'));
+    } finally {
+      setCreatingEmail(false);
     }
   }
 
@@ -81,14 +94,17 @@ export function SourcesSection({ companyId }: SourcesSectionProps) {
         )}
 
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<Mail />}
-            onClick={() => setShowImapForm((v) => !v)}
-          >
-            {t('settings.sources.addImap')}
-          </Button>
+          {capabilities?.collectionEmail && !hasCollectionEmail && (
+            <Button
+              variant="primary"
+              size="sm"
+              icon={<Mail />}
+              loading={creatingEmail}
+              onClick={handleCreateEmail}
+            >
+              {t('settings.sources.createCollectionEmail')}
+            </Button>
+          )}
           <Button
             variant="secondary"
             size="sm"
@@ -115,17 +131,6 @@ export function SourcesSection({ companyId }: SourcesSectionProps) {
           </p>
         )}
 
-        {showImapForm && (
-          <ImapForm
-            companyId={companyId}
-            onDone={() => {
-              setShowImapForm(false);
-              mutate();
-            }}
-            onCancel={() => setShowImapForm(false)}
-          />
-        )}
-
         <StateWrapper
           loading={isLoading && !sources}
           error={!sources ? error : undefined}
@@ -148,6 +153,8 @@ export function SourcesSection({ companyId }: SourcesSectionProps) {
 
 function sourceTypeLabelKey(type: Source['type']): string {
   switch (type) {
+    case 'collection_email':
+      return 'settings.sources.typeCollectionEmail';
     case 'imap':
       return 'settings.sources.typeImap';
     case 'onedrive':
@@ -155,6 +162,52 @@ function sourceTypeLabelKey(type: Source['type']): string {
     case 'google_drive':
       return 'settings.sources.typeGoogleDrive';
   }
+}
+
+function sourceDetailText(source: Source): string {
+  switch (source.type) {
+    case 'collection_email':
+      return source.detail.address;
+    case 'imap':
+      return [source.detail.host, source.detail.user, source.detail.folder].filter(Boolean).join(' · ');
+    default:
+      return [source.detail.accountEmail, source.detail.folderPath].filter(Boolean).join(' · ');
+  }
+}
+
+function CopyButton({ value }: { value: string }) {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard unavailable — no-op */
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      title={t('common.copy')}
+      aria-label={t('common.copy')}
+      className={cn(
+        'inline-flex items-center gap-1 rounded-[var(--radius-token-sm)] px-1.5 py-0.5',
+        'text-[var(--text-tertiary)] transition-colors duration-150',
+        'hover:bg-[var(--surface-interactive)] hover:text-[var(--text-secondary)]'
+      )}
+    >
+      {copied ? (
+        <Check className="h-3.5 w-3.5 text-[var(--status-success-text)]" aria-hidden="true" />
+      ) : (
+        <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+      )}
+    </button>
+  );
 }
 
 function SourceRow({
@@ -173,10 +226,8 @@ function SourceRow({
   const [pickingFolder, setPickingFolder] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const detailText =
-    source.type === 'imap'
-      ? [source.detail.host, source.detail.user, source.detail.folder].filter(Boolean).join(' · ')
-      : [source.detail.accountEmail, source.detail.folderPath].filter(Boolean).join(' · ');
+  const isEmail = source.type === 'collection_email';
+  const isDrive = source.type === 'onedrive' || source.type === 'google_drive';
 
   async function run(action: () => Promise<unknown>, setLoading = setBusy) {
     setLoading(true);
@@ -200,16 +251,24 @@ function SourceRow({
     >
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-[var(--text-tertiary)]" aria-hidden="true">
-          {source.type === 'imap' ? <Mail className="h-4 w-4" /> : <Cloud className="h-4 w-4" />}
+          {isEmail || source.type === 'imap' ? <Mail className="h-4 w-4" /> : <Cloud className="h-4 w-4" />}
         </span>
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-2 text-[13px] font-medium text-[var(--text-primary)]">
-            <span className="truncate">{source.name}</span>
             <span className="shrink-0 text-xs font-normal text-[var(--text-tertiary)]">
               {t(sourceTypeLabelKey(source.type))}
             </span>
           </p>
-          <p className="truncate text-xs text-[var(--text-tertiary)]">{detailText || '—'}</p>
+          {isEmail ? (
+            <p className="mt-0.5 flex items-center gap-1.5">
+              <span className="truncate font-mono text-[13px] text-[var(--text-primary)]">
+                {source.detail.address}
+              </span>
+              <CopyButton value={source.detail.address} />
+            </p>
+          ) : (
+            <p className="truncate text-xs text-[var(--text-tertiary)]">{sourceDetailText(source) || '—'}</p>
+          )}
         </div>
         <SourceStatusBadge status={source.status} />
         {source.lastSyncAt && (
@@ -257,6 +316,12 @@ function SourceRow({
         </div>
       </div>
 
+      {isEmail && (
+        <p className="mt-2 text-xs text-[var(--text-tertiary)]">
+          {t('settings.sources.collectionEmailHint')}
+        </p>
+      )}
+
       {source.status === 'error' && source.lastError && (
         <p className="mt-2 flex items-start gap-1.5 text-xs text-[var(--status-error-text)]">
           <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -264,7 +329,7 @@ function SourceRow({
         </p>
       )}
 
-      {source.type !== 'imap' && (
+      {isDrive && (
         <div className="mt-2">
           {pickingFolder ? (
             <FolderPicker
@@ -297,192 +362,6 @@ function SourceRow({
         </p>
       )}
     </li>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-
-function ImapForm({
-  companyId,
-  onDone,
-  onCancel,
-}: {
-  companyId: string;
-  onDone: () => void;
-  onCancel: () => void;
-}) {
-  const { t } = useTranslation();
-  const [form, setForm] = useState({
-    name: '',
-    host: '',
-    port: '993',
-    secure: true,
-    user: '',
-    password: '',
-    folder: '',
-  });
-  const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  function buildInput(): ImapInput {
-    return {
-      name: form.name,
-      host: form.host,
-      port: Number(form.port) || 993,
-      secure: form.secure,
-      user: form.user,
-      password: form.password,
-      folder: form.folder || undefined,
-    };
-  }
-
-  async function handleTest() {
-    setTesting(true);
-    setTestResult(null);
-    try {
-      const result = await testImapSource(companyId, buildInput());
-      setTestResult(result);
-    } catch (err) {
-      setTestResult({ ok: false, error: err instanceof ApiError ? err.message : t('common.error') });
-    } finally {
-      setTesting(false);
-    }
-  }
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError(null);
-    try {
-      await createImapSource(companyId, buildInput());
-      onDone();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('common.error'));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <form
-      onSubmit={handleSubmit}
-      className={cn(
-        'space-y-4 rounded-[var(--radius-token-md)] border border-[var(--border-default)]',
-        'bg-[var(--surface-sunken)] p-4'
-      )}
-    >
-      <h3 className="text-xs font-semibold text-[var(--text-primary)]">
-        {t('settings.sources.imapFormTitle')}
-      </h3>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={t('settings.sources.imapName')} htmlFor="imap-name">
-          <Input
-            id="imap-name"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
-          />
-        </Field>
-        <Field label={t('settings.sources.imapHost')} htmlFor="imap-host">
-          <Input
-            id="imap-host"
-            value={form.host}
-            onChange={(e) => setForm({ ...form, host: e.target.value })}
-            placeholder="imap.example.com"
-            required
-          />
-        </Field>
-        <Field label={t('settings.sources.imapPort')} htmlFor="imap-port">
-          <Input
-            id="imap-port"
-            type="number"
-            min={1}
-            max={65535}
-            value={form.port}
-            onChange={(e) => setForm({ ...form, port: e.target.value })}
-            required
-          />
-        </Field>
-        <Field label={t('settings.sources.imapUser')} htmlFor="imap-user">
-          <Input
-            id="imap-user"
-            value={form.user}
-            onChange={(e) => setForm({ ...form, user: e.target.value })}
-            autoComplete="off"
-            required
-          />
-        </Field>
-        <Field label={t('settings.sources.imapPassword')} htmlFor="imap-password">
-          <Input
-            id="imap-password"
-            type="password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            autoComplete="new-password"
-            required
-          />
-        </Field>
-        <Field label={t('settings.sources.imapFolder')} htmlFor="imap-folder">
-          <Input
-            id="imap-folder"
-            value={form.folder}
-            onChange={(e) => setForm({ ...form, folder: e.target.value })}
-            placeholder="INBOX"
-          />
-        </Field>
-      </div>
-
-      <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-        <input
-          type="checkbox"
-          checked={form.secure}
-          onChange={(e) => setForm({ ...form, secure: e.target.checked })}
-          className="h-3.5 w-3.5 accent-[var(--brand-primary)]"
-        />
-        {t('settings.sources.imapSecure')}
-      </label>
-
-      {testResult && (
-        <p
-          role="status"
-          className={cn(
-            'flex items-center gap-1.5 text-xs',
-            testResult.ok ? 'text-[var(--status-success-text)]' : 'text-[var(--status-error-text)]'
-          )}
-        >
-          {testResult.ok ? (
-            <>
-              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-              {t('settings.sources.testOk')}
-            </>
-          ) : (
-            <>
-              <XCircle className="h-3.5 w-3.5" aria-hidden="true" />
-              {testResult.error || t('settings.sources.testFailed')}
-            </>
-          )}
-        </p>
-      )}
-      {error && (
-        <p role="alert" className="text-xs text-[var(--status-error-text)]">
-          {error}
-        </p>
-      )}
-
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit" size="sm" loading={saving} icon={<Plus />}>
-          {t('settings.sources.createSource')}
-        </Button>
-        <Button type="button" variant="secondary" size="sm" loading={testing} onClick={handleTest}>
-          {t('settings.abra.testConnection')}
-        </Button>
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          {t('common.cancel')}
-        </Button>
-      </div>
-    </form>
   );
 }
 

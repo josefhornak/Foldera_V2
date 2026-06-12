@@ -93,6 +93,10 @@ export interface DriveDetail {
   folderPath?: string | null;
 }
 
+export interface CollectionEmailDetail {
+  address: string;
+}
+
 interface SourceBase {
   id: string;
   name: string;
@@ -104,12 +108,19 @@ interface SourceBase {
 
 export type Source = SourceBase &
   (
+    | { type: 'collection_email'; detail: CollectionEmailDetail }
     | { type: 'imap'; detail: ImapDetail }
     | { type: 'onedrive' | 'google_drive'; detail: DriveDetail }
   );
 
+export interface SourceCapabilities {
+  /** Whether app-provisioned collection mailboxes are available in this env */
+  collectionEmail: boolean;
+}
+
 export interface SourcesResponse {
   sources: Source[];
+  capabilities: SourceCapabilities;
 }
 
 export interface Folder {

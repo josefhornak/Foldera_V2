@@ -15,6 +15,7 @@ import {
   SOURCE_STATUS,
   SOURCE_TYPE,
   sources,
+  type CollectionEmailSourceConfig,
   type DriveSourceConfig,
   type ImapSourceConfig,
   type Source,
@@ -22,7 +23,13 @@ import {
 import { requireAuth } from '../middleware/auth.js';
 import { requireCompany } from '../middleware/companyScope.js';
 import { enqueuePollSource } from '../queue/queues.js';
-import { listDriveFolders, testImapConnection } from '../services/sources/index.js';
+import {
+  deprovisionCollectionMailbox,
+  isCollectionEmailAvailable,
+  listDriveFolders,
+  provisionCollectionMailbox,
+  testImapConnection,
+} from '../services/sources/index.js';
 import { encryptSecret } from '../utils/crypto.js';
 import { AppError, ErrorCodes } from '../utils/errors.js';
 import { generateId } from '../utils/ids.js';
@@ -76,14 +83,16 @@ const folderQuerySchema = z.object({
 
 /** Public projection of a source — never includes encrypted secrets/tokens */
 function toPublicSource(source: Source) {
-  const detail =
-    source.type === SOURCE_TYPE.IMAP
-      ? (({ host, port, user, folder }: ImapSourceConfig) => ({ host, port, user, folder }))(
-          source.config as ImapSourceConfig
-        )
-      : (({ accountEmail, folderPath }: DriveSourceConfig) => ({ accountEmail, folderPath }))(
-          source.config as DriveSourceConfig
-        );
+  let detail: Record<string, unknown>;
+  if (source.type === SOURCE_TYPE.COLLECTION_EMAIL) {
+    detail = { address: (source.config as CollectionEmailSourceConfig).address };
+  } else if (source.type === SOURCE_TYPE.IMAP) {
+    const { host, port, user, folder } = source.config as ImapSourceConfig;
+    detail = { host, port, user, folder };
+  } else {
+    const { accountEmail, folderPath } = source.config as DriveSourceConfig;
+    detail = { accountEmail, folderPath };
+  }
 
   return {
     id: source.id,
@@ -118,7 +127,7 @@ async function loadSource(req: Request): Promise<Source> {
 // Routes
 // ---------------------------------------------------------------------------
 
-/** GET / — list sources of the company */
+/** GET / — list sources of the company (+ environment capabilities) */
 router.get('/', async (req, res, next) => {
   try {
     const rows = await db
@@ -126,7 +135,33 @@ router.get('/', async (req, res, next) => {
       .from(sources)
       .where(eq(sources.companyId, req.company!.id))
       .orderBy(asc(sources.createdAt));
-    res.json({ sources: rows.map(toPublicSource) });
+    const collectionEmail = await isCollectionEmailAvailable();
+    res.json({ sources: rows.map(toPublicSource), capabilities: { collectionEmail } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** POST /collection-email — provision an app-managed collection mailbox */
+router.post('/collection-email', async (req, res, next) => {
+  try {
+    const company = req.company!;
+    const config = await provisionCollectionMailbox(company.name);
+
+    const id = generateId('src');
+    await db.insert(sources).values({
+      id,
+      companyId: company.id,
+      type: SOURCE_TYPE.COLLECTION_EMAIL,
+      name: config.address,
+      enabled: true,
+      config,
+      cursor: {},
+      status: SOURCE_STATUS.OK,
+    });
+
+    const [row] = await db.select().from(sources).where(eq(sources.id, id)).limit(1);
+    res.status(201).json({ source: toPublicSource(row!) });
   } catch (err) {
     next(err);
   }
@@ -245,6 +280,10 @@ router.delete('/:sourceId', async (req, res, next) => {
     await db
       .delete(sources)
       .where(and(eq(sources.id, source.id), eq(sources.companyId, req.company!.id)));
+    // Best-effort teardown of the host mailbox after the row is gone.
+    if (source.type === SOURCE_TYPE.COLLECTION_EMAIL) {
+      await deprovisionCollectionMailbox(source.config as CollectionEmailSourceConfig);
+    }
     res.status(204).end();
   } catch (err) {
     next(err);

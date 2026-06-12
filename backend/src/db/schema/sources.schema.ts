@@ -3,6 +3,8 @@ import { boolean, index, jsonb, pgTable, text, timestamp } from 'drizzle-orm/pg-
 import { companies } from './companies.schema.js';
 
 export const SOURCE_TYPE = {
+  /** App-provisioned collection mailbox (Postfix virtual mailbox + maildir) */
+  COLLECTION_EMAIL: 'collection_email',
   IMAP: 'imap',
   ONEDRIVE: 'onedrive',
   GOOGLE_DRIVE: 'google_drive',
@@ -17,6 +19,20 @@ export const SOURCE_STATUS = {
 } as const;
 
 export type SourceStatus = (typeof SOURCE_STATUS)[keyof typeof SOURCE_STATUS];
+
+/**
+ * Collection-email config stored in `config` JSONB. The address is provisioned
+ * by the app on the host Postfix; mail is read from the local maildir, so no
+ * credentials are stored.
+ */
+export interface CollectionEmailSourceConfig {
+  /** Full address, e.g. acme-sro@inbox.foldera.cz */
+  address: string;
+  /** Local part, e.g. acme-sro */
+  localPart: string;
+  /** Mail domain, e.g. inbox.foldera.cz */
+  domain: string;
+}
 
 /** IMAP config stored in `config` JSONB. Password is AES-256-GCM encrypted. */
 export interface ImapSourceConfig {
@@ -38,7 +54,7 @@ export interface DriveSourceConfig {
   folderPath: string;
 }
 
-export type SourceConfig = ImapSourceConfig | DriveSourceConfig;
+export type SourceConfig = CollectionEmailSourceConfig | ImapSourceConfig | DriveSourceConfig;
 
 /** Poll cursor stored in `cursor` JSONB — provider-specific. */
 export interface SourceCursor {

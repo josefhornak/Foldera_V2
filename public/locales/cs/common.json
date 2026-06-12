@@ -12,7 +12,8 @@
     "loading": "Načítání…",
     "error": "Něco se pokazilo. Zkuste to prosím znovu.",
     "retry": "Zkusit znovu",
-    "empty": "Zatím tu nic není"
+    "empty": "Zatím tu nic není",
+    "copy": "Kopírovat"
   },
   "errors": {
     "generic": "Něco se pokazilo",
@@ -141,11 +142,14 @@
     "sources": {
       "title": "Zdroje dokumentů",
       "hint": "Nakonfigurované zdroje se automaticky kontrolují každých 5 minut. Nové dokumenty se vytěží a rovnou odešlou do ABRA Flexi.",
-      "empty": "Zatím žádné zdroje. Přidejte sběrný e-mail nebo připojte cloudové úložiště.",
+      "empty": "Zatím žádné zdroje. Vytvořte sběrný e-mail nebo připojte cloudové úložiště.",
+      "createCollectionEmail": "Vytvořit sběrný e-mail",
+      "collectionEmailHint": "Přeposílejte faktury na tuto adresu — schránka se kontroluje každých 5 minut, přílohy se automaticky vytěží a odešlou do ABRA Flexi.",
       "addImap": "Přidat sběrný e-mail (IMAP)",
       "connectOneDrive": "Připojit OneDrive",
       "connectGoogleDrive": "Připojit Google Drive",
       "connectedBanner": "Úložiště připojeno. Vyberte složku, kterou má aplikace sledovat.",
+      "typeCollectionEmail": "Sběrný e-mail",
       "typeImap": "IMAP",
       "typeOneDrive": "OneDrive",
       "typeGoogleDrive": "Google Drive",
