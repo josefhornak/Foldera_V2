@@ -15,7 +15,12 @@
 import env from '../../config/env.js';
 import { logger } from '../../utils/logger.js';
 import { toError } from '../../utils/errors.js';
-import type { AbraExportResult, AbraFlexiConfig, ExtractedInvoice } from '../../types/contracts.js';
+import type {
+  AbraExportResult,
+  AbraFlexiConfig,
+  AbraSupplierDefaults,
+  ExtractedInvoice,
+} from '../../types/contracts.js';
 import { abraRequest, abraRejectionError, parseWriteResponse, abraGetList } from './client.js';
 import { normalizeBaseUrl, formatNumber, isoDateOrNull, roundCurrency } from './helpers.js';
 import { classifyVatBreakdown, STANDARD_VAT_RATE, REDUCED_VAT_RATE } from './payload.js';
@@ -68,11 +73,15 @@ function buildPokladnaWebUrl(cfg: AbraFlexiConfig, id: string): string {
  * Export a receipt as a cash-register movement (pokladni-pohyb).
  *
  * @param supplierCode adresar `kod` to reference as `firma` (optional)
+ * @param defaults     accounting classification (history- or AI-derived); the
+ *                     řádek DPH / předkontace / řádek KH / středisko are applied
+ *                     the same way as on invoices.
  */
 export async function exportReceiptToPokladna(
   cfg: AbraFlexiConfig,
   invoice: ExtractedInvoice,
   supplierCode: string | null,
+  defaults: AbraSupplierDefaults,
 ): Promise<AbraExportResult> {
   const typDokl = await resolveCashMovementType(cfg);
   const currency = invoice.currency?.trim().toUpperCase() || 'CZK';
@@ -91,6 +100,12 @@ export async function exportReceiptToPokladna(
   const issueDate = isoDateOrNull(invoice.issueDate);
   if (issueDate) pohyb.datVyst = issueDate;
   if (invoice.description) pohyb.popis = invoice.description;
+
+  // Accounting classification (history precedence; AI fills gaps upstream).
+  if (defaults.cleneniDph) pohyb.clenDph = `code:${defaults.cleneniDph}`;
+  if (defaults.predpisZauctovani) pohyb.typUcOp = `code:${defaults.predpisZauctovani}`;
+  if (defaults.cleneniKonVykDph) pohyb.clenKonVykDph = `code:${defaults.cleneniKonVykDph}`;
+  if (defaults.stredisko) pohyb.stredisko = `code:${defaults.stredisko}`;
 
   // VAT recap in the header (recomputed base × rate to match ABRA's arithmetic).
   const hasBuckets = vat.baseStandard !== 0 || vat.baseReduced !== 0 || vat.baseZero !== 0;

@@ -152,7 +152,7 @@ async function runAbraExport(
   // hardcoded codes, and a suggestion never breaks the export (see below).
   const historyDefaults = defaults;
   const aiFilled: string[] = [];
-  if (company.accountingFillMode === 'ai' && !isReceipt) {
+  if (company.accountingFillMode === 'ai') {
     const merged = { ...defaults };
     const [clenDph, typUcOp, clenKonVyk] = await Promise.all([
       defaults.cleneniDph == null ? suggestClenDph(cfg, invoice).catch(() => null) : null,
@@ -165,29 +165,32 @@ async function runAbraExport(
     defaults = merged;
   }
 
+  // Export the document (invoice → faktura-prijata, receipt → pokladni-pohyb)
+  // with the given accounting defaults.
+  const doExport = (d: AbraSupplierDefaults): Promise<AbraExportResult> =>
+    isReceipt
+      ? exportReceiptToPokladna(cfg, invoice, supplierCode, d)
+      : exportPurchaseInvoice(cfg, invoice, d);
+
   let result: AbraExportResult;
-  if (isReceipt) {
-    result = await exportReceiptToPokladna(cfg, invoice, supplierCode);
-  } else {
-    try {
-      result = await exportPurchaseInvoice(cfg, invoice, defaults);
-      if (aiFilled.length > 0) {
-        notes.push(`Zaúčtování navrhla AI (${aiFilled.join(', ')}) — zkontrolujte ho v ABRA Flexi.`);
-      }
-    } catch (error) {
-      // An AI-suggested code must never break an otherwise valid export — if ABRA
-      // rejects the payload, retry once with history-only defaults and tell the user.
-      if (aiFilled.length === 0) throw error;
-      logger.warn(
-        { companyId: company.id, aiFilled, error: toError(error).message },
-        '[Pipeline] AI-suggested accounting rejected — retrying without it'
-      );
-      result = await exportPurchaseInvoice(cfg, invoice, historyDefaults);
-      notes.push(
-        `Zaúčtování navržené AI (${aiFilled.join(', ')}) ABRA odmítla — doklad byl vytvořen bez něj, ` +
-          `doplňte ho prosím ručně.`
-      );
+  try {
+    result = await doExport(defaults);
+    if (aiFilled.length > 0) {
+      notes.push(`Zaúčtování navrhla AI (${aiFilled.join(', ')}) — zkontrolujte ho v ABRA Flexi.`);
     }
+  } catch (error) {
+    // An AI-suggested code must never break an otherwise valid export — if ABRA
+    // rejects the payload, retry once with history-only defaults and tell the user.
+    if (aiFilled.length === 0) throw error;
+    logger.warn(
+      { companyId: company.id, aiFilled, error: toError(error).message },
+      '[Pipeline] AI-suggested accounting rejected — retrying without it'
+    );
+    result = await doExport(historyDefaults);
+    notes.push(
+      `Zaúčtování navržené AI (${aiFilled.join(', ')}) ABRA odmítla — doklad byl vytvořen bez něj, ` +
+        `doplňte ho prosím ručně.`
+    );
   }
 
   // smerKod is dropped from the invoice payload when the bank code is not a real
