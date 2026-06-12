@@ -52,9 +52,12 @@ export interface DocumentRow {
   createdAt: string;
 }
 
-/** Detail endpoint additionally returns the extracted fields object. */
+export type DocumentKind = 'invoice' | 'receipt' | 'credit_note' | 'other';
+
+/** Detail endpoint additionally returns the full extracted object. */
 export interface DocumentDetail extends DocumentRow {
   extractedFields?: Record<string, string | number | null> | null;
+  extracted?: ({ documentType?: DocumentKind } & Record<string, unknown>) | null;
 }
 
 export interface DocumentsResponse {

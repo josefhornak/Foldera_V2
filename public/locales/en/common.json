@@ -109,7 +109,16 @@
       "processing": "Pending",
       "failed": "Error"
     },
-    "delete": "Delete document"
+    "delete": "Delete document",
+    "docKind": "Document type",
+    "documentNumber": "Document number",
+    "pokladnaCode": "Cash document",
+    "kind": {
+      "invoice": "Invoice",
+      "receipt": "Receipt",
+      "credit_note": "Credit note",
+      "other": "Other"
+    }
   },
   "status": {
     "processing": "Processing",

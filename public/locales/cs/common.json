@@ -109,7 +109,16 @@
       "processing": "Čeká",
       "failed": "Chyba"
     },
-    "delete": "Smazat doklad"
+    "delete": "Smazat doklad",
+    "docKind": "Typ dokladu",
+    "documentNumber": "Číslo dokladu",
+    "pokladnaCode": "Doklad v pokladně",
+    "kind": {
+      "invoice": "Faktura",
+      "receipt": "Účtenka",
+      "credit_note": "Dobropis",
+      "other": "Jiný doklad"
+    }
   },
   "status": {
     "processing": "Zpracovává se",

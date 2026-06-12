@@ -54,6 +54,8 @@ export function DocumentDetailPanel({ companyId, docId, onClose, onRetried, onDe
   }
 
   const extractedEntries = Object.entries(doc?.extractedFields ?? {});
+  const docKind = doc?.extracted?.documentType ?? 'invoice';
+  const isReceipt = docKind === 'receipt';
 
   return (
     <>
@@ -137,17 +139,28 @@ export function DocumentDetailPanel({ companyId, docId, onClose, onRetried, onDe
                   })()}
 
                 <dl className="space-y-2">
+                  <DetailRow label={t('documents.docKind')} value={t(`documents.kind.${docKind}`)} />
                   <DetailRow label={t('documents.supplier')} value={doc.supplierName} />
                   <DetailRow label={t('documents.supplierIco')} value={doc.supplierIco} />
-                  <DetailRow label={t('documents.invoiceNumber')} value={doc.invoiceNumber} />
-                  <DetailRow label={t('documents.variableSymbol')} value={doc.variableSymbol} />
+                  <DetailRow
+                    label={isReceipt ? t('documents.documentNumber') : t('documents.invoiceNumber')}
+                    value={doc.invoiceNumber}
+                  />
+                  {!isReceipt && (
+                    <DetailRow label={t('documents.variableSymbol')} value={doc.variableSymbol} />
+                  )}
                   <DetailRow label={t('documents.issueDate')} value={formatDate(doc.issueDate)} />
-                  <DetailRow label={t('documents.dueDate')} value={formatDate(doc.dueDate)} />
+                  {!isReceipt && (
+                    <DetailRow label={t('documents.dueDate')} value={formatDate(doc.dueDate)} />
+                  )}
                   <DetailRow
                     label={t('documents.amount')}
                     value={formatCurrency(doc.totalAmount, doc.currency)}
                   />
-                  <DetailRow label={t('documents.abraCode')} value={doc.abraCode} />
+                  <DetailRow
+                    label={isReceipt ? t('documents.pokladnaCode') : t('documents.abraCode')}
+                    value={doc.abraCode}
+                  />
                   <DetailRow label={t('documents.processedAt')} value={formatDateTime(doc.processedAt)} />
                   <DetailRow label={t('documents.createdAt')} value={formatDateTime(doc.createdAt)} />
                   <DetailRow label={t('documents.rawStatus')} value={t(`status.${doc.status}`)} />
