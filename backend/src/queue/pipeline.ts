@@ -239,7 +239,10 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
       extracted: invoice,
     };
 
-    if (!invoice.isInvoice) {
+    // Received invoices and credit notes (dobropisy) are exportable; everything
+    // else (receipts, orders, …) is skipped.
+    const exportable = invoice.isInvoice || invoice.documentType === 'credit_note';
+    if (!exportable) {
       await db
         .update(documents)
         .set({ ...baseFields, status: DOCUMENT_STATUS.SKIPPED_NOT_INVOICE, processedAt: new Date() })

@@ -87,9 +87,27 @@ function setCodeField(
   }
 }
 
-/** Build line items from extracted invoice items. VAT amounts omitted — ABRA computes them. */
-function buildLineItemsFromExtraction(invoice: ExtractedInvoice): AbraFlexiLineItem[] {
+/**
+ * Build line items from extracted invoice items. VAT amounts omitted — ABRA
+ * computes them. Credit notes (dobropisy) carry the sign on the quantity
+ * (mnozMj < 0) with a positive unit price — ABRA requires "záporné množství".
+ */
+function buildLineItemsFromExtraction(
+  invoice: ExtractedInvoice,
+  isCreditNote: boolean,
+): AbraFlexiLineItem[] {
   return invoice.lineItems.map((item) => {
+    if (isCreditNote) {
+      const rawQty = item.quantity && item.quantity !== 0 ? item.quantity : 1;
+      let unitPrice = item.unitPrice;
+      if (unitPrice === null && item.total !== null) unitPrice = item.total / rawQty;
+      return {
+        nazev: item.description || 'Položka',
+        mnozMj: -Math.abs(rawQty),
+        cenaMj: formatNumber(unitPrice === null ? 0 : Math.abs(roundCurrency(unitPrice))),
+        szbDph: item.vatRate ?? 0,
+      };
+    }
     const quantity = item.quantity && item.quantity > 0 ? item.quantity : 1;
     let unitPrice = item.unitPrice;
     if (unitPrice === null && item.total !== null) {
@@ -110,11 +128,22 @@ function buildLineItemsFromExtraction(invoice: ExtractedInvoice): AbraFlexiLineI
  * VAT is recomputed as base × rate so it matches ABRA's own arithmetic
  * (the OCR-extracted vat value risks a "differs from calculated" 400).
  */
-function buildRecapLineItems(invoice: ExtractedInvoice): AbraFlexiLineItem[] {
+function buildRecapLineItems(invoice: ExtractedInvoice, isCreditNote: boolean): AbraFlexiLineItem[] {
   const items: AbraFlexiLineItem[] = [];
 
   for (const bucket of invoice.vatBreakdown) {
     if (bucket.base === 0 && bucket.vat === 0) continue;
+
+    if (isCreditNote) {
+      // Credit note: negative quantity, positive base, let ABRA compute the VAT.
+      items.push({
+        nazev: `Dobropis - sazba DPH ${bucket.rate} %`,
+        mnozMj: -1,
+        cenaMj: formatNumber(Math.abs(bucket.base)),
+        szbDph: bucket.rate,
+      });
+      continue;
+    }
 
     if (invoice.reverseCharge) {
       // PDP: the document carries no VAT — recipient self-assesses
@@ -227,10 +256,14 @@ export function buildInvoicePayload(
   const isForeign = currency !== 'CZK';
   const vat = classifyVatBreakdown(invoice.vatBreakdown);
   const hasRealItems = invoice.lineItems.length > 0;
+  // Credit notes (dobropisy) carry the sign on the line-item quantity, so the
+  // header sums (which can't be negated cleanly) are never sent — ABRA derives
+  // them from the negative-quantity items.
+  const isCreditNote = invoice.documentType === 'credit_note';
 
   if (invoice.reverseCharge && isForeign) {
     faktura.mena = `code:${currency}`;
-    if (!hasRealItems) setForeignAmounts(faktura, invoice, vat, currency);
+    if (!hasRealItems && !isCreditNote) setForeignAmounts(faktura, invoice, vat, currency);
     faktura.typObchodu = 'TUZEMSKO';
   } else if (invoice.reverseCharge) {
     setDomesticAmounts(faktura, vat, false);
@@ -244,14 +277,14 @@ export function buildInvoicePayload(
     // foreign-currency (*Men) sums from them, so only send header sums in the
     // no-items recap path. `mena` must always be set.
     faktura.mena = `code:${currency}`;
-    if (!hasRealItems) setForeignAmounts(faktura, invoice, vat, currency);
+    if (!hasRealItems && !isCreditNote) setForeignAmounts(faktura, invoice, vat, currency);
   } else {
     // With real line items ABRA derives every base/VAT sum from them. Sending
     // header sums computed from the OCR vatBreakdown — which can disagree with
     // the items (e.g. items at 21 % but the breakdown says 12 %) — triggers
     // "Zadaná hodnota … se liší od vypočtené". Only send header sums in the
     // no-items recap path, where they match the generated recap lines.
-    if (!hasRealItems) setDomesticAmounts(faktura, vat, true);
+    if (!hasRealItems && !isCreditNote) setDomesticAmounts(faktura, vat, true);
     faktura.typObchodu = 'TUZEMSKO';
   }
 
@@ -262,8 +295,8 @@ export function buildInvoicePayload(
 
   // --- Line items (real items, or one recap item per VAT bucket) ---
   const items = hasRealItems
-    ? buildLineItemsFromExtraction(invoice)
-    : buildRecapLineItems(invoice);
+    ? buildLineItemsFromExtraction(invoice, isCreditNote)
+    : buildRecapLineItems(invoice, isCreditNote);
   if (items.length > 0) {
     faktura.polozkyFaktury = items;
     faktura.bezPolozek = 'false';

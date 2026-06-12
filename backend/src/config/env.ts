@@ -27,6 +27,11 @@ const envSchema = z.object({
   // company uses a different code.
   ABRA_DEFAULT_TYP_FAKTURY_PRIJATE: z.string().default('FAKTURA'),
 
+  // Document type (typDokl) for received credit notes (dobropisy / opravné daňové
+  // doklady). Must be a credit-note type with a number series — `ODD` ("Opravný
+  // daňový doklad") is the standard one; override per deployment if needed.
+  ABRA_DEFAULT_TYP_DOBROPIS: z.string().default('ODD'),
+
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   MICROSOFT_CLIENT_ID: z.string().optional(),

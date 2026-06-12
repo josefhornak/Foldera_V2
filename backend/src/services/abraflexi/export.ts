@@ -67,7 +67,8 @@ export async function exportPurchaseInvoice(
   invoice: ExtractedInvoice,
   defaults: AbraSupplierDefaults,
 ): Promise<AbraExportResult> {
-  if (!invoice.isInvoice) {
+  const isCreditNote = invoice.documentType === 'credit_note';
+  if (!invoice.isInvoice && !isCreditNote) {
     throw new AppError(ErrorCodes.BAD_REQUEST, 'Dokument není faktura — export do ABRA Flexi přeskočen', 400);
   }
 
@@ -108,14 +109,16 @@ export async function exportPurchaseInvoice(
   // Without a typDokl ABRA cannot assign an internal number. When the supplier
   // has no history to harvest a type from, fall back to the configured default
   // received-invoice type so the export still gets a number series.
-  const effectiveDefaults: AbraSupplierDefaults =
-    defaults.documentType != null
-      ? defaults
-      : { ...defaults, documentType: env.ABRA_DEFAULT_TYP_FAKTURY_PRIJATE };
-  if (defaults.documentType == null) {
+  // Credit notes always go to the dobropis document type; regular invoices use
+  // the supplier-history type, falling back to the configured default.
+  const documentType = isCreditNote
+    ? env.ABRA_DEFAULT_TYP_DOBROPIS
+    : (defaults.documentType ?? env.ABRA_DEFAULT_TYP_FAKTURY_PRIJATE);
+  const effectiveDefaults: AbraSupplierDefaults = { ...defaults, documentType };
+  if (isCreditNote || defaults.documentType == null) {
     logger.info(
-      { companyId: cfg.companyId, defaultTyp: env.ABRA_DEFAULT_TYP_FAKTURY_PRIJATE },
-      '[AbraFlexi] No supplier-history document type — using default typDokl',
+      { companyId: cfg.companyId, defaultTyp: documentType, isCreditNote },
+      '[AbraFlexi] Resolved document type (typDokl)',
     );
   }
   const payload = buildInvoicePayload(invoice, effectiveDefaults, supplierCode);
