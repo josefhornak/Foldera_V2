@@ -256,34 +256,38 @@ function SourceRow({
         'bg-[var(--surface-default)] px-4 py-3'
       )}
     >
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="text-[var(--text-tertiary)]" aria-hidden="true">
-          {isEmail || source.type === 'imap' ? <Mail className="h-4 w-4" /> : <Cloud className="h-4 w-4" />}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-2 text-[13px] font-medium text-[var(--text-primary)]">
-            <span className="shrink-0 text-xs font-normal text-[var(--text-tertiary)]">
-              {t(sourceTypeLabelKey(source.type))}
-            </span>
-          </p>
-          {isEmail ? (
-            <p className="mt-0.5 flex items-center gap-1.5">
-              <span className="truncate font-mono text-[13px] text-[var(--text-primary)]">
-                {source.detail.address}
-              </span>
-              <CopyButton value={source.detail.address} />
-            </p>
-          ) : (
-            <p className="truncate text-xs text-[var(--text-tertiary)]">{sourceDetailText(source) || '—'}</p>
-          )}
-        </div>
-        <SourceStatusBadge status={source.status} />
-        {source.lastSyncAt && (
-          <span className="hidden text-xs text-[var(--text-tertiary)] sm:block">
-            {t('settings.sources.lastSync', { time: formatRelative(source.lastSyncAt) })}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <span className="mt-0.5 shrink-0 text-[var(--text-tertiary)]" aria-hidden="true">
+            {isEmail || source.type === 'imap' ? <Mail className="h-4 w-4" /> : <Cloud className="h-4 w-4" />}
           </span>
-        )}
-        <div className="flex items-center gap-1.5">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[13px] font-semibold text-[var(--text-primary)]">
+                {t(sourceTypeLabelKey(source.type))}
+              </span>
+              <SourceStatusBadge status={source.status} />
+              {source.lastSyncAt && (
+                <span className="text-xs text-[var(--text-tertiary)]">
+                  {t('settings.sources.lastSync', { time: formatRelative(source.lastSyncAt) })}
+                </span>
+              )}
+            </div>
+            {isEmail ? (
+              <div className="mt-1 flex items-center gap-1.5">
+                <span className="min-w-0 break-all font-mono text-[13px] text-[var(--text-primary)]">
+                  {source.detail.address}
+                </span>
+                <CopyButton value={source.detail.address} />
+              </div>
+            ) : (
+              <p className="mt-0.5 truncate text-xs text-[var(--text-tertiary)]">
+                {sourceDetailText(source) || '—'}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5 self-end sm:self-start">
           <Switch
             checked={source.enabled}
             disabled={busy}
