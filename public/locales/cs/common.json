@@ -88,7 +88,16 @@
     "processedAt": "Zpracováno",
     "abraCode": "Doklad v Abře",
     "errorMessage": "Chyba",
-    "rawStatus": "Stav zpracování"
+    "rawStatus": "Stav zpracování",
+    "upload": {
+      "dropHint": "Přetáhněte sem faktury nebo klikněte pro výběr",
+      "formats": "PDF, obrázky, ISDOC nebo XML · max. 25 MB na soubor",
+      "uploading": "Nahrávám…",
+      "resultsTitle": "Výsledky nahrání",
+      "queued": "zařazeno ke zpracování",
+      "duplicate": "již zpracováno (duplicita)",
+      "unsupported": "nepodporovaný soubor"
+    }
   },
   "status": {
     "processing": "Zpracovává se",
@@ -106,7 +115,7 @@
   "pagination": {
     "previous": "Předchozí",
     "next": "Další",
-    "pageOf": "Strana {{page}} z {{total}}"
+    "pageOf": "Strana {{page}} z {{totalPages}}"
   },
   "settings": {
     "title": "Nastavení",

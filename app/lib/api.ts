@@ -71,6 +71,40 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   return data as T;
 }
 
+/**
+ * Multipart upload — same auth and error handling as `api()`, but sends
+ * FormData and lets the browser set the Content-Type boundary.
+ */
+export async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
+  const token = useAuthStore.getState().token;
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(path, { method: 'POST', headers, body: formData });
+
+  let data: unknown;
+  const text = await res.text();
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = undefined;
+    }
+  }
+
+  if (res.status === 401) {
+    useAuthStore.getState().logout();
+    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+      window.location.assign('/login');
+    }
+    throw new ApiError(extractErrorMessage(data, 401), 401, data);
+  }
+  if (!res.ok) {
+    throw new ApiError(extractErrorMessage(data, res.status), res.status, data);
+  }
+  return data as T;
+}
+
 /** Default SWR fetcher — cache keys are API endpoint paths. */
 export function swrFetcher<T>(path: string): Promise<T> {
   return api<T>(path);

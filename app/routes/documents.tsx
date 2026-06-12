@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronLeft, ChevronRight, ExternalLink, RefreshCw, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { DocumentDetailPanel } from '~/components/documents/DocumentDetailPanel';
+import { UploadDropzone } from '~/components/documents/UploadDropzone';
 import { ConfidenceBadge, DocumentStatusBadge } from '~/components/ui/Badge';
 import { Button } from '~/components/ui/Button';
 import { Card } from '~/components/ui/Card';
@@ -52,6 +53,8 @@ export default function DocumentsPage() {
         <h1 className="text-lg font-semibold text-[var(--text-primary)]">{t('documents.title')}</h1>
         <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">{t('documents.subtitle')}</p>
       </header>
+
+      {companyId && <UploadDropzone companyId={companyId} onUploaded={() => mutate()} />}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1 sm:max-w-xs">

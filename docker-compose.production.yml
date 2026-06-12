@@ -12,6 +12,9 @@ services:
       - valkey
     ports:
       - '127.0.0.1:3000:3000'
+    volumes:
+      # Manual uploads land here on the API and are processed by the worker
+      - tmpfiles:/tmp/foldera-v2
 
   worker:
     build: .
@@ -25,6 +28,8 @@ services:
     depends_on:
       - postgres
       - valkey
+    volumes:
+      - tmpfiles:/tmp/foldera-v2
 
   postgres:
     image: postgres:18
@@ -45,3 +50,4 @@ services:
 volumes:
   pgdata:
   valkeydata:
+  tmpfiles:

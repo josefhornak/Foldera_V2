@@ -88,7 +88,16 @@
     "processedAt": "Processed",
     "abraCode": "Document in Abra",
     "errorMessage": "Error",
-    "rawStatus": "Processing status"
+    "rawStatus": "Processing status",
+    "upload": {
+      "dropHint": "Drag invoices here or click to browse",
+      "formats": "PDF, images, ISDOC or XML · max 25 MB per file",
+      "uploading": "Uploading…",
+      "resultsTitle": "Upload results",
+      "queued": "queued for processing",
+      "duplicate": "already processed (duplicate)",
+      "unsupported": "unsupported file"
+    }
   },
   "status": {
     "processing": "Processing",
@@ -106,7 +115,7 @@
   "pagination": {
     "previous": "Previous",
     "next": "Next",
-    "pageOf": "Page {{page}} of {{total}}"
+    "pageOf": "Page {{page}} of {{totalPages}}"
   },
   "settings": {
     "title": "Settings",

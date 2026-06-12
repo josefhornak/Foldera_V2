@@ -1,17 +1,103 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+
 import { and, count, desc, eq, gte, ilike, or, sql } from 'drizzle-orm';
 import { Router } from 'express';
+import multer from 'multer';
+import { nanoid } from 'nanoid';
 import { z } from 'zod';
 
 import { db } from '../db/client.js';
 import { documents, DOCUMENT_STATUS, type DocumentStatus } from '../db/schema/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireCompany } from '../middleware/companyScope.js';
-import { enqueueExportRetry } from '../queue/queues.js';
+import { enqueueExportRetry, enqueueProcessDocument } from '../queue/queues.js';
+import {
+  resolveMimeType,
+  validateMagicNumber,
+} from '../services/sources/attachmentFilter.js';
+import { sha256Hex } from '../utils/crypto.js';
 import { AppError, ErrorCodes } from '../utils/errors.js';
 import { escapeLikePattern } from '../utils/sqlUtils.js';
+import { ensureTmpDir } from '../utils/tmpDir.js';
 
 const router = Router({ mergeParams: true });
 router.use(requireAuth, requireCompany);
+
+const MAX_UPLOAD_SIZE = 25 * 1024 * 1024;
+const MAX_UPLOAD_FILES = 10;
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_UPLOAD_SIZE, files: MAX_UPLOAD_FILES },
+});
+
+interface UploadResult {
+  fileName: string;
+  status: 'queued' | 'duplicate' | 'unsupported';
+  documentId?: string;
+}
+
+/**
+ * Manual upload (drag & drop in the UI). Files go through the exact same
+ * pipeline as documents from polled sources: written to the shared temp dir,
+ * queued for processing, deleted afterwards — never stored by the app.
+ */
+router.post('/upload', upload.array('files', MAX_UPLOAD_FILES), async (req, res, next) => {
+  try {
+    const files = (req.files ?? []) as Express.Multer.File[];
+    if (files.length === 0) {
+      throw new AppError(ErrorCodes.BAD_REQUEST, 'No files uploaded', 400);
+    }
+
+    const tmpDir = await ensureTmpDir();
+    const companyId = req.company!.id;
+    const results: UploadResult[] = [];
+
+    for (const file of files) {
+      // Multer decodes latin1 — recover UTF-8 filenames (diacritics)
+      const fileName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+
+      const mimeType = resolveMimeType(file.mimetype, fileName);
+      if (!mimeType || !validateMagicNumber(file.buffer, mimeType)) {
+        results.push({ fileName, status: 'unsupported' });
+        continue;
+      }
+
+      const contentHash = sha256Hex(file.buffer);
+      const [existing] = await db
+        .select({ id: documents.id })
+        .from(documents)
+        .where(and(eq(documents.companyId, companyId), eq(documents.contentHash, contentHash)))
+        .limit(1);
+      if (existing) {
+        results.push({ fileName, status: 'duplicate', documentId: existing.id });
+        continue;
+      }
+
+      const ext = path.extname(fileName);
+      const filePath = path.join(tmpDir, `upload-${nanoid(16)}${ext}`);
+      await fs.writeFile(filePath, file.buffer);
+
+      await enqueueProcessDocument({
+        companyId,
+        sourceId: null,
+        file: {
+          externalRef: `upload:${contentHash}`,
+          fileName,
+          mimeType,
+          filePath,
+          receivedAt: new Date().toISOString(),
+        },
+      });
+      results.push({ fileName, status: 'queued' });
+    }
+
+    res.status(202).json({ results });
+  } catch (err) {
+    next(err);
+  }
+});
 
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),

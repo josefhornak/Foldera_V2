@@ -15,7 +15,8 @@ export interface PollSourcesJobData {
 
 export interface ProcessDocumentJobData {
   companyId: string;
-  sourceId: string;
+  /** Null for manual uploads — the file did not come from a polled source */
+  sourceId: string | null;
   file: {
     externalRef: string;
     fileName: string;

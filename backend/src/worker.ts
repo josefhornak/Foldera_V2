@@ -7,9 +7,6 @@
  * - process-document: full pipeline (extract → ABRA Flexi → cleanup).
  * - export-retry: re-export from stored extraction after an ABRA failure.
  */
-import fs from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
 
 import { Worker } from 'bullmq';
 import { and, eq } from 'drizzle-orm';
@@ -30,8 +27,8 @@ import {
 } from './queue/queues.js';
 import { toError } from './utils/errors.js';
 import { logger } from './utils/logger.js';
+import { ensureTmpDir, TMP_DIR } from './utils/tmpDir.js';
 
-const TMP_DIR = path.join(os.tmpdir(), 'foldera-v2');
 
 async function pollOneSource(sourceId: string): Promise<void> {
   const [source] = await db.select().from(sources).where(eq(sources.id, sourceId)).limit(1);
@@ -91,7 +88,7 @@ async function pollAllSources(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  await fs.mkdir(TMP_DIR, { recursive: true });
+  await ensureTmpDir();
 
   const pollWorker = new Worker<PollSourcesJobData>(
     QUEUE_NAMES.POLL_SOURCES,
