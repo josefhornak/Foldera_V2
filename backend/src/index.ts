@@ -24,6 +24,10 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        // The React Router 7 SPA build emits inline bootstrap scripts
+        // (window.__reactRouterContext, hydration stream) whose content changes
+        // every build, so a static hash isn't viable for statically-served HTML.
+        'script-src': ["'self'", "'unsafe-inline'"],
         // The SPA loads Plus Jakarta Sans from Google Fonts
         'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         'font-src': ["'self'", 'https://fonts.gstatic.com'],

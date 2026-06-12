@@ -1,6 +1,7 @@
 services:
   api:
     build: .
+    container_name: foldera-v2-api
     restart: unless-stopped
     env_file: backend/.env
     environment:
@@ -18,6 +19,7 @@ services:
 
   worker:
     build: .
+    container_name: foldera-v2-worker
     restart: unless-stopped
     command: ['node', 'dist/worker.js']
     env_file: backend/.env
@@ -33,16 +35,20 @@ services:
 
   postgres:
     image: postgres:18
+    container_name: foldera-v2-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: foldera
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
       POSTGRES_DB: foldera_v2
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # postgres:18 stores data under /var/lib/postgresql/<major>/docker — mount
+      # the parent dir (not /data, which is the pre-18 convention)
+      - pgdata:/var/lib/postgresql
 
   valkey:
     image: valkey/valkey:8
+    container_name: foldera-v2-valkey
     restart: unless-stopped
     volumes:
       - valkeydata:/data
@@ -51,3 +57,7 @@ volumes:
   pgdata:
   valkeydata:
   tmpfiles:
+
+networks:
+  default:
+    name: foldera-v2-net
