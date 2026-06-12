@@ -1,10 +1,12 @@
 /**
  * Attachment upload for received invoices.
  *
- * ABRA Flexi accepts attachments as a raw-body POST to
- *   {base}/faktura-prijata/{id}/prilohy?name={fileName}
- * with the file's Content-Type header. The filename must be URL-encoded
- * (Czech diacritics in OCR'd filenames would otherwise break the request).
+ * ABRA Flexi accepts a binary attachment as a raw-body **PUT** to
+ *   {base}/faktura-prijata/{id}/prilohy/new/{fileName}
+ * with the file's Content-Type header. The filename goes in the PATH (not a
+ * query param) and must be URL-encoded (Czech diacritics in OCR'd filenames
+ * would otherwise break the request). POST or the `?name=` query form are
+ * rejected (405 / a misleading "Import ISDOC funguje pouze v evidencich…" 400).
  *
  * https://podpora.flexibee.eu/cs/articles/4722200-prilohy
  */
@@ -44,7 +46,7 @@ export async function uploadInvoiceAttachment(
   }
 
   const safeName = encodeURIComponent(fileName || 'document.pdf');
-  const path = `/${ENTITY_FAKTURA_PRIJATA}/${encodeURIComponent(abraInvoiceId)}/prilohy?name=${safeName}`;
+  const path = `/${ENTITY_FAKTURA_PRIJATA}/${encodeURIComponent(abraInvoiceId)}/prilohy/new/${safeName}`;
 
   logger.info(
     { companyId: cfg.companyId, abraInvoiceId, fileName, mimeType, sizeBytes: content.length },
@@ -53,7 +55,7 @@ export async function uploadInvoiceAttachment(
 
   const res = await abraRequest(cfg, {
     path,
-    method: 'POST',
+    method: 'PUT',
     body: new Uint8Array(content),
     contentType: mimeType || 'application/octet-stream',
     timeoutMs: ATTACHMENT_TIMEOUT_MS,
