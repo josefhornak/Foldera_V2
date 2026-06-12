@@ -19,11 +19,13 @@ const envSchema = z.object({
   MISTRAL_API_URL: z.string().default('https://api.mistral.ai'),
 
   // Fallback ABRA Flexi document type (typDokl) for received invoices, used when
-  // a supplier has no prior invoices to harvest a type from. Without a typDokl
-  // ABRA cannot assign an internal number ("Pole 'Interní číslo' musí být
-  // vyplněno"). `CF_FAKTURA_PRIJATA` is ABRA's standard "Čtení faktur" type;
-  // override per deployment if the target company uses a different code.
-  ABRA_DEFAULT_TYP_FAKTURY_PRIJATE: z.string().default('CF_FAKTURA_PRIJATA'),
+  // a supplier has no prior invoices to harvest a type from. The type MUST have
+  // a number series (číselná řada) configured, otherwise ABRA cannot assign an
+  // internal number ("Pole 'Interní číslo' musí být vyplněno"). `FAKTURA`
+  // ("Faktura - daňový doklad") is the standard type with a series (the demo's
+  // CF_* "Čtení faktur" types have none); override per deployment if the target
+  // company uses a different code.
+  ABRA_DEFAULT_TYP_FAKTURY_PRIJATE: z.string().default('FAKTURA'),
 
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
