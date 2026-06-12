@@ -81,21 +81,46 @@ export function DocumentDetailPanel({ companyId, docId, onClose, onRetried }: Do
                   </div>
                 </div>
 
-                {doc.errorMessage && (
-                  <div
-                    className={cn(
-                      'rounded-[var(--radius-token-md)] border border-[var(--status-error)]/20',
-                      'bg-[var(--status-error-subtle)] px-3 py-2'
-                    )}
-                  >
-                    <p className="text-xs font-medium text-[var(--status-error-text)]">
-                      {t('documents.errorMessage')}
-                    </p>
-                    <p className="mt-1 break-words text-xs text-[var(--status-error-text)]">
-                      {doc.errorMessage}
-                    </p>
-                  </div>
-                )}
+                {doc.errorMessage &&
+                  (() => {
+                    // On a successful export the message is a non-blocking note
+                    // (e.g. an unrecognized bank code was dropped) — show it as a
+                    // warning, not an error. Genuine failures stay red.
+                    // Full static class strings (no interpolation) so Tailwind
+                    // JIT keeps both variants.
+                    const isNote = doc.status === 'exported';
+                    return (
+                      <div
+                        className={cn(
+                          'rounded-[var(--radius-token-md)] border px-3 py-2',
+                          isNote
+                            ? 'border-[var(--status-warning)]/20 bg-[var(--status-warning-subtle)]'
+                            : 'border-[var(--status-error)]/20 bg-[var(--status-error-subtle)]'
+                        )}
+                      >
+                        <p
+                          className={cn(
+                            'text-xs font-medium',
+                            isNote
+                              ? 'text-[var(--status-warning-text)]'
+                              : 'text-[var(--status-error-text)]'
+                          )}
+                        >
+                          {t(isNote ? 'documents.warningMessage' : 'documents.errorMessage')}
+                        </p>
+                        <p
+                          className={cn(
+                            'mt-1 break-words text-xs',
+                            isNote
+                              ? 'text-[var(--status-warning-text)]'
+                              : 'text-[var(--status-error-text)]'
+                          )}
+                        >
+                          {doc.errorMessage}
+                        </p>
+                      </div>
+                    );
+                  })()}
 
                 <dl className="space-y-2">
                   <DetailRow label={t('documents.supplier')} value={doc.supplierName} />

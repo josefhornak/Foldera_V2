@@ -28,6 +28,7 @@ import {
   getSupplierDefaults,
   uploadInvoiceAttachment,
 } from '../services/abraflexi/index.js';
+import { isKnownCzBankCode } from '../services/abraflexi/helpers.js';
 import { extractInvoice } from '../services/extraction/index.js';
 import type {
   AbraFlexiConfig,
@@ -125,7 +126,21 @@ async function runAbraExport(
 
   const result = await exportPurchaseInvoice(cfg, invoice, defaults);
 
-  let attachmentNote: string | null = null;
+  // Notes are surfaced to the user on an otherwise successful export (the UI
+  // shows them as a non-blocking warning). They explain what was auto-adjusted
+  // so a silent omission never looks like missing data.
+  const notes: string[] = [];
+
+  // smerKod is dropped from the payload when the bank code is not a real ČNB
+  // code (see buildInvoicePayload) — tell the user it happened.
+  if (invoice.bankCode && !isKnownCzBankCode(invoice.bankCode)) {
+    notes.push(
+      `Kód banky „${invoice.bankCode}“ nebyl rozpoznán v registru bank ABRA Flexi, ` +
+        `proto nebyl k faktuře připojen. Číslo účtu zůstalo zachováno — kód banky ` +
+        `případně doplňte v ABRA Flexi ručně.`
+    );
+  }
+
   if (attachmentPath) {
     try {
       await uploadInvoiceAttachment(
@@ -137,7 +152,7 @@ async function runAbraExport(
       );
     } catch (error) {
       // Attachment failure must never flip a successful export
-      attachmentNote = `Document created, but attachment upload failed: ${toError(error).message}`;
+      notes.push(`Faktura byla vytvořena, ale nahrání přílohy selhalo: ${toError(error).message}`);
       logger.warn(
         { companyId: company.id, abraId: result.id, error: toError(error).message },
         '[Pipeline] Attachment upload failed'
@@ -150,7 +165,7 @@ async function runAbraExport(
     abraId: result.id,
     abraCode: result.code,
     abraUrl: result.webUrl,
-    errorMessage: attachmentNote,
+    errorMessage: notes.length > 0 ? notes.join(' ') : null,
   };
 }
 

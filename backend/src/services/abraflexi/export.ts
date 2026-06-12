@@ -12,6 +12,7 @@
  */
 
 import { logger } from '../../utils/logger.js';
+import env from '../../config/env.js';
 import { AppError, ErrorCodes, toError } from '../../utils/errors.js';
 import type {
   AbraExportResult,
@@ -104,7 +105,20 @@ export async function exportPurchaseInvoice(
   }
 
   // --- 3. Build payload ---
-  const payload = buildInvoicePayload(invoice, defaults, supplierCode);
+  // Without a typDokl ABRA cannot assign an internal number. When the supplier
+  // has no history to harvest a type from, fall back to the configured default
+  // received-invoice type so the export still gets a number series.
+  const effectiveDefaults: AbraSupplierDefaults =
+    defaults.documentType != null
+      ? defaults
+      : { ...defaults, documentType: env.ABRA_DEFAULT_TYP_FAKTURY_PRIJATE };
+  if (defaults.documentType == null) {
+    logger.info(
+      { companyId: cfg.companyId, defaultTyp: env.ABRA_DEFAULT_TYP_FAKTURY_PRIJATE },
+      '[AbraFlexi] No supplier-history document type — using default typDokl',
+    );
+  }
+  const payload = buildInvoicePayload(invoice, effectiveDefaults, supplierCode);
 
   // --- 4. POST to ABRA Flexi ---
   const res = await abraRequest(cfg, {
