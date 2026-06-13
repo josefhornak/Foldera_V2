@@ -26,6 +26,8 @@ export interface Company {
   accountingFillMode: AccountingFillMode;
   /** Attach the original e-mail (.eml) to the ABRA document for e-mail sources. */
   attachOriginalEmail: boolean;
+  /** 'detail' = keep every line item, 'summary' = collapse per VAT rate. */
+  lineItemMode: 'detail' | 'summary';
   trialEndsAt: string | null;
   createdAt: string;
   /** The signed-in user's role in this company: 'admin' = správce, 'member' = jen nahlíží. */

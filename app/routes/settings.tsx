@@ -168,6 +168,57 @@ function AccountingCard({ company, onChanged }: { company: Company; onChanged: (
   );
 }
 
+/** Choose how invoice line items are extracted: full detail vs summary per VAT rate. */
+function LineItemsCard({ company, onChanged }: { company: Company; onChanged: () => void }) {
+  const [mode, setMode] = useState(company.lineItemMode);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => setMode(company.lineItemMode), [company.lineItemMode]);
+
+  async function change(next: Company['lineItemMode']) {
+    const prev = mode;
+    setMode(next);
+    setSaving(true);
+    try {
+      await updateCompany(company.id, { lineItemMode: next });
+      onChanged();
+    } catch {
+      setMode(prev);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Vytěžování položek</CardTitle>
+        <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+          Jak se z dokladu přenášejí položky do ABRA Flexi.
+        </p>
+      </CardHeader>
+      <CardContent>
+        <Field label="Režim položek" htmlFor="li-mode" className="max-w-md">
+          <Select
+            id="li-mode"
+            value={mode}
+            disabled={saving}
+            onChange={(e) => change(e.target.value as Company['lineItemMode'])}
+          >
+            <option value="detail">Kompletní řádkové položky z dokladu</option>
+            <option value="summary">Souhrnně – jedna položka na sazbu DPH</option>
+          </Select>
+        </Field>
+        <p className="mt-2 text-xs text-[var(--text-tertiary)]">
+          {mode === 'summary'
+            ? 'Položky se sloučí do jedné na každou sazbu DPH. Celková částka zůstává stejná.'
+            : 'Do ABRA se přenese každá řádková položka tak, jak je na dokladu.'}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 /** Toggle: attach the original e-mail (.eml) to the ABRA document. */
 function EmailOptionsCard({ company, onChanged }: { company: Company; onChanged: () => void }) {
   const [on, setOn] = useState(company.attachOriginalEmail);
@@ -411,6 +462,8 @@ function CompanySection({ company, onChanged }: { company: Company; onChanged: (
       <BillingCard companyId={company.id} />
 
       <AccountingCard company={company} onChanged={onChanged} />
+
+      <LineItemsCard company={company} onChanged={onChanged} />
 
       <EmailOptionsCard company={company} onChanged={onChanged} />
 

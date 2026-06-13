@@ -38,6 +38,7 @@ import { isKnownCzBankCode } from '../services/abraflexi/helpers.js';
 import { blockMessage, decideBilling, recordDocumentUsage } from '../services/billing.js';
 import { notifyDocumentFailure } from '../services/notifications.js';
 import { extractInvoice } from '../services/extraction/index.js';
+import { summarizeLineItems } from '../services/extraction/summarize.js';
 import type {
   AbraExportResult,
   AbraFlexiConfig,
@@ -352,6 +353,15 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
     }
 
     const invoice = extraction.fields;
+
+    // Company opted into "souhrnně": collapse line items into one per VAT rate
+    // before the record is persisted/exported. The grand total is preserved.
+    if (company.lineItemMode === 'summary' && invoice.lineItems.length > 1) {
+      const before = invoice.lineItems.length;
+      invoice.lineItems = summarizeLineItems(invoice.lineItems, invoice);
+      log.info({ documentId, before, after: invoice.lineItems.length }, '[Pipeline] Line items summarized by VAT rate');
+    }
+
     const baseFields = {
       supplierName: invoice.supplierName,
       supplierIco: invoice.supplierIco,

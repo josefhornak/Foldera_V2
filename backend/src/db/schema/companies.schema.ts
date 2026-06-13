@@ -35,6 +35,13 @@ export const companies = pgTable(
     /** Attach the original e-mail (.eml) to the ABRA Flexi document for e-mail sources. */
     attachOriginalEmail: boolean('attach_original_email').notNull().default(false),
 
+    // Line-item extraction mode: 'detail' = keep every line item from the
+    // document, 'summary' = collapse them into one item per VAT rate.
+    lineItemMode: text('line_item_mode')
+      .$type<'detail' | 'summary'>()
+      .notNull()
+      .default('detail'),
+
     // Billing. trial → free 7 days / 10 docs, then blocked until active.
     billingStatus: text('billing_status')
       .$type<'trial' | 'active' | 'cancelled'>()

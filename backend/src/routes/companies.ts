@@ -37,6 +37,8 @@ const companySchema = z.object({
   accountingFillMode: z.enum(['history', 'ai']).optional(),
   /** Attach the original e-mail (.eml) to the ABRA document (e-mail sources). */
   attachOriginalEmail: z.boolean().optional(),
+  /** 'detail' = keep every line item, 'summary' = collapse per VAT rate. */
+  lineItemMode: z.enum(['detail', 'summary']).optional(),
 });
 
 const abraConfigSchema = z.object({
@@ -64,6 +66,7 @@ function toPublicCompany(c: typeof companies.$inferSelect, role: 'admin' | 'memb
     abraConfigured: Boolean(c.abraApiUrl && c.abraApiUser && c.abraApiPasswordEnc),
     accountingFillMode: c.accountingFillMode,
     attachOriginalEmail: c.attachOriginalEmail,
+    lineItemMode: c.lineItemMode,
     trialEndsAt: c.trialEndsAt,
     createdAt: c.createdAt,
     /** The requesting user's role in this company. */
