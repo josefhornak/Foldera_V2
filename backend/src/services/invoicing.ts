@@ -32,11 +32,14 @@ const ASSETS = path.resolve(process.cwd(), 'assets');
 const FONT_REG = path.join(ASSETS, 'DejaVuSans.ttf');
 const FONT_BOLD = path.join(ASSETS, 'DejaVuSans-Bold.ttf');
 const FONT_MONO = path.join(ASSETS, 'DejaVuSansMono.ttf');
-const ACCENT = '#6d28d9';
-const INK = '#0b0b10';
-const MUTED = '#9b9ba6';
-const BODY = '#52525b';
-const LINE = '#e7e7ea';
+// Dark editorial palette — mirrors the app + landing page.
+const PAGE = '#0b0b10'; // surface-ground
+const TXT = '#efeff4'; // text-primary
+const SEC = '#9c9cac'; // text-secondary
+const MUTED = '#74748a'; // mono micro-labels
+const ACCENT = '#8b5cf6'; // brand-primary
+const ACCENT_LIGHT = '#b9a3ff'; // brand-primary-light
+const HAIR = '#2a2a35'; // hairline on dark
 
 function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -91,15 +94,29 @@ export async function buildPdf(data: InvoiceData, isdocXml?: string): Promise<Bu
     doc.font('mono').fontSize(7).fillColor(MUTED).text(text.toUpperCase(), x, y, { characterSpacing: 1.4, ...opts });
   };
 
+  // ── Dark page background + subtle violet glow top-right ─────────────────────
+  doc.rect(0, 0, 595, 842).fill(PAGE);
+  const glow = doc.radialGradient(560, 40, 0, 560, 40, 220);
+  glow.stop(0, ACCENT, 0.18);
+  glow.stop(1, ACCENT, 0);
+  doc.rect(300, 0, 295, 240).fill(glow);
+
+  /** Hairline on the dark page. */
+  const rule = (yy: number, w = 0.75, color = HAIR) =>
+    doc.moveTo(left, yy).lineTo(right, yy).lineWidth(w).strokeColor(color).stroke();
+
   // ── Masthead ──────────────────────────────────────────────────────────────
-  doc.font('bold').fontSize(27).fillColor(INK).text('Foldera', left, 50, { continued: true });
-  doc.fillColor(ACCENT).text('.');
-  kicker('Fakturace · neplátce DPH', left, 84);
+  doc.font('bold').fontSize(27).fillColor(TXT).text('Foldera', left, 50, { continued: true });
+  doc.fillColor(ACCENT_LIGHT).text('.');
+  kicker('Doklady do ABRA Flexi', left, 84);
 
   kicker('Faktura — daňový doklad', left, 52, { width: W, align: 'right' });
-  doc.font('bold').fontSize(21).fillColor(INK).text(`č. ${data.number}`, left, 64, { width: W, align: 'right' });
+  doc.font('bold').fontSize(21).fillColor(TXT).text(`č. ${data.number}`, left, 64, { width: W, align: 'right' });
 
-  doc.moveTo(left, 106).lineTo(right, 106).lineWidth(2).strokeColor(ACCENT).stroke();
+  // violet gradient rule under the masthead
+  const ruleGrad = doc.linearGradient(left, 0, right, 0);
+  ruleGrad.stop(0, ACCENT).stop(1, ACCENT_LIGHT);
+  doc.rect(left, 106, W, 2).fill(ruleGrad);
 
   // ── Parties ────────────────────────────────────────────────────────────────
   const py = 128;
@@ -107,14 +124,14 @@ export async function buildPdf(data: InvoiceData, isdocXml?: string): Promise<Bu
   kicker('Dodavatel', left, py);
   kicker('Odběratel', colB, py);
 
-  doc.font('bold').fontSize(12).fillColor(INK).text(env.BILLING_SUPPLIER_NAME, left, py + 14, { width: colB - left - 16 });
-  doc.font('reg').fontSize(9).fillColor(BODY);
+  doc.font('bold').fontSize(12).fillColor(TXT).text(env.BILLING_SUPPLIER_NAME, left, py + 14, { width: colB - left - 16 });
+  doc.font('reg').fontSize(9).fillColor(SEC);
   doc.text(env.BILLING_SUPPLIER_ADDRESS, left, py + 32, { width: colB - left - 16 });
   doc.text(`IČO ${env.BILLING_SUPPLIER_ICO} · neplátce DPH`, left, py + 46);
   doc.text(env.BILLING_SUPPLIER_EMAIL, left, py + 60);
 
-  doc.font('bold').fontSize(12).fillColor(INK).text(data.customerName, colB, py + 14, { width: right - colB });
-  doc.font('reg').fontSize(9).fillColor(BODY);
+  doc.font('bold').fontSize(12).fillColor(TXT).text(data.customerName, colB, py + 14, { width: right - colB });
+  doc.font('reg').fontSize(9).fillColor(SEC);
   let cy = py + 32;
   if (data.customerAddress) {
     doc.text(data.customerAddress, colB, cy, { width: right - colB });
@@ -124,7 +141,7 @@ export async function buildPdf(data: InvoiceData, isdocXml?: string): Promise<Bu
 
   // ── Meta row (hairline framed) ──────────────────────────────────────────────
   const my = py + 92;
-  doc.moveTo(left, my).lineTo(right, my).lineWidth(0.75).strokeColor(LINE).stroke();
+  rule(my);
   const cells: [string, string][] = [
     ['Vystaveno', data.issueDate],
     ['Splatnost', data.dueDate],
@@ -135,9 +152,9 @@ export async function buildPdf(data: InvoiceData, isdocXml?: string): Promise<Bu
   cells.forEach(([label, value], i) => {
     const x = left + i * cw;
     kicker(label, x, my + 12);
-    doc.font('bold').fontSize(10).fillColor(INK).text(value, x, my + 24, { width: cw - 8 });
+    doc.font('bold').fontSize(10).fillColor(TXT).text(value, x, my + 24, { width: cw - 8 });
   });
-  doc.moveTo(left, my + 48).lineTo(right, my + 48).lineWidth(0.75).strokeColor(LINE).stroke();
+  rule(my + 48);
 
   // ── Line items ──────────────────────────────────────────────────────────────
   let y = my + 70;
@@ -146,38 +163,38 @@ export async function buildPdf(data: InvoiceData, isdocXml?: string): Promise<Bu
   kicker('Cena', 392, y, { width: 70, align: 'right' });
   kicker('Celkem', 467, y, { width: 80, align: 'right' });
   y += 13;
-  doc.moveTo(left, y).lineTo(right, y).lineWidth(1).strokeColor(INK).stroke();
+  rule(y, 1, ACCENT);
   y += 10;
   for (const ln of data.lines) {
-    doc.font('reg').fontSize(10).fillColor(INK).text(ln.description, left, y, { width: 250 });
+    doc.font('reg').fontSize(10).fillColor(TXT).text(ln.description, left, y, { width: 250 });
     const rowH = doc.y - y;
-    doc.fillColor(BODY);
+    doc.fillColor(SEC);
     doc.text(String(ln.quantity), 318, y, { width: 62, align: 'right' });
     doc.text(fmt(ln.unitPriceCzk), 392, y, { width: 70, align: 'right' });
-    doc.font('bold').fillColor(INK).text(fmt(ln.amountCzk), 467, y, { width: 80, align: 'right' });
+    doc.font('bold').fillColor(TXT).text(fmt(ln.amountCzk), 467, y, { width: 80, align: 'right' });
     y += Math.max(rowH, 14) + 9;
-    doc.moveTo(left, y - 5).lineTo(right, y - 5).lineWidth(0.5).strokeColor(LINE).stroke();
+    rule(y - 5, 0.5);
   }
 
   // ── Total — oversized focal figure ──────────────────────────────────────────
   y += 14;
   kicker('Celkem k úhradě', left, y, { width: W, align: 'right' });
-  doc.font('bold').fontSize(38).fillColor(ACCENT).text(fmt(data.totalCzk), left, y + 12, { width: W, align: 'right' });
+  doc.font('bold').fontSize(38).fillColor(ACCENT_LIGHT).text(fmt(data.totalCzk), left, y + 12, { width: W, align: 'right' });
   const totalBottom = y + 12 + 44;
 
-  // ── QR platba (framed) ───────────────────────────────────────────────────────
+  // ── QR platba (light card so it always scans) ────────────────────────────────
   if (qrPng) {
     const qy = y + 6;
-    doc.roundedRect(left, qy, 78, 78, 6).lineWidth(1).strokeColor(LINE).stroke();
-    doc.image(qrPng, left + 6, qy + 6, { width: 66, height: 66 });
-    kicker('QR platba', left + 92, qy + 8);
-    doc.font('reg').fontSize(8.5).fillColor(BODY).text('Naskenujte v bankovní aplikaci', left + 92, qy + 22, { width: 170 });
-    if (iban) doc.font('mono').fontSize(8).fillColor(INK).text(iban, left + 92, qy + 42, { width: 200, characterSpacing: 0.5 });
+    doc.roundedRect(left, qy, 82, 82, 8).fill('#ffffff');
+    doc.image(qrPng, left + 8, qy + 8, { width: 66, height: 66 });
+    kicker('QR platba', left + 96, qy + 10);
+    doc.font('reg').fontSize(8.5).fillColor(SEC).text('Naskenujte v bankovní aplikaci', left + 96, qy + 24, { width: 170 });
+    if (iban) doc.font('mono').fontSize(8).fillColor(TXT).text(iban, left + 96, qy + 44, { width: 200, characterSpacing: 0.5 });
   }
 
   // ── Footer (pinned) ──────────────────────────────────────────────────────────
   const fy = Math.max(totalBottom + 40, 720);
-  doc.moveTo(left, fy).lineTo(right, fy).lineWidth(0.75).strokeColor(LINE).stroke();
+  rule(fy);
   doc.font('reg').fontSize(8).fillColor(MUTED).text(
     `Neplátce DPH. Úhradu zašlete na účet ${env.BILLING_SUPPLIER_BANK}, variabilní symbol ${data.variableSymbol}. ` +
       `K e-mailu je přiložena elektronická faktura (ISDOC) pro import do účetnictví.`,
