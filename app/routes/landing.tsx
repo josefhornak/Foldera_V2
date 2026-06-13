@@ -81,9 +81,10 @@ const FEATURES = [
 ];
 
 const FAQ = [
+  { q: 'Kam putují moje data?', a: 'Doklady zpracováváme přes pokročilou evropskou AI s OCR — data zůstávají v EU a řídíme se GDPR. Soubory navíc trvale neukládáme: po vytěžení a nahrání do ABRA Flexi se originál smaže.' },
   { q: 'Ukládáte naše soubory?', a: 'Ne. Soubor se jen zpracuje, nahraje jako příloha do ABRA Flexi a poté smaže. V aplikaci zůstanou pouze vytěžená metadata, abyste mohli export případně zopakovat.' },
   { q: 'Funguje to s mojí verzí ABRA Flexi?', a: 'Ano. Připojujeme se přes REST API ABRA Flexi (FlexiBee). Stačí zadat adresu instance, firmu a přihlašovací údaje.' },
-  { q: 'Co když se doklad nerozpozná správně?', a: 'Nízká přesnost se označí a doklad lze znovu exportovat z uložených dat. ABRA odmítnutí jsou retryovatelná, nic se neztratí.' },
+  { q: 'Co když se doklad nerozpozná správně?', a: 'Nízká přesnost se označí a doklad lze znovu exportovat z uložených dat. Nepovedený export jde kdykoli zopakovat, nic se neztratí.' },
   { q: 'Platí se za uživatele?', a: 'Ne. Platíte za firmu a počet zpracovaných dokladů, uživatelů můžete mít kolik chcete.' },
 ];
 
