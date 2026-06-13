@@ -199,11 +199,13 @@ export async function buildPdf(data: InvoiceData, isdocXml?: string): Promise<Bu
     fy + 10,
     { width: W }
   );
-  kicker(`Foldera · ${env.BILLING_SUPPLIER_NAME} · IČO ${env.BILLING_SUPPLIER_ICO}`, left, Math.min(fy + 48, 778), {
-    width: W,
-    align: 'center',
-    lineBreak: false,
-  });
+  // Centered "Foldera." wordmark — matches the masthead (violet dot).
+  doc.font('bold').fontSize(11);
+  const markW = doc.widthOfString('Foldera') + doc.widthOfString('.');
+  const markX = left + (W - markW) / 2;
+  const markY = Math.min(fy + 44, 778);
+  doc.fillColor(TXT).text('Foldera', markX, markY, { lineBreak: false, continued: true });
+  doc.fillColor(ACCENT).text('.', { lineBreak: false });
 
   // Embed the ISDOC XML directly inside the PDF — one clean hybrid file that is
   // both human-readable and machine-importable (like ZUGFeRD / Factur-X). Czech
