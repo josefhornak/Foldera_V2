@@ -25,8 +25,14 @@ import { logger } from '../utils/logger.js';
 import { toError } from '../utils/errors.js';
 import { INCLUDED_DOCS, OVERAGE_CZK, PLAN_PRICE_CZK, currentPeriod } from './billing.js';
 import { lookupAres } from './ares.js';
+import { buildPaymentQrPng, toCzechIban } from './payment-qr.js';
+import { buildIsdocXml } from './isdoc.js';
 
 const FONT_PATH = path.resolve(process.cwd(), 'assets', 'DejaVuSans.ttf');
+const ACCENT = '#6d28d9';
+const INK = '#0b0b10';
+const MUTED = '#71717a';
+const LINE = '#e4e4e7';
 
 /** 'YYYY-MM' of the month before `date`. */
 function priorPeriod(date = new Date()): string {
@@ -58,7 +64,19 @@ interface InvoiceData {
   totalCzk: number;
 }
 
-function buildPdf(data: InvoiceData): Promise<Buffer> {
+export async function buildPdf(data: InvoiceData): Promise<Buffer> {
+  const left = 50;
+  const right = 545;
+  const fmt = (n: number) => `${n.toLocaleString('cs-CZ')} Kč`;
+
+  const qrPng = await buildPaymentQrPng({
+    account: env.BILLING_SUPPLIER_BANK,
+    amountCzk: data.totalCzk,
+    variableSymbol: data.variableSymbol,
+    message: `Foldera ${data.number}`,
+    recipientName: env.BILLING_SUPPLIER_NAME,
+  });
+
   const doc = new PDFDocument({ size: 'A4', margin: 50 });
   const chunks: Buffer[] = [];
   doc.on('data', (c: Buffer) => chunks.push(c));
@@ -67,69 +85,109 @@ function buildPdf(data: InvoiceData): Promise<Buffer> {
   doc.registerFont('dv', FONT_PATH);
   doc.font('dv');
 
-  const left = 50;
-  const right = 545;
+  // ── Header band ──────────────────────────────────────────────────────────
+  doc.rect(0, 0, 595, 96).fill(ACCENT);
+  doc.fillColor('#ffffff').fontSize(22).text('Foldera', left, 30);
+  doc.fontSize(9).fillColor('#ede9fe').text('Automatizace faktur do účetnictví', left, 58);
+  doc.fontSize(20).fillColor('#ffffff').text(`Faktura ${data.number}`, 0, 30, { width: right, align: 'right' });
+  doc.fontSize(9).fillColor('#ede9fe').text('Daňový doklad — neplátce DPH', 0, 60, { width: right, align: 'right' });
+  doc.fillColor(INK);
 
-  doc.fontSize(20).text(`Faktura č. ${data.number}`, left, 50);
-  doc.fontSize(9).fillColor('#555').text('Daňový doklad (neplátce DPH)', left, 78);
-  doc.fillColor('#000');
-
-  // Supplier / customer columns
-  const topY = 110;
-  doc.fontSize(9).fillColor('#777').text('DODAVATEL', left, topY);
-  doc.fillColor('#000').fontSize(10);
-  doc.text(env.BILLING_SUPPLIER_NAME, left, topY + 14);
-  doc.text(env.BILLING_SUPPLIER_ADDRESS, left, topY + 28);
-  doc.text(`IČO: ${env.BILLING_SUPPLIER_ICO}`, left, topY + 42);
-  doc.text('Neplátce DPH', left, topY + 56);
-  doc.text(env.BILLING_SUPPLIER_EMAIL, left, topY + 70);
-
+  // ── Supplier / customer ─────────────────────────────────────────────────
+  const topY = 130;
   const colX = 320;
-  doc.fontSize(9).fillColor('#777').text('ODBĚRATEL', colX, topY);
-  doc.fillColor('#000').fontSize(10);
-  doc.text(data.customerName, colX, topY + 14);
-  if (data.customerAddress) doc.text(data.customerAddress, colX, topY + 28, { width: right - colX });
-  if (data.customerIco) doc.text(`IČO: ${data.customerIco}`, colX, topY + 56);
+  doc.fontSize(8).fillColor(MUTED).text('DODAVATEL', left, topY);
+  doc.fontSize(8).fillColor(MUTED).text('ODBĚRATEL', colX, topY);
+  doc.fillColor(INK).fontSize(11).text(env.BILLING_SUPPLIER_NAME, left, topY + 13);
+  doc.fontSize(9).fillColor('#3f3f46');
+  doc.text(env.BILLING_SUPPLIER_ADDRESS, left, topY + 30, { width: colX - left - 20 });
+  doc.text(`IČO: ${env.BILLING_SUPPLIER_ICO}`, left, topY + 46);
+  doc.text('Neplátce DPH', left, topY + 60);
+  doc.text(env.BILLING_SUPPLIER_EMAIL, left, topY + 74);
 
-  // Meta
-  const metaY = topY + 100;
-  doc.fontSize(10);
-  doc.text(`Datum vystavení: ${data.issueDate}`, left, metaY);
-  doc.text(`Datum splatnosti: ${data.dueDate}`, left, metaY + 14);
-  doc.text(`Variabilní symbol: ${data.variableSymbol}`, left, metaY + 28);
-  doc.text(`Bankovní účet: ${env.BILLING_SUPPLIER_BANK}`, left, metaY + 42);
-  if (env.BILLING_SUPPLIER_IBAN) doc.text(`IBAN: ${env.BILLING_SUPPLIER_IBAN}`, left, metaY + 56);
-
-  // Line items table
-  let y = metaY + 90;
-  doc.fontSize(9).fillColor('#777');
-  doc.text('Popis', left, y);
-  doc.text('Množství', 330, y, { width: 60, align: 'right' });
-  doc.text('Cena', 400, y, { width: 60, align: 'right' });
-  doc.text('Celkem', 465, y, { width: 80, align: 'right' });
-  doc.moveTo(left, y + 14).lineTo(right, y + 14).strokeColor('#ccc').stroke();
-  doc.fillColor('#000').fontSize(10);
-  y += 22;
-  for (const ln of data.lines) {
-    doc.text(ln.description, left, y, { width: 270 });
-    doc.text(String(ln.quantity), 330, y, { width: 60, align: 'right' });
-    doc.text(`${ln.unitPriceCzk} Kč`, 400, y, { width: 60, align: 'right' });
-    doc.text(`${ln.amountCzk} Kč`, 465, y, { width: 80, align: 'right' });
-    y += 20;
+  doc.fillColor(INK).fontSize(11).text(data.customerName, colX, topY + 13, { width: right - colX });
+  doc.fontSize(9).fillColor('#3f3f46');
+  let cy = topY + 30;
+  if (data.customerAddress) {
+    doc.text(data.customerAddress, colX, cy, { width: right - colX });
+    cy = doc.y + 2;
   }
-  doc.moveTo(left, y + 4).lineTo(right, y + 4).strokeColor('#ccc').stroke();
-  doc.fontSize(13).text('Celkem k úhradě:', 300, y + 14, { width: 165, align: 'right' });
-  doc.text(`${data.totalCzk} Kč`, 465, y + 14, { width: 80, align: 'right' });
+  if (data.customerIco) doc.text(`IČO: ${data.customerIco}`, colX, cy);
 
+  // ── Meta strip ──────────────────────────────────────────────────────────
+  const metaY = topY + 104;
+  doc.roundedRect(left, metaY, right - left, 30, 4).fill('#f4f4f5');
+  doc.fillColor(MUTED).fontSize(8);
+  const cells = [
+    ['Vystaveno', data.issueDate],
+    ['Splatnost', data.dueDate],
+    ['Var. symbol', data.variableSymbol],
+    ['Účet', env.BILLING_SUPPLIER_BANK],
+  ];
+  const cellW = (right - left) / cells.length;
+  cells.forEach(([label, value], i) => {
+    const x = left + i * cellW + 10;
+    doc.fillColor(MUTED).fontSize(7).text((label ?? '').toUpperCase(), x, metaY + 6);
+    doc.fillColor(INK).fontSize(9).text(value ?? '', x, metaY + 16);
+  });
+
+  // ── Line items table ────────────────────────────────────────────────────
+  let y = metaY + 52;
+  doc.fontSize(8).fillColor(MUTED);
+  doc.text('POPIS', left, y);
+  doc.text('MNOŽSTVÍ', 320, y, { width: 60, align: 'right' });
+  doc.text('CENA', 390, y, { width: 70, align: 'right' });
+  doc.text('CELKEM', 465, y, { width: 80, align: 'right' });
+  y += 14;
+  doc.moveTo(left, y).lineTo(right, y).lineWidth(1).strokeColor(ACCENT).stroke();
+  y += 8;
+  doc.fontSize(10);
+  for (const ln of data.lines) {
+    doc.fillColor(INK).text(ln.description, left, y, { width: 260 });
+    const rowH = doc.y - y;
+    doc.fillColor('#3f3f46');
+    doc.text(String(ln.quantity), 320, y, { width: 60, align: 'right' });
+    doc.text(fmt(ln.unitPriceCzk), 390, y, { width: 70, align: 'right' });
+    doc.fillColor(INK).text(fmt(ln.amountCzk), 465, y, { width: 80, align: 'right' });
+    y += Math.max(rowH, 14) + 8;
+    doc.moveTo(left, y - 4).lineTo(right, y - 4).lineWidth(0.5).strokeColor(LINE).stroke();
+  }
+
+  // ── Total box ───────────────────────────────────────────────────────────
+  y += 6;
+  doc.roundedRect(320, y, right - 320, 40, 4).fill(ACCENT);
+  doc.fillColor('#ede9fe').fontSize(9).text('CELKEM K ÚHRADĚ', 330, y + 9);
+  doc.fillColor('#ffffff').fontSize(18).text(fmt(data.totalCzk), 320, y + 19, { width: right - 320 - 10, align: 'right' });
+
+  // ── QR platba ───────────────────────────────────────────────────────────
+  const qrY = y;
+  if (qrPng) {
+    doc.image(qrPng, left, qrY, { width: 92, height: 92 });
+    doc.fillColor(INK).fontSize(9).text('QR platba', left + 102, qrY + 8);
+    doc.fillColor(MUTED).fontSize(8).text('Naskenujte v bankovní aplikaci', left + 102, qrY + 22, { width: 150 });
+    const iban = toCzechIban(env.BILLING_SUPPLIER_BANK);
+    if (iban) doc.fillColor('#3f3f46').fontSize(7).text(iban, left + 102, qrY + 44, { width: 160 });
+  }
+
+  // ── Footer ──────────────────────────────────────────────────────────────
   doc
+    .fillColor(MUTED)
     .fontSize(8)
-    .fillColor('#777')
     .text(
-      `Nejsem plátce DPH. Úhradu zašlete na účet ${env.BILLING_SUPPLIER_BANK}, variabilní symbol ${data.variableSymbol}.`,
+      `Nejsem plátce DPH. Úhradu zašlete na účet ${env.BILLING_SUPPLIER_BANK} pod variabilním symbolem ${data.variableSymbol}. ` +
+        `Součástí e-mailu je elektronická faktura ve formátu ISDOC pro snadný import do účetnictví.`,
       left,
-      y + 60,
+      qrY + 110,
       { width: right - left }
     );
+  doc
+    .fillColor(MUTED)
+    .fontSize(8)
+    .text(`Foldera · ${env.BILLING_SUPPLIER_EMAIL} · IČO ${env.BILLING_SUPPLIER_ICO}`, left, 770, {
+      width: right - left,
+      align: 'center',
+      lineBreak: false,
+    });
 
   doc.end();
   return done;
@@ -190,13 +248,39 @@ export async function generateInvoiceFor(company: Company, period: string): Prom
       lines,
       totalCzk,
     });
+    const isdocXml = buildIsdocXml({
+      number,
+      issueDate,
+      dueDate,
+      variableSymbol,
+      supplier: {
+        name: env.BILLING_SUPPLIER_NAME,
+        ico: env.BILLING_SUPPLIER_ICO,
+        address: env.BILLING_SUPPLIER_ADDRESS,
+        email: env.BILLING_SUPPLIER_EMAIL,
+        iban: toCzechIban(env.BILLING_SUPPLIER_BANK),
+        account: env.BILLING_SUPPLIER_BANK,
+      },
+      customer: { name: company.name, ico: company.ico, address: customerAddress },
+      lines: lines.map((l, i) => ({
+        id: i + 1,
+        description: l.description,
+        quantity: l.quantity,
+        unitPriceCzk: l.unitPriceCzk,
+        amountCzk: l.amountCzk,
+      })),
+      totalCzk,
+    });
     await sendMail({
       to: recipientEmail,
       bcc: env.BILLING_INVOICE_BCC,
       subject: `Foldera – faktura ${number} (${period})`,
-      html: `<p>Dobrý den,</p><p>v příloze posíláme fakturu č. <b>${number}</b> za předplatné Foldera za období ${period}.</p><p>Částka k úhradě: <b>${totalCzk} Kč</b>, splatnost ${dueDate}, variabilní symbol ${variableSymbol}.</p><p>Děkujeme, Foldera.</p>`,
+      html: `<p>Dobrý den,</p><p>v příloze posíláme fakturu č. <b>${number}</b> za předplatné Foldera za období ${period}.</p><p>Částka k úhradě: <b>${totalCzk} Kč</b>, splatnost ${dueDate}, variabilní symbol ${variableSymbol}.</p><p>Fakturu přikládáme i ve formátu <b>ISDOC</b> pro snadný import do účetnictví. V PDF najdete QR platbu.</p><p>Děkujeme, Foldera.</p>`,
       text: `Faktura ${number} za období ${period}. K úhradě ${totalCzk} Kč, splatnost ${dueDate}, VS ${variableSymbol}.`,
-      attachments: [{ filename: `faktura-${number}.pdf`, content: pdf, contentType: 'application/pdf' }],
+      attachments: [
+        { filename: `faktura-${number}.pdf`, content: pdf, contentType: 'application/pdf' },
+        { filename: `faktura-${number}.isdoc`, content: Buffer.from(isdocXml, 'utf8'), contentType: 'application/xml' },
+      ],
     });
   } catch (error) {
     status = 'failed';
