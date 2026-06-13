@@ -83,3 +83,24 @@ export async function sendVerificationCode(to: string, name: string, code: strin
     text: `Váš ověřovací kód do Foldera je ${code}. Platí 15 minut.`,
   });
 }
+
+/** Invite a person to join a company with a given role. */
+export async function sendCompanyInvite(
+  to: string,
+  companyName: string,
+  role: 'admin' | 'member',
+  link: string
+): Promise<void> {
+  const roleLabel = role === 'admin' ? 'správce' : 'běžný uživatel (jen nahlíží)';
+  const inner = `
+    <p style="font-size:15px;margin:0 0 8px">Dobrý den,</p>
+    <p style="font-size:15px;color:#9c9cac;margin:0 0 18px">byli jste pozváni do firmy <b style="color:#efeff4">${escapeHtml(companyName)}</b> ve Foldeře jako <b style="color:#efeff4">${roleLabel}</b>.</p>
+    <a href="${link}" style="display:inline-block;background:#8b5cf6;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 22px;border-radius:10px">Přijmout pozvánku</a>
+    <p style="font-size:13px;color:#666674;margin:18px 0 0">Pozvánka platí 7 dní. Pokud ještě nemáte účet, nejprve se zaregistrujte stejným e-mailem a poté pozvánku přijměte.</p>`;
+  await sendMail({
+    to,
+    subject: `Foldera – pozvánka do firmy ${companyName}`,
+    html: SHELL(inner),
+    text: `Byli jste pozváni do firmy ${companyName} ve Foldeře jako ${roleLabel}. Pozvánku přijměte zde: ${link} (platí 7 dní).`,
+  });
+}

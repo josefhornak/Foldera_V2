@@ -6,17 +6,31 @@ import { SourcesSection } from '~/components/settings/SourcesSection';
 import { Button } from '~/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/Card';
 import { Field, Input, Select } from '~/components/ui/Input';
-import { LogOut } from 'lucide-react';
+import { LogOut, Mail, ShieldCheck, Trash2, UserRound } from 'lucide-react';
 import { useBilling, subscribeCompany, cancelSubscription } from '~/hooks/useBilling';
 import { deleteCompany, updateCompany, useCompanies } from '~/hooks/useCompanies';
+import {
+  changeMemberRole,
+  inviteMember,
+  removeMember,
+  revokeInvite,
+  useTeam,
+  type Role,
+} from '~/hooks/useTeam';
 import { ApiError } from '~/lib/api';
 import { cn } from '~/lib/utils';
 import { useAuthStore } from '~/stores/auth';
 import { useCompanyStore } from '~/stores/company';
 import type { Company } from '~/types';
 
-const SECTIONS = ['abraflexi', 'sources', 'company'] as const;
+const SECTIONS = ['abraflexi', 'sources', 'company', 'team'] as const;
 type Section = (typeof SECTIONS)[number];
+const TAB_LABEL: Record<Section, string> = {
+  abraflexi: 'ABRA Flexi',
+  sources: 'Zdroje',
+  company: 'Firma',
+  team: 'Tým',
+};
 
 export default function SettingsPage() {
   const { t } = useTranslation();
@@ -56,7 +70,7 @@ export default function SettingsPage() {
                 : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             )}
           >
-            {t(`settings.tabs.${s}`)}
+            {TAB_LABEL[s]}
           </NavLink>
         ))}
       </nav>
@@ -64,6 +78,7 @@ export default function SettingsPage() {
       {section === 'abraflexi' && <AbraSection company={company} onSaved={() => mutate()} />}
       {section === 'sources' && <SourcesSection companyId={company.id} />}
       {section === 'company' && <CompanySection company={company} onChanged={() => mutate()} />}
+      {section === 'team' && <TeamSection company={company} />}
     </div>
   );
 }
@@ -386,6 +401,188 @@ function CompanySection({ company, onChanged }: { company: Company; onChanged: (
               {t('settings.company.delete')}
             </Button>
           )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function RoleBadge({ role }: { role: Role }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 rounded-[var(--radius-token-full)] px-2 py-0.5 text-[11px] font-medium',
+        role === 'admin'
+          ? 'bg-[var(--brand-primary-subtle)] text-[var(--brand-primary-light)]'
+          : 'bg-[var(--surface-interactive)] text-[var(--text-secondary)]'
+      )}
+    >
+      {role === 'admin' ? <ShieldCheck className="h-3 w-3" /> : <UserRound className="h-3 w-3" />}
+      {role === 'admin' ? 'Správce' : 'Jen nahlíží'}
+    </span>
+  );
+}
+
+/** Team management: invite people by e-mail and assign roles. Read-only for members. */
+function TeamSection({ company }: { company: Company }) {
+  const { members, invitations, role, mutate } = useTeam(company.id);
+  const isAdmin = (role ?? company.role) === 'admin';
+  const [email, setEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<Role>('member');
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+
+  async function run(key: string, fn: () => Promise<unknown>) {
+    setBusy(key);
+    setError(null);
+    try {
+      await fn();
+      await mutate();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Akce se nezdařila.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function submitInvite(e: FormEvent) {
+    e.preventDefault();
+    setSent(false);
+    await run('invite', async () => {
+      await inviteMember(company.id, email, inviteRole);
+      setEmail('');
+      setSent(true);
+    });
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Role v týmu</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3 text-sm text-[var(--text-secondary)]">
+            <p className="flex items-start gap-2">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-primary-light)]" />
+              <span>
+                <b className="text-[var(--text-primary)]">Správce</b> — plný přístup: připojení k ABRA Flexi, zdroje
+                faktur, nahrávání a mazání dokladů, předplatné a správa týmu (zve a odebírá lidi).
+              </span>
+            </p>
+            <p className="flex items-start gap-2">
+              <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
+              <span>
+                <b className="text-[var(--text-primary)]">Běžný uživatel</b> — jen nahlíží: vidí přehled a doklady, ale
+                nemůže nic měnit, nahrávat ani spravovat nastavení.
+              </span>
+            </p>
+            <p className="text-xs text-[var(--text-tertiary)]">
+              Kdo firmu vytvoří, je automaticky správce. Firma musí mít vždy aspoň jednoho správce.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pozvat člena</CardTitle>
+            <p className="mt-1 text-xs text-[var(--text-tertiary)]">Pošleme e-mailem pozvánku s odkazem (platí 7 dní).</p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={submitInvite} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <Field label="E-mail" htmlFor="inv-email" className="flex-1">
+                <Input
+                  id="inv-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="kolega@firma.cz"
+                  required
+                />
+              </Field>
+              <Field label="Role" htmlFor="inv-role" className="sm:w-44">
+                <Select id="inv-role" value={inviteRole} onChange={(e) => setInviteRole(e.target.value as Role)}>
+                  <option value="member">Jen nahlíží</option>
+                  <option value="admin">Správce</option>
+                </Select>
+              </Field>
+              <Button type="submit" loading={busy === 'invite'} icon={<Mail />}>
+                Pozvat
+              </Button>
+            </form>
+            {sent && <p className="mt-3 text-xs text-[var(--status-success-text)]">Pozvánka odeslána.</p>}
+            {error && <p className="mt-3 text-xs text-[var(--status-error-text)]">{error}</p>}
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Členové{members ? ` (${members.length})` : ''}</CardTitle>
+          {!isAdmin && <p className="mt-1 text-xs text-[var(--text-tertiary)]">Jste běžný uživatel — jen nahlížíte.</p>}
+        </CardHeader>
+        <CardContent>
+          <ul className="divide-y divide-[var(--border-subtle)]">
+            {(members ?? []).map((m) => (
+              <li key={m.userId} className="flex items-center gap-3 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">
+                    {m.name} {m.isYou && <span className="text-[var(--text-tertiary)]">(vy)</span>}
+                  </p>
+                  <p className="truncate text-xs text-[var(--text-tertiary)]">{m.email}</p>
+                </div>
+                {isAdmin && !m.isYou ? (
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={m.role}
+                      onChange={(e) => run(`role-${m.userId}`, () => changeMemberRole(company.id, m.userId, e.target.value as Role))}
+                      className="!h-8 !w-32 text-xs"
+                    >
+                      <option value="member">Jen nahlíží</option>
+                      <option value="admin">Správce</option>
+                    </Select>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      loading={busy === `rm-${m.userId}`}
+                      onClick={() => run(`rm-${m.userId}`, () => removeMember(company.id, m.userId))}
+                      icon={<Trash2 />}
+                      aria-label="Odebrat"
+                    />
+                  </div>
+                ) : (
+                  <RoleBadge role={m.role} />
+                )}
+              </li>
+            ))}
+          </ul>
+
+          {isAdmin && invitations && invitations.length > 0 && (
+            <div className="mt-5 border-t border-[var(--border-subtle)] pt-4">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Čeká na přijetí</p>
+              <ul className="space-y-2">
+                {invitations.map((inv) => (
+                  <li key={inv.id} className="flex items-center gap-3">
+                    <Mail className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
+                    <span className="min-w-0 flex-1 truncate text-sm text-[var(--text-secondary)]">{inv.email}</span>
+                    <RoleBadge role={inv.role} />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      loading={busy === `inv-${inv.id}`}
+                      onClick={() => run(`inv-${inv.id}`, () => revokeInvite(company.id, inv.id))}
+                    >
+                      Zrušit
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {error && !sent && <p className="mt-3 text-xs text-[var(--status-error-text)]">{error}</p>}
         </CardContent>
       </Card>
     </div>

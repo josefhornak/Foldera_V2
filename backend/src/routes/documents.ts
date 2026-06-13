@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { db } from '../db/client.js';
 import { documents, DOCUMENT_STATUS, type DocumentStatus } from '../db/schema/index.js';
 import { requireAuth } from '../middleware/auth.js';
-import { requireCompany } from '../middleware/companyScope.js';
+import { requireCompany, requireAdminRole } from '../middleware/companyScope.js';
 import { uploadLimiter } from '../middleware/rateLimit.js';
 import { enqueueExportRetry, enqueueProcessDocument } from '../queue/queues.js';
 import {
@@ -236,7 +236,7 @@ function carveEmbeddedPdf(buffer: Buffer, fallbackName: string): ReadyFile | nul
  * pipeline as documents from polled sources: written to the shared temp dir,
  * queued for processing, deleted afterwards — never stored by the app.
  */
-router.post('/upload', uploadLimiter, upload.array('files', MAX_UPLOAD_FILES), async (req, res, next) => {
+router.post('/upload', requireAdminRole, uploadLimiter, upload.array('files', MAX_UPLOAD_FILES), async (req, res, next) => {
   try {
     const files = (req.files ?? []) as Express.Multer.File[];
     if (files.length === 0) {
@@ -424,7 +424,7 @@ router.get('/:documentId', async (req, res, next) => {
     const [row] = await db
       .select()
       .from(documents)
-      .where(and(eq(documents.id, req.params.documentId!), eq(documents.companyId, req.company!.id)))
+      .where(and(eq(documents.id, String(req.params.documentId)), eq(documents.companyId, req.company!.id)))
       .limit(1);
     if (!row) throw new AppError(ErrorCodes.NOT_FOUND, 'Document not found', 404);
     // rawText can be large — strip it from the detail payload
@@ -436,12 +436,12 @@ router.get('/:documentId', async (req, res, next) => {
 });
 
 /** Retry export to ABRA Flexi from stored extracted data (export_failed only) */
-router.post('/:documentId/retry', async (req, res, next) => {
+router.post('/:documentId/retry', requireAdminRole, async (req, res, next) => {
   try {
     const [row] = await db
       .select({ id: documents.id, status: documents.status, extracted: documents.extracted })
       .from(documents)
-      .where(and(eq(documents.id, req.params.documentId!), eq(documents.companyId, req.company!.id)))
+      .where(and(eq(documents.id, String(req.params.documentId)), eq(documents.companyId, req.company!.id)))
       .limit(1);
     if (!row) throw new AppError(ErrorCodes.NOT_FOUND, 'Document not found', 404);
     if (row.status !== DOCUMENT_STATUS.EXPORT_FAILED) {
@@ -464,11 +464,11 @@ router.post('/:documentId/retry', async (req, res, next) => {
 });
 
 /** Delete a document record (metadata only — files are never stored anyway). */
-router.delete('/:documentId', async (req, res, next) => {
+router.delete('/:documentId', requireAdminRole, async (req, res, next) => {
   try {
     const [row] = await db
       .delete(documents)
-      .where(and(eq(documents.id, req.params.documentId!), eq(documents.companyId, req.company!.id)))
+      .where(and(eq(documents.id, String(req.params.documentId)), eq(documents.companyId, req.company!.id)))
       .returning({ id: documents.id });
     if (!row) throw new AppError(ErrorCodes.NOT_FOUND, 'Document not found', 404);
     res.status(204).end();

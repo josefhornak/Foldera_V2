@@ -21,7 +21,7 @@ import {
   type Source,
 } from '../db/schema/sources.schema.js';
 import { requireAuth } from '../middleware/auth.js';
-import { requireCompany } from '../middleware/companyScope.js';
+import { requireCompany, requireAdminRole } from '../middleware/companyScope.js';
 import { pollLimiter, sourceWriteLimiter } from '../middleware/rateLimit.js';
 import { enqueuePollSource } from '../queue/queues.js';
 import {
@@ -162,7 +162,7 @@ router.get('/', async (req, res, next) => {
 });
 
 /** POST /collection-email — provision an app-managed collection mailbox */
-router.post('/collection-email', sourceWriteLimiter, async (req, res, next) => {
+router.post('/collection-email', requireAdminRole, sourceWriteLimiter, async (req, res, next) => {
   try {
     const company = req.company!;
     await assertSourceCapacity(company.id);
@@ -188,7 +188,7 @@ router.post('/collection-email', sourceWriteLimiter, async (req, res, next) => {
 });
 
 /** POST /imap/test — test an IMAP connection without creating a source */
-router.post('/imap/test', sourceWriteLimiter, async (req, res, next) => {
+router.post('/imap/test', requireAdminRole, sourceWriteLimiter, async (req, res, next) => {
   try {
     const body = imapConnectionSchema.parse(req.body);
     const result = await testImapConnection(body);
@@ -199,7 +199,7 @@ router.post('/imap/test', sourceWriteLimiter, async (req, res, next) => {
 });
 
 /** POST /imap — create an IMAP source (connection is validated first) */
-router.post('/imap', sourceWriteLimiter, async (req, res, next) => {
+router.post('/imap', requireAdminRole, sourceWriteLimiter, async (req, res, next) => {
   try {
     const body = imapCreateSchema.parse(req.body);
     await assertSourceCapacity(req.company!.id);
@@ -242,7 +242,7 @@ router.post('/imap', sourceWriteLimiter, async (req, res, next) => {
 });
 
 /** PATCH /:sourceId — update name/enabled; for IMAP also connection fields */
-router.patch('/:sourceId', async (req, res, next) => {
+router.patch('/:sourceId', requireAdminRole, async (req, res, next) => {
   try {
     const source = await loadSource(req);
     const body = sourceUpdateSchema.parse(req.body);
@@ -295,7 +295,7 @@ router.patch('/:sourceId', async (req, res, next) => {
 });
 
 /** DELETE /:sourceId */
-router.delete('/:sourceId', async (req, res, next) => {
+router.delete('/:sourceId', requireAdminRole, async (req, res, next) => {
   try {
     const source = await loadSource(req);
     await db
@@ -312,7 +312,7 @@ router.delete('/:sourceId', async (req, res, next) => {
 });
 
 /** POST /:sourceId/poll — enqueue an on-demand poll job */
-router.post('/:sourceId/poll', pollLimiter, async (req, res, next) => {
+router.post('/:sourceId/poll', requireAdminRole, pollLimiter, async (req, res, next) => {
   try {
     const source = await loadSource(req);
     await enqueuePollSource(source.id);
@@ -335,7 +335,7 @@ router.get('/:sourceId/folders', async (req, res, next) => {
 });
 
 /** PATCH /:sourceId/folder — set the watched drive folder, reset cursor */
-router.patch('/:sourceId/folder', async (req, res, next) => {
+router.patch('/:sourceId/folder', requireAdminRole, async (req, res, next) => {
   try {
     const source = await loadSource(req);
     if (source.type !== SOURCE_TYPE.ONEDRIVE && source.type !== SOURCE_TYPE.GOOGLE_DRIVE) {

@@ -9,6 +9,7 @@ import { Input } from '~/components/ui/Input';
 import { StateWrapper } from '~/components/ui/StateWrapper';
 import { Table, TBody, Td, Th, THead, Tr } from '~/components/ui/Table';
 import { useDebouncedValue } from '~/hooks/useDebouncedValue';
+import { useCompanies } from '~/hooks/useCompanies';
 import { retryDocument, useDocuments } from '~/hooks/useDocuments';
 import { useStats } from '~/hooks/useStats';
 import { confidenceLevel, normalizeConfidence } from '~/lib/confidence';
@@ -73,6 +74,8 @@ interface FilterTab {
 export default function DocumentsPage() {
   const { t } = useTranslation();
   const companyId = useCompanyStore((s) => s.companyId);
+  const { companies } = useCompanies();
+  const isAdmin = companies?.find((c) => c.id === companyId)?.role === 'admin';
 
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState('');
@@ -128,7 +131,7 @@ export default function DocumentsPage() {
           </h1>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">{t('documents.subtitle')}</p>
         </div>
-        {companyId && <UploadDropzone companyId={companyId} onUploaded={refresh} />}
+        {companyId && isAdmin && <UploadDropzone companyId={companyId} onUploaded={refresh} />}
       </header>
 
       {/* Toolbar: search + filter tabs */}

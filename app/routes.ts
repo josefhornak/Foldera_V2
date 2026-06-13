@@ -4,6 +4,7 @@ export default [
   // Public marketing landing
   index('routes/landing.tsx'),
   route('podminky', 'routes/terms.tsx'),
+  route('pozvanka/:token', 'routes/invite-accept.tsx'),
   route('login', 'routes/login.tsx'),
   route('register', 'routes/register.tsx'),
   // Authenticated app

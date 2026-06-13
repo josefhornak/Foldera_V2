@@ -26,6 +26,8 @@ export interface Company {
   accountingFillMode: AccountingFillMode;
   trialEndsAt: string | null;
   createdAt: string;
+  /** The signed-in user's role in this company: 'admin' = správce, 'member' = jen nahlíží. */
+  role: 'admin' | 'member';
 }
 
 export const DOCUMENT_STATUSES = [
