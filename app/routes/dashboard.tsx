@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { DocumentStatusBadge } from '~/components/ui/Badge';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/Card';
 import { StateWrapper } from '~/components/ui/StateWrapper';
+import { useBilling } from '~/hooks/useBilling';
 import { useDocuments } from '~/hooks/useDocuments';
 import { useStats } from '~/hooks/useStats';
-import { formatNumber, formatPercent, formatRelative } from '~/lib/format';
+import { formatNumber, formatRelative } from '~/lib/format';
 import { cn } from '~/lib/utils';
 import { useCompanyStore } from '~/stores/company';
 
@@ -16,6 +17,7 @@ export default function DashboardPage() {
   const { t } = useTranslation();
   const companyId = useCompanyStore((s) => s.companyId);
   const { stats, error, isLoading, mutate } = useStats(companyId, POLL_INTERVAL);
+  const { billing } = useBilling(companyId);
   const recent = useDocuments(companyId, {
     page: 1,
     pageSize: 5,
@@ -23,6 +25,33 @@ export default function DashboardPage() {
   });
 
   const failedCount = stats?.allTime.failed ?? 0;
+
+  // Monthly counter from the billing usage ledger (monthlyUsage) — the real
+  // count of documents processed this month. Unlike counting the documents
+  // table, it never drops when a document is deleted.
+  const monthlyCounter = !billing
+    ? '—'
+    : billing.status === 'trial'
+      ? `${billing.trialDocsUsed} / ${billing.trialDocLimit}`
+      : `${billing.used} / ${billing.included}`;
+
+  // Spend this period (what will be billed) + when the next invoice is issued.
+  const spentValue = !billing
+    ? '—'
+    : billing.status === 'active'
+      ? `${billing.estimatedTotalCzk.toLocaleString('cs-CZ')} Kč`
+      : billing.status === 'trial'
+        ? 'Zdarma'
+        : '—';
+  const now = new Date();
+  const nextBilling = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const nextBillingValue = !billing
+    ? '—'
+    : billing.status === 'active'
+      ? nextBilling.toLocaleDateString('cs-CZ')
+      : billing.status === 'trial'
+        ? 'Po aktivaci'
+        : '—';
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
@@ -34,23 +63,10 @@ export default function DashboardPage() {
       </header>
 
       <StateWrapper loading={isLoading && !stats} error={!stats ? error : undefined} onRetry={() => mutate()}>
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-          <StatCard
-            label={t('dashboard.totalProcessed')}
-            value={formatNumber(stats?.allTime.total)}
-          />
-          <StatCard
-            label={t('dashboard.last30Days')}
-            value={formatNumber(stats?.last30Days.total)}
-          />
-          <StatCard
-            label={t('dashboard.successRate')}
-            value={formatPercent(stats?.allTime.successRate)}
-          />
-          <StatCard
-            label={t('dashboard.avgConfidence')}
-            value={formatPercent(stats?.allTime.avgConfidence)}
-          />
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatCard label="Doklady tento měsíc" value={monthlyCounter} />
+          <StatCard label="Útrata tento měsíc" value={spentValue} />
+          <StatCard label="Příští fakturace" value={nextBillingValue} />
           <StatCard
             label={t('dashboard.errorsToResolve')}
             value={formatNumber(failedCount)}
