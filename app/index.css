@@ -134,6 +134,91 @@
     box-shadow: 0 0 7px 0 currentColor;
     flex: none;
   }
+
+  /* ---- Landing page visual primitives (dark, elevated) ------------------ */
+
+  /* Layered violet gradient-mesh background for hero / feature sections. */
+  .mesh-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(40% 50% at 15% 0%, rgba(139, 92, 246, 0.20), transparent 70%),
+      radial-gradient(35% 45% at 85% 10%, rgba(124, 78, 240, 0.16), transparent 70%),
+      radial-gradient(45% 55% at 50% 110%, rgba(139, 92, 246, 0.12), transparent 70%);
+  }
+
+  /* Faint grid overlay — adds the "engineered" texture from the reference. */
+  .grid-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000 40%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000 40%, transparent 100%);
+  }
+
+  /* Frosted glass surface. */
+  .glass {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Gradient hairline border via two-layer background-clip. */
+  .gradient-border {
+    border: 1px solid transparent;
+    background:
+      linear-gradient(var(--surface-default), var(--surface-default)) padding-box,
+      linear-gradient(140deg, rgba(139, 92, 246, 0.6), rgba(255, 255, 255, 0.06) 45%, rgba(124, 78, 240, 0.5)) border-box;
+  }
+
+  /* Violet gradient clipped text for headline accents. */
+  .text-gradient {
+    background: linear-gradient(110deg, #b9a3ff 0%, #8b5cf6 45%, #c9b8ff 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Hover lift for cards. */
+  .card-lift {
+    transition:
+      transform var(--duration-normal) var(--ease-out),
+      border-color var(--duration-normal) var(--ease-default),
+      box-shadow var(--duration-normal) var(--ease-out);
+    will-change: transform;
+  }
+  .card-lift:hover {
+    transform: translateY(-4px);
+    border-color: var(--border-brand);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(139, 92, 246, 0.12);
+  }
+
+  .animate-float {
+    animation: foldera-float 7s var(--ease-default) infinite;
+  }
+  .animate-float-slow {
+    animation: foldera-float 11s var(--ease-default) infinite;
+  }
+  .animate-rise {
+    animation: foldera-rise 0.7s var(--ease-out) both;
+  }
+}
+
+@keyframes foldera-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes foldera-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {

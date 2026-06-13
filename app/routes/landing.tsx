@@ -10,6 +10,10 @@ import {
   ShieldCheck,
   Sparkles,
   Check,
+  Clock,
+  Gauge,
+  Zap,
+  Building2,
 } from 'lucide-react';
 import { Button } from '~/components/ui/Button';
 import { api, ApiError } from '~/lib/api';
@@ -54,6 +58,13 @@ const FEATURES = [
   { icon: ShieldCheck, title: 'Soubory neukládáme', text: 'Originál se zpracuje, nahraje do ABRA a smaže. V aplikaci zůstává jen metadata.' },
 ];
 
+const STATS = [
+  { icon: Clock, value: '< 60 s', label: 'od přijetí faktury po doklad v ABRA' },
+  { icon: Gauge, value: '98 %', label: 'přesnost vytěžení u běžných faktur' },
+  { icon: Zap, value: '0', label: 'ručního přepisování údajů' },
+  { icon: Building2, value: '3', label: 'zdroje příjmu — e-mail, OneDrive, Drive' },
+];
+
 const FAQ = [
   {
     q: 'Ukládáte naše soubory?',
@@ -81,11 +92,13 @@ export default function Landing() {
     <div className="min-h-screen bg-[var(--surface-ground)] text-[var(--text-primary)]">
       <LandingNav appHref={appHref} loggedIn={Boolean(token)} />
       <Hero appHref={appHref} loggedIn={Boolean(token)} />
+      <StatBand />
       <HowItWorks />
       <Features />
       <Pricing />
       <Faq />
       <Contact />
+      <CtaBand appHref={appHref} loggedIn={Boolean(token)} />
       <Footer />
     </div>
   );
@@ -108,7 +121,7 @@ function BrandMark({ className }: { className?: string }) {
 
 function LandingNav({ appHref, loggedIn }: { appHref: string; loggedIn: boolean }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-[var(--border-subtle)] bg-[var(--surface-ground)]/80 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-[var(--border-subtle)] bg-[var(--surface-ground)]/70 backdrop-blur-xl">
       <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
         <a href="#top" className="flex items-center gap-2.5">
           <BrandMark />
@@ -138,22 +151,19 @@ function LandingNav({ appHref, loggedIn }: { appHref: string; loggedIn: boolean 
 function Hero({ appHref, loggedIn }: { appHref: string; loggedIn: boolean }) {
   return (
     <section id="top" className="relative overflow-hidden">
-      {/* accent glow */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-[-10rem] mx-auto h-[28rem] max-w-4xl rounded-full opacity-30 blur-[120px]"
-        style={{ background: 'radial-gradient(closest-side, var(--brand-primary), transparent)' }}
-      />
-      <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-5 py-20 md:grid-cols-2 md:py-28">
-        <div>
-          <span className="inline-flex items-center gap-2 rounded-[var(--radius-token-full)] border border-[var(--border-default)] bg-[var(--surface-interactive)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
-            <Sparkles className="h-3.5 w-3.5 text-[var(--brand-primary-light)]" /> Most mezi fakturami a ABRA Flexi
+      <div aria-hidden="true" className="mesh-bg" />
+      <div aria-hidden="true" className="grid-overlay" />
+      <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-5 py-20 md:grid-cols-[1.05fr_0.95fr] md:py-28">
+        <div className="animate-rise">
+          <span className="inline-flex items-center gap-2 rounded-[var(--radius-token-full)] border border-[var(--border-strong)] bg-[var(--surface-interactive)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
+            <span className="status-dot" style={{ color: 'var(--status-success)' }} /> Most mezi fakturami a ABRA Flexi
           </span>
-          <h1 className="mt-5 font-heading text-4xl font-bold leading-[1.1] tracking-tight md:text-5xl">
-            Faktury z e-mailu rovnou do{' '}
-            <span className="text-[var(--brand-primary-light)]">ABRA Flexi</span>. Automaticky.
+          <h1 className="mt-5 font-heading text-[2.6rem] font-bold leading-[1.05] tracking-tight md:text-[3.5rem]">
+            Faktury z e-mailu<br className="hidden sm:block" /> rovnou do{' '}
+            <span className="text-gradient">ABRA Flexi</span>.
+            <br className="hidden sm:block" /> Automaticky.
           </h1>
-          <p className="mt-5 max-w-md text-base text-[var(--text-secondary)]">
+          <p className="mt-6 max-w-md text-lg leading-relaxed text-[var(--text-secondary)]">
             Foldera vytěží příchozí faktury, zkontroluje duplicity a založí fakturu přijatou
             v ABRA Flexi i s přílohou — bez ručního přepisování.
           </p>
@@ -165,7 +175,15 @@ function Hero({ appHref, loggedIn }: { appHref: string; loggedIn: boolean }) {
               <Button variant="secondary">Jak to funguje</Button>
             </a>
           </div>
-          <p className="mt-3 text-xs text-[var(--text-tertiary)]">Bez platební karty · 7 dní / 10 dokladů zdarma</p>
+          <p className="mt-4 text-xs text-[var(--text-tertiary)]">Bez platební karty · 7 dní / 10 dokladů zdarma</p>
+          <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-[var(--text-tertiary)]">
+            <span className="text-[var(--text-secondary)]">Postaveno na</span>
+            <span>Mistral OCR</span>
+            <span className="opacity-40">·</span>
+            <span>ISDOC</span>
+            <span className="opacity-40">·</span>
+            <span>ABRA Flexi REST API</span>
+          </div>
         </div>
         <HeroMock />
       </div>
@@ -173,7 +191,7 @@ function Hero({ appHref, loggedIn }: { appHref: string; loggedIn: boolean }) {
   );
 }
 
-/** Small on-brand mock of the documents table. */
+/** Glass product mock of the documents table with floating accent cards. */
 function HeroMock() {
   const rows = [
     { sup: 'Alza.cz a.s.', num: '26100412', amt: '18 540 Kč', color: 'var(--status-success)', label: 'Zpracováno' },
@@ -182,29 +200,67 @@ function HeroMock() {
     { sup: 'O2 Czech Republic', num: 'FV-998120', amt: '849 Kč', color: 'var(--status-warning)', label: 'Zpracovává se' },
   ];
   return (
-    <div className="rounded-[var(--radius-token-lg)] border border-[var(--border-default)] bg-[var(--surface-default)] p-2 shadow-[var(--shadow-lg)]">
-      <div className="flex items-center gap-2 px-3 py-2">
-        <span className="h-2.5 w-2.5 rounded-full bg-[var(--status-error)]/60" />
-        <span className="h-2.5 w-2.5 rounded-full bg-[var(--status-warning)]/60" />
-        <span className="h-2.5 w-2.5 rounded-full bg-[var(--status-success)]/60" />
-        <span className="ml-2 text-xs text-[var(--text-tertiary)]">flexi.foldera.cz · Dokumenty</span>
-      </div>
-      <div className="divide-y divide-[var(--border-subtle)] rounded-[var(--radius-token-md)] bg-[var(--surface-sunken)]">
-        {rows.map((r) => (
-          <div key={r.num} className="flex items-center gap-3 px-4 py-3">
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-semibold">{r.sup}</p>
-              <p className="truncate text-xs text-[var(--text-tertiary)]">{r.num}</p>
+    <div className="relative animate-rise [animation-delay:120ms]">
+      {/* glow behind the mock */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -inset-6 rounded-[var(--radius-token-xl)] opacity-60 blur-3xl"
+        style={{ background: 'radial-gradient(closest-side, rgba(139,92,246,0.35), transparent)' }}
+      />
+      <div className="glass relative rounded-[var(--radius-token-xl)] p-2">
+        <div className="flex items-center gap-2 px-3 py-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-[var(--status-error)]/60" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[var(--status-warning)]/60" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[var(--status-success)]/60" />
+          <span className="ml-2 text-xs text-[var(--text-tertiary)]">foldera.cz · Dokumenty</span>
+        </div>
+        <div className="divide-y divide-[var(--border-subtle)] rounded-[var(--radius-token-lg)] bg-[var(--surface-sunken)]/80">
+          {rows.map((r) => (
+            <div key={r.num} className="flex items-center gap-3 px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13px] font-semibold">{r.sup}</p>
+                <p className="truncate text-xs text-[var(--text-tertiary)]">{r.num}</p>
+              </div>
+              <span className="text-[13px] font-semibold tabular-nums">{r.amt}</span>
+              <span className="inline-flex w-[120px] items-center justify-end gap-2 text-xs text-[var(--text-secondary)]">
+                <span className="status-dot" style={{ color: r.color }} />
+                {r.label}
+              </span>
             </div>
-            <span className="text-[13px] font-semibold tabular-nums">{r.amt}</span>
-            <span className="inline-flex w-[120px] items-center justify-end gap-2 text-xs text-[var(--text-secondary)]">
-              <span className="status-dot" style={{ color: r.color }} />
-              {r.label}
-            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* floating accuracy card (echoes the reference's stat tile) */}
+      <div className="glass animate-float absolute -bottom-6 -left-6 hidden rounded-[var(--radius-token-lg)] px-4 py-3 sm:block">
+        <p className="text-[11px] font-medium text-[var(--text-tertiary)]">Přesnost vytěžení</p>
+        <div className="mt-0.5 flex items-baseline gap-1">
+          <span className="font-heading text-2xl font-bold text-gradient">98</span>
+          <span className="text-xs text-[var(--text-tertiary)]">/ 100</span>
+        </div>
+      </div>
+
+      {/* floating ISDOC pill */}
+      <div className="glass animate-float-slow absolute -right-4 -top-4 hidden items-center gap-2 rounded-[var(--radius-token-full)] px-3 py-1.5 text-xs font-medium md:flex">
+        <Check className="h-3.5 w-3.5 text-[var(--status-success)]" /> ISDOC ověřeno
+      </div>
+    </div>
+  );
+}
+
+function StatBand() {
+  return (
+    <section className="border-y border-[var(--border-subtle)] bg-[var(--surface-sunken)]/40">
+      <div className="mx-auto grid max-w-6xl grid-cols-2 gap-px px-5 py-2 md:grid-cols-4">
+        {STATS.map((s) => (
+          <div key={s.label} className="flex flex-col items-center gap-2 px-4 py-8 text-center">
+            <s.icon className="h-5 w-5 text-[var(--brand-primary-light)]" />
+            <span className="font-heading text-3xl font-bold tracking-tight md:text-4xl">{s.value}</span>
+            <span className="max-w-[16rem] text-xs text-[var(--text-secondary)]">{s.label}</span>
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -212,13 +268,13 @@ function Section({ id, eyebrow, title, subtitle, children }: {
   id?: string; eyebrow: string; title: string; subtitle?: string; children: ReactNode;
 }) {
   return (
-    <section id={id} className="mx-auto max-w-6xl px-5 py-20">
+    <section id={id} className="mx-auto max-w-6xl px-5 py-24">
       <div className="mx-auto max-w-2xl text-center">
-        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--brand-primary-light)]">{eyebrow}</p>
-        <h2 className="mt-2 font-heading text-3xl font-bold tracking-tight">{title}</h2>
-        {subtitle && <p className="mt-3 text-[var(--text-secondary)]">{subtitle}</p>}
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--brand-primary-light)]">{eyebrow}</p>
+        <h2 className="mt-3 font-heading text-3xl font-bold tracking-tight md:text-[2.5rem]">{title}</h2>
+        {subtitle && <p className="mt-4 text-[var(--text-secondary)]">{subtitle}</p>}
       </div>
-      <div className="mt-12">{children}</div>
+      <div className="mt-14">{children}</div>
     </section>
   );
 }
@@ -226,15 +282,24 @@ function Section({ id, eyebrow, title, subtitle, children }: {
 function HowItWorks() {
   return (
     <Section id="jak" eyebrow="Jak to funguje" title="Tři kroky, žádné přepisování">
-      <div className="grid gap-5 md:grid-cols-3">
+      <div className="relative grid gap-6 md:grid-cols-3">
+        {/* connector line */}
+        <div
+          aria-hidden="true"
+          className="absolute left-[16%] right-[16%] top-[2.1rem] hidden h-px md:block"
+          style={{ background: 'linear-gradient(to right, transparent, var(--border-brand), transparent)' }}
+        />
         {STEPS.map((s, i) => (
-          <div key={s.title} className="rounded-[var(--radius-token-lg)] border border-[var(--border-default)] bg-[var(--surface-default)] p-6">
-            <div className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-token-md)] bg-[var(--brand-primary-subtle)] text-[var(--brand-primary-light)]">
+          <div key={s.title} className="card-lift relative rounded-[var(--radius-token-xl)] border border-[var(--border-default)] bg-[var(--surface-default)] p-7">
+            <div
+              className="flex h-12 w-12 items-center justify-center rounded-[var(--radius-token-lg)] text-white"
+              style={{ background: 'var(--accent-gradient)', boxShadow: 'var(--accent-glow)' }}
+            >
               <s.icon className="h-5 w-5" />
             </div>
-            <p className="mt-4 text-xs font-semibold text-[var(--text-tertiary)]">Krok {i + 1}</p>
-            <h3 className="mt-1 text-base font-semibold">{s.title}</h3>
-            <p className="mt-2 text-sm text-[var(--text-secondary)]">{s.text}</p>
+            <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-[var(--brand-primary-light)]">Krok {i + 1}</p>
+            <h3 className="mt-1.5 text-lg font-semibold">{s.title}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">{s.text}</p>
           </div>
         ))}
       </div>
@@ -247,10 +312,12 @@ function Features() {
     <Section id="funkce" eyebrow="Funkce" title="Vše pro bezstarostný import faktur" subtitle="Od příjmu přes vytěžení až po zaúčtování — automaticky a ověřeně.">
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {FEATURES.map((f) => (
-          <div key={f.title} className="rounded-[var(--radius-token-lg)] border border-[var(--border-default)] bg-[var(--surface-default)] p-6">
-            <f.icon className="h-5 w-5 text-[var(--brand-primary-light)]" />
-            <h3 className="mt-3 text-base font-semibold">{f.title}</h3>
-            <p className="mt-2 text-sm text-[var(--text-secondary)]">{f.text}</p>
+          <div key={f.title} className="card-lift group rounded-[var(--radius-token-xl)] border border-[var(--border-default)] bg-[var(--surface-default)] p-7">
+            <div className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-token-lg)] bg-[var(--brand-primary-subtle)] text-[var(--brand-primary-light)] transition-colors group-hover:bg-[var(--brand-primary)] group-hover:text-white">
+              <f.icon className="h-5 w-5" />
+            </div>
+            <h3 className="mt-4 text-base font-semibold">{f.title}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">{f.text}</p>
           </div>
         ))}
       </div>
@@ -268,26 +335,33 @@ function Pricing() {
     'Automatické zaúčtování (historie / AI)',
   ];
   return (
-    <Section id="cenik" eyebrow="Ceník" title="Jeden jednoduchý plán" subtitle="Bez závazků. Fakturováno běžnou fakturou.">
+    <Section id="cenik" eyebrow="Ceník" title="Jeden jednoduchý plán" subtitle="Bez závazků. Fakturováno běžnou fakturou každý měsíc.">
       <div className="mx-auto max-w-md">
-        <div
-          className="rounded-[var(--radius-token-xl)] border border-[var(--border-brand)] bg-[var(--surface-default)] p-8 shadow-[var(--shadow-lg)]"
-          style={{ boxShadow: 'var(--shadow-lg), 0 0 60px rgba(var(--brand-primary-rgb),0.12)' }}
-        >
-          <div className="flex items-baseline gap-2">
-            <span className="font-heading text-4xl font-bold">99 Kč</span>
+        <div className="gradient-border card-lift relative overflow-hidden rounded-[var(--radius-token-xl)] p-8 shadow-[var(--shadow-lg)]">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full opacity-40 blur-3xl"
+            style={{ background: 'radial-gradient(closest-side, var(--brand-primary), transparent)' }}
+          />
+          <span className="inline-flex items-center gap-1.5 rounded-[var(--radius-token-full)] bg-[var(--brand-primary-subtle)] px-3 py-1 text-xs font-semibold text-[var(--brand-primary-light)]">
+            <Sparkles className="h-3.5 w-3.5" /> Vše v jednom
+          </span>
+          <div className="mt-5 flex items-baseline gap-2">
+            <span className="font-heading text-5xl font-bold tracking-tight">99 Kč</span>
             <span className="text-[var(--text-secondary)]">/ měsíc · firma</span>
           </div>
           <p className="mt-2 text-sm text-[var(--text-tertiary)]">7 dní zdarma na vyzkoušení (až 10 dokladů), bez karty.</p>
-          <ul className="mt-6 space-y-3">
+          <ul className="mt-7 space-y-3">
             {included.map((item) => (
               <li key={item} className="flex items-start gap-2.5 text-sm">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--status-success)]" />
+                <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--status-success-subtle)]">
+                  <Check className="h-3 w-3 text-[var(--status-success)]" />
+                </span>
                 <span>{item}</span>
               </li>
             ))}
           </ul>
-          <Link to="/register" className="mt-7 block">
+          <Link to="/register" className="mt-8 block">
             <Button className="w-full">Vyzkoušet 7 dní zdarma</Button>
           </Link>
         </div>
@@ -303,13 +377,13 @@ function Faq() {
         {FAQ.map((item) => (
           <details
             key={item.q}
-            className="group rounded-[var(--radius-token-lg)] border border-[var(--border-default)] bg-[var(--surface-default)] px-5 py-4"
+            className="group rounded-[var(--radius-token-lg)] border border-[var(--border-default)] bg-[var(--surface-default)] px-5 py-4 transition-colors hover:border-[var(--border-strong)]"
           >
             <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold marker:content-['']">
               {item.q}
-              <span className="ml-4 text-[var(--text-tertiary)] transition-transform group-open:rotate-45">+</span>
+              <span className="ml-4 text-lg text-[var(--text-tertiary)] transition-transform group-open:rotate-45">+</span>
             </summary>
-            <p className="mt-3 text-sm text-[var(--text-secondary)]">{item.a}</p>
+            <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">{item.a}</p>
           </details>
         ))}
       </div>
@@ -338,14 +412,16 @@ function Contact() {
   }
 
   const inputClass =
-    'h-10 w-full rounded-[var(--radius-token-md)] border border-[var(--border-default)] bg-[var(--surface-default)] px-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] focus:border-[var(--brand-primary)] focus:outline-none';
+    'h-10 w-full rounded-[var(--radius-token-md)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] transition-colors focus:border-[var(--brand-primary)] focus:outline-none';
 
   return (
     <Section id="kontakt" eyebrow="Kontakt" title="Máte dotaz? Napište nám" subtitle="Ozveme se obvykle do jednoho pracovního dne.">
-      <div className="mx-auto max-w-lg rounded-[var(--radius-token-lg)] border border-[var(--border-default)] bg-[var(--surface-default)] p-6">
+      <div className="glass mx-auto max-w-lg rounded-[var(--radius-token-xl)] p-7">
         {sent ? (
           <div className="flex flex-col items-center gap-3 py-8 text-center">
-            <Check className="h-8 w-8 text-[var(--status-success)]" />
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--status-success-subtle)]">
+              <Check className="h-6 w-6 text-[var(--status-success)]" />
+            </span>
             <p className="text-sm font-semibold">Děkujeme, zpráva odešla.</p>
             <p className="text-sm text-[var(--text-secondary)]">Brzy se vám ozveme.</p>
           </div>
@@ -370,6 +446,32 @@ function Contact() {
         )}
       </div>
     </Section>
+  );
+}
+
+function CtaBand({ appHref, loggedIn }: { appHref: string; loggedIn: boolean }) {
+  return (
+    <section className="mx-auto max-w-6xl px-5 pb-24">
+      <div className="relative overflow-hidden rounded-[var(--radius-token-xl)] border border-[var(--border-brand)] px-6 py-16 text-center">
+        <div aria-hidden="true" className="mesh-bg opacity-80" />
+        <div className="relative">
+          <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
+            Začněte zpracovávat faktury <span className="text-gradient">za dvě minuty</span>
+          </h2>
+          <p className="mx-auto mt-4 max-w-md text-[var(--text-secondary)]">
+            Připojte zdroj, zadejte přístup do ABRA Flexi a Foldera se postará o zbytek.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Link to={appHref}>
+              <Button icon={<ArrowRight />}>{loggedIn ? 'Do aplikace' : 'Vyzkoušet 7 dní zdarma'}</Button>
+            </Link>
+            <a href="#cenik">
+              <Button variant="secondary">Zobrazit ceník</Button>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
