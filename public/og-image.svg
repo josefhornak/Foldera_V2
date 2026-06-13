@@ -1,52 +1,44 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#2a1540;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#48295E;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:#0b0b10;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#14101f;stop-opacity:1" />
     </linearGradient>
-    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#EAF97D;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#CEDB6A;stop-opacity:1" />
+    <linearGradient id="violet" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7c4ef0;stop-opacity:1" />
     </linearGradient>
     <filter id="blur1">
-      <feGaussianBlur stdDeviation="60"/>
+      <feGaussianBlur stdDeviation="70"/>
     </filter>
   </defs>
 
   <!-- Background -->
   <rect width="1200" height="630" fill="url(#bg)"/>
 
-  <!-- Decorative blobs -->
-  <circle cx="950" cy="120" r="220" fill="#EAF97D" opacity="0.08" filter="url(#blur1)"/>
-  <circle cx="150" cy="500" r="180" fill="#8653AB" opacity="0.1" filter="url(#blur1)"/>
+  <!-- Decorative glow -->
+  <circle cx="980" cy="110" r="240" fill="#8b5cf6" opacity="0.16" filter="url(#blur1)"/>
+  <circle cx="160" cy="540" r="200" fill="#7c4ef0" opacity="0.12" filter="url(#blur1)"/>
 
-  <!-- Left accent bar -->
-  <rect x="80" y="200" width="6" height="230" rx="3" fill="url(#accent)"/>
+  <!-- Brand mark — violet tile + white F -->
+  <rect x="100" y="150" width="56" height="56" rx="16" fill="url(#violet)"/>
+  <g fill="#ffffff">
+    <rect x="119" y="166" width="6" height="25" rx="2"/>
+    <rect x="119" y="166" width="17" height="6" rx="2"/>
+    <rect x="119" y="178" width="14" height="5" rx="2"/>
+  </g>
+  <text x="172" y="190" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="700" fill="#efeff4">Foldera</text>
 
-  <!-- Logo / Brand mark -->
-  <rect x="100" y="160" width="52" height="52" rx="14" fill="url(#accent)"/>
-  <text x="126" y="195" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="700" fill="#48295E" text-anchor="middle">F</text>
+  <!-- Top accent rule -->
+  <rect x="100" y="232" width="120" height="4" rx="2" fill="url(#violet)"/>
 
-  <!-- Site name -->
-  <text x="170" y="196" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="700" fill="#FFFFFF">Foldera</text>
-
-  <!-- Main headline -->
-  <text x="100" y="290" font-family="system-ui, -apple-system, sans-serif" font-size="56" font-weight="800" fill="#FFFFFF">Inteligentní správa</text>
-  <text x="100" y="360" font-family="system-ui, -apple-system, sans-serif" font-size="56" font-weight="800" fill="url(#accent)">firemních dokumentů</text>
+  <!-- Headline -->
+  <text x="100" y="320" font-family="system-ui, -apple-system, sans-serif" font-size="58" font-weight="800" fill="#efeff4">Konec přepisování dokladů.</text>
+  <text x="100" y="392" font-family="system-ui, -apple-system, sans-serif" font-size="58" font-weight="800" fill="#b9a3ff">Vy už jen kontrolujete v ABRA Flexi.</text>
 
   <!-- Subtitle -->
-  <text x="100" y="420" font-family="system-ui, -apple-system, sans-serif" font-size="26" fill="rgba(255,255,255,0.6)">AI extrakce dat · Schvalovací workflow · Fulltextové vyhledávání</text>
-
-  <!-- Feature chips -->
-  <rect x="100" y="460" width="180" height="44" rx="22" fill="#EAF97D" opacity="0.15"/>
-  <text x="190" y="487" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#EAF97D" text-anchor="middle">AI zpracování</text>
-
-  <rect x="296" y="460" width="196" height="44" rx="22" fill="#EAF97D" opacity="0.15"/>
-  <text x="394" y="487" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#EAF97D" text-anchor="middle">Neomezení uživatelé</text>
-
-  <rect x="508" y="460" width="160" height="44" rx="22" fill="#EAF97D" opacity="0.15"/>
-  <text x="588" y="487" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#EAF97D" text-anchor="middle">Data v EU · GDPR</text>
+  <text x="100" y="452" font-family="system-ui, -apple-system, sans-serif" font-size="25" fill="#9c9cac">Faktury · zálohové faktury · dobropisy · účtenky — automaticky vytěženo a založeno.</text>
 
   <!-- URL -->
-  <text x="100" y="580" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="rgba(255,255,255,0.4)">foldera.cz</text>
+  <text x="100" y="560" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="600" fill="#6f6f80">foldera.cz</text>
 </svg>

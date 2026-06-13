@@ -1,39 +1,23 @@
 import { cn } from '~/lib/utils';
 
 /**
- * Foldera brand mark — purple rounded tile with the lime stacked-pages glyph.
- * Mirrors public/logo.svg (and the favicon) so the in-app branding matches.
- * Gradient ids are suffixed per-instance to stay unique when several render.
+ * Foldera brand mark — violet rounded tile with a white "F", matching the
+ * landing-page header (and the favicon). Single source of truth for the in-app
+ * brand mark.
  */
-export function LogoMark({ className, id = 'a' }: { className?: string; id?: string }) {
-  const bg = `fld-bg-${id}`;
-  const fg = `fld-fg-${id}`;
+export function LogoMark({ className }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 209 209"
-      className={cn('h-8 w-8', className)}
-      role="img"
+    <span
+      className={cn(
+        'flex h-8 w-8 items-center justify-center rounded-[9px] text-[15px] font-bold text-white [background:var(--accent-gradient)]',
+        className
+      )}
+      style={{ boxShadow: 'var(--accent-glow)' }}
       aria-label="Foldera"
-      xmlns="http://www.w3.org/2000/svg"
+      role="img"
     >
-      <defs>
-        <linearGradient id={bg} x1="0" y1="0" x2="209" y2="209" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#3A214A" />
-          <stop offset="100%" stopColor="#1F1230" />
-        </linearGradient>
-        <linearGradient id={fg} x1="0" y1="36" x2="0" y2="168" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#DCE88A" />
-          <stop offset="50%" stopColor="#AFC96A" />
-          <stop offset="100%" stopColor="#6F8835" />
-        </linearGradient>
-      </defs>
-      <rect width="208.5" height="208.5" rx="45" fill={`url(#${bg})`} />
-      <g>
-        <rect x="64" y="36" width="80" height="16" rx="8" fill={`url(#${fg})`} />
-        <rect x="64" y="60" width="68" height="16" rx="8" fill={`url(#${fg})`} />
-        <rect x="64" y="84" width="52" height="84" rx="13" fill={`url(#${fg})`} />
-      </g>
-    </svg>
+      F
+    </span>
   );
 }
 
@@ -45,21 +29,19 @@ export function Logo({
   className,
   tone = 'light',
   markOnly = false,
-  id = 'a',
 }: {
   className?: string;
   tone?: 'light' | 'dark';
   markOnly?: boolean;
-  id?: string;
 }) {
   return (
     <span className={cn('inline-flex items-center gap-2', className)}>
-      <LogoMark id={id} className="h-7 w-7" />
+      <LogoMark />
       {!markOnly && (
         <span
           className={cn(
-            'text-lg font-extrabold tracking-tight',
-            tone === 'dark' ? 'text-white' : 'text-[var(--brand-primary)]'
+            'font-heading text-lg font-bold tracking-tight',
+            tone === 'dark' ? 'text-white' : 'text-[var(--text-primary)]'
           )}
         >
           Foldera
