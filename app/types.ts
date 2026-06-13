@@ -104,6 +104,7 @@ export interface Billing {
   overageCostCzk: number;
   estimatedTotalCzk: number;
   planPriceCzk: number;
+  nextInvoiceDate: string | null;
 }
 
 export type SourceStatus = 'ok' | 'error' | 'pending_auth';

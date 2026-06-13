@@ -43,12 +43,12 @@ export default function DashboardPage() {
       : billing.status === 'trial'
         ? 'Zdarma'
         : '—';
-  const now = new Date();
-  const nextBilling = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const nextBillingValue = !billing
     ? '—'
     : billing.status === 'active'
-      ? nextBilling.toLocaleDateString('cs-CZ')
+      ? billing.nextInvoiceDate
+        ? new Date(billing.nextInvoiceDate).toLocaleDateString('cs-CZ')
+        : '—'
       : billing.status === 'trial'
         ? 'Po aktivaci'
         : '—';

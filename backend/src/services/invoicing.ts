@@ -23,7 +23,7 @@ import { generateId } from '../utils/ids.js';
 import { sendMail } from '../utils/email.js';
 import { logger } from '../utils/logger.js';
 import { toError } from '../utils/errors.js';
-import { INCLUDED_DOCS, OVERAGE_CZK, PLAN_PRICE_CZK, currentPeriod } from './billing.js';
+import { INCLUDED_DOCS, OVERAGE_CZK, PLAN_PRICE_CZK, completedBillingPeriod } from './billing.js';
 import { lookupAres } from './ares.js';
 import { buildPaymentQrPng, toCzechIban } from './payment-qr.js';
 import { buildIsdocXml } from './isdoc.js';
@@ -37,12 +37,6 @@ const INK = '#0b0b10';
 const MUTED = '#9b9ba6';
 const BODY = '#52525b';
 const LINE = '#e7e7ea';
-
-/** 'YYYY-MM' of the month before `date`. */
-function priorPeriod(date = new Date()): string {
-  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - 1, 1));
-  return d.toISOString().slice(0, 7);
-}
 
 function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -215,7 +209,12 @@ export async function buildPdf(data: InvoiceData, isdocXml?: string): Promise<Bu
 }
 
 /** Build, persist and e-mail the invoice for one company + period. */
-export async function generateInvoiceFor(company: Company, period: string): Promise<Invoice | null> {
+export async function generateInvoiceFor(
+  company: Company,
+  period: string,
+  periodStart?: Date,
+  periodEnd?: Date
+): Promise<Invoice | null> {
   const [usageRow] = await db
     .select({ used: monthlyUsage.docCount })
     .from(monthlyUsage)
@@ -224,12 +223,18 @@ export async function generateInvoiceFor(company: Company, period: string): Prom
   const used = usageRow?.used ?? 0;
   const overage = Math.max(0, used - INCLUDED_DOCS);
 
+  // Human label for the billed period, e.g. "29. 6. – 28. 7. 2026".
+  const label =
+    periodStart && periodEnd
+      ? `${periodStart.toLocaleDateString('cs-CZ')} – ${new Date(periodEnd.getTime() - 86_400_000).toLocaleDateString('cs-CZ')}`
+      : period;
+
   const lines: InvoiceLine[] = [
-    { description: `Předplatné Foldera – ${period}`, quantity: 1, unitPriceCzk: PLAN_PRICE_CZK, amountCzk: PLAN_PRICE_CZK },
+    { description: `Předplatné Foldera – ${label}`, quantity: 1, unitPriceCzk: PLAN_PRICE_CZK, amountCzk: PLAN_PRICE_CZK },
   ];
   if (overage > 0) {
     lines.push({
-      description: `Doklady nad rámec (${INCLUDED_DOCS} v ceně) – ${period}`,
+      description: `Doklady nad rámec (${INCLUDED_DOCS} v ceně) – ${label}`,
       quantity: overage,
       unitPriceCzk: OVERAGE_CZK,
       amountCzk: overage * OVERAGE_CZK,
@@ -300,9 +305,9 @@ export async function generateInvoiceFor(company: Company, period: string): Prom
     await sendMail({
       to: recipientEmail,
       bcc: env.BILLING_INVOICE_BCC,
-      subject: `Foldera – faktura ${number} (${period})`,
-      html: `<p>Dobrý den,</p><p>v příloze posíláme fakturu č. <b>${number}</b> za předplatné Foldera za období ${period}.</p><p>Částka k úhradě: <b>${totalCzk} Kč</b>, splatnost ${dueDate}, variabilní symbol ${variableSymbol}.</p><p>V PDF najdete QR platbu a je v něm vložená i elektronická faktura <b>ISDOC</b> pro snadný import do účetnictví.</p><p>Děkujeme, Foldera.</p>`,
-      text: `Faktura ${number} za období ${period}. K úhradě ${totalCzk} Kč, splatnost ${dueDate}, VS ${variableSymbol}.`,
+      subject: `Foldera – faktura ${number} (${label})`,
+      html: `<p>Dobrý den,</p><p>v příloze posíláme fakturu č. <b>${number}</b> za předplatné Foldera za období ${label}.</p><p>Částka k úhradě: <b>${totalCzk} Kč</b>, splatnost ${dueDate}, variabilní symbol ${variableSymbol}.</p><p>V PDF najdete QR platbu a je v něm vložená i elektronická faktura <b>ISDOC</b> pro snadný import do účetnictví.</p><p>Děkujeme, Foldera.</p>`,
+      text: `Faktura ${number} za období ${label}. K úhradě ${totalCzk} Kč, splatnost ${dueDate}, VS ${variableSymbol}.`,
       attachments: [{ filename: `faktura-${number}.pdf`, content: pdf, contentType: 'application/pdf' }],
     });
   } catch (error) {
@@ -336,14 +341,20 @@ export async function generateInvoiceFor(company: Company, period: string): Prom
   return row ?? null;
 }
 
-/** Issue invoices for the prior month to every eligible active company. */
+/**
+ * Issue invoices in arrears on each company's subscription anniversary. A
+ * company is billed only once a full anniversary period has elapsed, so a
+ * mid-month signup is never charged for a partial month. Idempotent per
+ * (company, period) via the unique index.
+ */
 export async function runMonthlyInvoicing(): Promise<void> {
   if (!env.BILLING_INVOICE_ENABLED) return;
-  const period = priorPeriod();
   const active = await db.select().from(companies).where(eq(companies.billingStatus, 'active'));
   for (const company of active) {
-    // Only bill companies that were already subscribed during the prior month.
-    if (!company.subscriptionStartedAt || currentPeriod(company.subscriptionStartedAt) > period) continue;
+    if (!company.subscriptionStartedAt) continue;
+    const completed = completedBillingPeriod(company.subscriptionStartedAt);
+    if (!completed) continue; // first full month hasn't elapsed yet
+    const period = completed.key;
     const [existing] = await db
       .select({ id: invoices.id })
       .from(invoices)
@@ -351,7 +362,7 @@ export async function runMonthlyInvoicing(): Promise<void> {
       .limit(1);
     if (existing) continue;
     try {
-      await generateInvoiceFor(company, period);
+      await generateInvoiceFor(company, period, completed.start, completed.end);
     } catch (error) {
       logger.error(
         { companyId: company.id, period, error: toError(error).message },
