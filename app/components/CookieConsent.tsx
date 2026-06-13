@@ -36,7 +36,7 @@ export function CookieConsent() {
         <div className="max-w-2xl">
           <div className="kicker text-[var(--brand-primary-light)]">Cookies</div>
           <p className="mt-1.5 text-sm text-[var(--text-secondary)]">
-            Používáme nezbytné cookies pro provoz a přihlášení a anonymní měření návštěvnosti. Více v{' '}
+            Používáme nezbytné cookies pro provoz a přihlášení, plus anonymní statistiky návštěvnosti. Více v{' '}
             <Link to="/podminky" className="text-[var(--text-link)] underline underline-offset-2">
               podmínkách
             </Link>

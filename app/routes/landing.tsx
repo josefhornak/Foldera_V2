@@ -62,18 +62,18 @@ export function meta() {
 }
 
 const STEPS = [
-  { title: 'Připojíte zdroj', text: 'Sběrný e-mail, OneDrive nebo Google Drive. Faktury jen přeposíláte nebo ukládáte do složky.' },
-  { title: 'Foldera vytěží data', text: 'OCR + ISDOC: dodavatel, IČO, částky, sazby DPH, položky. Zkontroluje duplicity proti ABRA Flexi.' },
-  { title: 'Vy jen zkontrolujete', text: 'Hotový doklad i s přílohou a zaúčtováním čeká v ABRA Flexi. Vaše práce je projít, co dorazilo.' },
+  { title: 'Připojíte zdroj faktur', text: 'Sběrný e-mail, OneDrive nebo Google Drive. Faktury pak stačí přeposlat nebo uložit do složky.' },
+  { title: 'Foldera vytěží údaje', text: 'Z každé faktury přečte dodavatele, IČO, částky, sazby DPH i položky a ověří, jestli už v ABRA Flexi není.' },
+  { title: 'Vy už jen zkontrolujete', text: 'Hotový doklad i s přílohou a zaúčtováním na vás čeká v ABRA Flexi. Stačí projít, co přišlo.' },
 ];
 
 const FEATURES = [
-  { icon: Mail, title: 'Sběrný e-mail i cloud', text: 'Vlastní adresa @inbox.foldera.cz, OneDrive a Google Drive. Kontrola každých pár minut.' },
-  { icon: ScanLine, title: 'Přesné vytěžení', text: 'Pokročilé OCR + ISDOC jako jistota. Cizí měny, přenesená daňová povinnost, více sazeb DPH.' },
-  { icon: CopyCheck, title: 'Kontrola duplicit', text: 'Stejná faktura se nezaloží dvakrát — porovnání podle IČO a čísla / variabilního symbolu.' },
-  { icon: Receipt, title: 'Faktury, dobropisy i účtenky', text: 'Faktury a dobropisy do faktur přijatých, účtenky rovnou do pokladny — vše s přílohou.' },
-  { icon: Sparkles, title: 'Automatické zaúčtování', text: 'Řádek DPH, předkontace a řádek kontrolního hlášení podle historie dodavatele, nebo návrh od AI.' },
-  { icon: ShieldCheck, title: 'Soubory neukládáme', text: 'Originál se zpracuje, nahraje do ABRA a smaže. V aplikaci zůstává jen metadata.' },
+  { icon: Mail, title: 'Sběrný e-mail i cloud', text: 'Vlastní adresa @inbox.foldera.cz, OneDrive i Google Drive. Foldera je kontroluje každých pár minut.' },
+  { icon: ScanLine, title: 'Spolehlivé vytěžení', text: 'Přesné čtení dat, u elektronických faktur rovnou z ISDOC. Zvládne cizí měny, přenesenou daňovou povinnost i více sazeb DPH.' },
+  { icon: CopyCheck, title: 'Kontrola duplicit', text: 'Stejná faktura se nezaloží dvakrát. Porovnáváme podle IČO, čísla i variabilního symbolu.' },
+  { icon: Receipt, title: 'Faktury, dobropisy i účtenky', text: 'Faktury a dobropisy mezi faktury přijaté, účtenky rovnou do pokladny — všechno i s přílohou.' },
+  { icon: Sparkles, title: 'Automatické zaúčtování', text: 'Doplní řádek DPH, předkontaci i řádek kontrolního hlášení — podle historie dodavatele, nebo návrhem od AI.' },
+  { icon: ShieldCheck, title: 'Soubory neukládáme', text: 'Originál se zpracuje, nahraje do ABRA Flexi a smaže. V aplikaci zůstanou jen vytěžená data.' },
 ];
 
 const FAQ = [
@@ -170,7 +170,7 @@ function Hero({ appHref, loggedIn }: { appHref: string; loggedIn: boolean }) {
       </h1>
       <div className="mt-8 flex flex-col gap-8 animate-rise md:flex-row md:items-end md:justify-between [animation-delay:80ms]">
         <p className="max-w-md text-lg leading-relaxed text-[var(--text-secondary)]">
-          Příchozí faktury, dobropisy i účtenky se do ABRA Flexi založí samy. Vám zbyde jen kontrola.
+          Příchozí faktury, dobropisy i účtenky se do ABRA Flexi založí samy. Vy už jen zkontrolujete, co přišlo.
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <Link to={appHref}>
@@ -248,7 +248,7 @@ function Block({ id, index, kicker, title, intro, children }: {
 
 function HowItWorks() {
   return (
-    <Block id="jak" index="01" kicker="Jak to funguje" title="Tři kroky, pak už nic" intro="Jednou nastavíte zdroj. Pak Foldera běží sama a vy se k fakturám vracíte jen na kontrolu v ABRA Flexi.">
+    <Block id="jak" index="01" kicker="Jak to funguje" title="Nastavíte jednou, dál to běží samo" intro="Zdroj faktur připojíte jednou. Od té chvíle Foldera pracuje sama a vy se k fakturám vrátíte už jen na kontrolu v ABRA Flexi.">
       <div>
         {STEPS.map((s, i) => (
           <div key={s.title} className="flex gap-6 border-t border-[var(--border-subtle)] py-7 first:border-t-0">
@@ -270,8 +270,8 @@ function Features() {
       id="funkce"
       index="02"
       kicker="Funkce"
-      title="Bezobslužně, od příjmu po zaúčtování"
-      intro="Na rozdíl od jiných řešení nepracujete v žádném dalším rozhraní — jen ve svém účetnictví zkontrolujete, co dorazilo."
+      title="Od schránky až do účetnictví"
+      intro="Na rozdíl od jiných nástrojů nepracujete v žádné další aplikaci. Všechno máte rovnou ve svém účetnictví."
     >
       <div className="grid border-l border-[var(--border-subtle)] sm:grid-cols-2">
         {FEATURES.map((f) => (
@@ -296,7 +296,7 @@ function Pricing() {
     'Automatické zaúčtování (historie / AI)',
   ];
   return (
-    <Block id="cenik" index="03" kicker="Ceník" title="Jeden plán, bez závazků" intro="Platíte za firmu, ne za uživatele. Fakturováno běžnou fakturou každý měsíc.">
+    <Block id="cenik" index="03" kicker="Ceník" title="Jeden plán, bez závazků" intro="Platíte za firmu, ne za uživatele. Každý měsíc vám přijde běžná faktura.">
       <div className="gradient-border overflow-hidden rounded-[var(--radius-token-xl)] p-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -365,7 +365,7 @@ function Contact() {
     'h-10 w-full border-0 border-b border-[var(--border-default)] bg-transparent px-0 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] transition-colors focus:border-[var(--brand-primary)] focus:outline-none';
 
   return (
-    <Block id="kontakt" index="05" kicker="Kontakt" title="Máte dotaz? Napište" intro="Ozveme se obvykle do jednoho pracovního dne.">
+    <Block id="kontakt" index="05" kicker="Kontakt" title="Máte dotaz? Napište nám" intro="Ozveme se obvykle do jednoho pracovního dne.">
       <div className="max-w-xl">
         {sent ? (
           <div className="flex items-center gap-3 border-t border-[var(--border-subtle)] py-10">
