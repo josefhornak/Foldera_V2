@@ -64,7 +64,7 @@ const SHELL = (inner: string): string =>
      <div style="max-width:480px;margin:0 auto;background:#14141c;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:32px">
        <div style="font-weight:700;font-size:20px;color:#8b5cf6;margin-bottom:20px">Foldera</div>
        ${inner}
-       <p style="color:#666674;font-size:12px;margin-top:28px">Automatický most mezi fakturami a ABRA Flexi.</p>
+       <p style="color:#666674;font-size:12px;margin-top:28px">Faktury automaticky do ABRA Flexi.</p>
      </div>
    </div>`;
 

@@ -20,13 +20,49 @@ import { api, ApiError } from '~/lib/api';
 import { cn } from '~/lib/utils';
 import { useAuthStore } from '~/stores/auth';
 
+const SITE_URL = 'https://foldera.cz';
+const OG_TITLE = 'Foldera — faktury do ABRA Flexi bez přepisování';
+const OG_DESC =
+  'Foldera běží bezobslužně: příchozí faktury, dobropisy i účtenky sama vytěží a založí jako hotový doklad v ABRA Flexi i s přílohou. Vy už jen kontrolujete ve svém účetnictví. 7 dní zdarma.';
+
 export function meta() {
   return [
-    { title: 'Foldera — faktury z e-mailu rovnou do ABRA Flexi' },
+    { title: OG_TITLE },
+    { name: 'description', content: OG_DESC },
+    { name: 'robots', content: 'index, follow' },
+    { name: 'keywords', content: 'faktury, ABRA Flexi, FlexiBee, účetnictví, automatizace faktur, faktura přijatá, ISDOC, OCR' },
+    { tagName: 'link', rel: 'canonical', href: `${SITE_URL}/` },
+    // Open Graph
+    { property: 'og:type', content: 'website' },
+    { property: 'og:site_name', content: 'Foldera' },
+    { property: 'og:locale', content: 'cs_CZ' },
+    { property: 'og:url', content: `${SITE_URL}/` },
+    { property: 'og:title', content: OG_TITLE },
+    { property: 'og:description', content: OG_DESC },
+    { property: 'og:image', content: `${SITE_URL}/og-image.svg` },
+    // Twitter
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: OG_TITLE },
+    { name: 'twitter:description', content: OG_DESC },
+    { name: 'twitter:image', content: `${SITE_URL}/og-image.svg` },
+    // Structured data
     {
-      name: 'description',
-      content:
-        'Foldera automaticky vytěží příchozí faktury, zkontroluje duplicity a založí fakturu přijatou v ABRA Flexi i s přílohou. Bez ručního přepisování. 7 dní zdarma.',
+      'script:ld+json': {
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareApplication',
+        name: 'Foldera',
+        applicationCategory: 'BusinessApplication',
+        operatingSystem: 'Web',
+        url: `${SITE_URL}/`,
+        description: OG_DESC,
+        offers: {
+          '@type': 'Offer',
+          price: '99',
+          priceCurrency: 'CZK',
+          description: '99 Kč měsíčně za firmu, 50 dokladů v ceně, 7 dní zdarma.',
+        },
+        publisher: { '@type': 'Organization', name: 'Foldera', url: SITE_URL },
+      },
     },
   ];
 }
@@ -40,18 +76,18 @@ const STEPS = [
   {
     icon: ScanLine,
     title: 'Foldera vytěží data',
-    text: 'OCR (Mistral) + ISDOC: dodavatel, IČO, částky, sazby DPH, položky. Zkontroluje duplicity.',
+    text: 'OCR + ISDOC: dodavatel, IČO, částky, sazby DPH, položky. Zkontroluje duplicity.',
   },
   {
     icon: FileCheck2,
-    title: 'Doklad v ABRA Flexi',
-    text: 'Založí fakturu přijatou i s přílohou — se správným zaúčtováním. Bez ručního přepisování.',
+    title: 'Vy jen zkontrolujete',
+    text: 'Hotový doklad i s přílohou a zaúčtováním čeká v ABRA Flexi. Vaše jediná práce je projít, co dorazilo.',
   },
 ];
 
 const FEATURES = [
   { icon: Mail, title: 'Sběrný e-mail i cloud', text: 'Vlastní adresa @inbox.foldera.cz, OneDrive a Google Drive. Kontrola každých pár minut.' },
-  { icon: ScanLine, title: 'Přesné vytěžení', text: 'Mistral OCR + ISDOC jako jistota. Cizí měny, přenesená daňová povinnost, více sazeb DPH.' },
+  { icon: ScanLine, title: 'Přesné vytěžení', text: 'Pokročilé OCR + ISDOC jako jistota. Cizí měny, přenesená daňová povinnost, více sazeb DPH.' },
   { icon: CopyCheck, title: 'Kontrola duplicit', text: 'Stejná faktura se nezaloží dvakrát — porovnání podle IČO a čísla / variabilního symbolu.' },
   { icon: Receipt, title: 'Faktury, dobropisy i účtenky', text: 'Faktury a dobropisy do faktur přijatých, účtenky rovnou do pokladny — vše s přílohou.' },
   { icon: Sparkles, title: 'Automatické zaúčtování', text: 'Řádek DPH, předkontace a řádek kontrolního hlášení podle historie dodavatele, nebo návrh od AI.' },
@@ -155,17 +191,19 @@ function Hero({ appHref, loggedIn }: { appHref: string; loggedIn: boolean }) {
       <div aria-hidden="true" className="grid-overlay" />
       <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-5 py-20 md:grid-cols-[1.05fr_0.95fr] md:py-28">
         <div className="animate-rise">
-          <span className="inline-flex items-center gap-2 rounded-[var(--radius-token-full)] border border-[var(--border-strong)] bg-[var(--surface-interactive)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
-            <span className="status-dot" style={{ color: 'var(--status-success)' }} /> Most mezi fakturami a ABRA Flexi
-          </span>
-          <h1 className="mt-5 font-heading text-[2.6rem] font-bold leading-[1.05] tracking-tight md:text-[3.5rem]">
-            Faktury z e-mailu<br className="hidden sm:block" /> rovnou do{' '}
+          <h1 className="font-heading text-[2.6rem] font-bold leading-[1.05] tracking-tight md:text-[3.5rem]">
+            Konec přepisování faktur.
+            <br className="hidden sm:block" /> Vy už jen kontrolujete v{' '}
             <span className="text-gradient">ABRA Flexi</span>.
-            <br className="hidden sm:block" /> Automaticky.
           </h1>
-          <p className="mt-6 max-w-md text-lg leading-relaxed text-[var(--text-secondary)]">
-            Foldera vytěží příchozí faktury, zkontroluje duplicity a založí fakturu přijatou
-            v ABRA Flexi i s přílohou — bez ručního přepisování.
+          <p className="mt-6 max-w-lg text-lg leading-relaxed text-[var(--text-secondary)]">
+            Foldera běží bezobslužně: každou příchozí fakturu, dobropis i účtenku sama vytěží,
+            zkontroluje duplicity a založí jako hotový doklad v ABRA Flexi — i s přílohou.
+            Vaše jediná práce je zkontrolovat ve svém účetnictví, co dorazilo.
+          </p>
+          <p className="mt-4 max-w-lg text-sm leading-relaxed text-[var(--text-tertiary)]">
+            Na rozdíl od jiných řešení nepřepisujete nic v žádném dalším systému — pracujete
+            už jen ve svém ERP.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link to={appHref}>
@@ -176,14 +214,6 @@ function Hero({ appHref, loggedIn }: { appHref: string; loggedIn: boolean }) {
             </a>
           </div>
           <p className="mt-4 text-xs text-[var(--text-tertiary)]">Bez platební karty · 7 dní / 10 dokladů zdarma</p>
-          <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-[var(--text-tertiary)]">
-            <span className="text-[var(--text-secondary)]">Postaveno na</span>
-            <span>Mistral OCR</span>
-            <span className="opacity-40">·</span>
-            <span>ISDOC</span>
-            <span className="opacity-40">·</span>
-            <span>ABRA Flexi REST API</span>
-          </div>
         </div>
         <HeroMock />
       </div>
@@ -309,7 +339,7 @@ function HowItWorks() {
 
 function Features() {
   return (
-    <Section id="funkce" eyebrow="Funkce" title="Vše pro bezstarostný import faktur" subtitle="Od příjmu přes vytěžení až po zaúčtování — automaticky a ověřeně.">
+    <Section id="funkce" eyebrow="Funkce" title="Bezobslužně od příjmu po zaúčtování" subtitle="Foldera odvede přepisování za vás. Na rozdíl od jiných řešení nepracujete v žádném dalším rozhraní — jen ve svém účetnictví zkontrolujete, co dorazilo.">
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {FEATURES.map((f) => (
           <div key={f.title} className="card-lift group rounded-[var(--radius-token-xl)] border border-[var(--border-default)] bg-[var(--surface-default)] p-7">
@@ -483,8 +513,9 @@ function Footer() {
           <BrandMark className="h-7 w-7 rounded-[9px] text-sm" />
           <span className="font-heading font-bold text-[var(--text-secondary)]">Foldera</span>
         </div>
-        <p>© {2026} Foldera · Automatický most mezi fakturami a ABRA Flexi</p>
+        <p>© {2026} Foldera · Faktury automaticky do ABRA Flexi</p>
         <div className="flex items-center gap-5">
+          <Link to="/podminky" className="hover:text-[var(--text-primary)]">Obchodní podmínky</Link>
           <Link to="/login" className="hover:text-[var(--text-primary)]">Přihlásit se</Link>
           <a href="#cenik" className="hover:text-[var(--text-primary)]">Ceník</a>
         </div>

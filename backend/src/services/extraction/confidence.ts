@@ -123,7 +123,8 @@ function scoreInvoiceFields(invoice: ExtractedInvoice): number {
   if (invoice.invoiceNumber != null && invoice.invoiceNumber.trim() !== '') score += 15;
   if (isIsoDate(invoice.issueDate)) score += 10;
   if (isIsoDate(invoice.dueDate)) score += 5;
-  if (invoice.totalAmount != null && invoice.totalAmount > 0) score += 15;
+  // Credit notes legitimately carry negative totals — score presence, not sign.
+  if (invoice.totalAmount != null && Math.abs(invoice.totalAmount) > 0) score += 15;
   if (isTotalConsistent(invoice)) score += 10;
   if (invoice.variableSymbol != null && /^\d+$/.test(invoice.variableSymbol)) score += 10;
   if (invoice.currency != null && CURRENCY_PATTERN.test(invoice.currency)) score += 5;
@@ -148,7 +149,8 @@ function scoreReceiptFields(invoice: ExtractedInvoice): number {
   }
 
   if (isIsoDate(invoice.issueDate)) score += 15;
-  if (invoice.totalAmount != null && invoice.totalAmount > 0) score += 30;
+  // A receipt total may be extracted negative (read as a return); score presence.
+  if (invoice.totalAmount != null && Math.abs(invoice.totalAmount) > 0) score += 30;
   if (isTotalConsistent(invoice)) score += 15;
   if (invoice.currency != null && CURRENCY_PATTERN.test(invoice.currency)) score += 10;
 

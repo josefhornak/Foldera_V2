@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 import compression from 'compression';
@@ -61,6 +62,9 @@ if (env.NODE_ENV === 'production') {
   app.use(
     express.static(publicDir, {
       index: false,
+      // Don't 301 '/podminky' → '/podminky/' (would fight the catch-all that
+      // serves the prerendered HTML and the canonical without a trailing slash).
+      redirect: false,
       setHeaders: (res, filePath) => {
         // i18n JSON must always revalidate so translation updates land
         // immediately; hashed build assets stay long-lived.
@@ -72,8 +76,21 @@ if (env.NODE_ENV === 'production') {
       },
     })
   );
-  app.get(/^(?!\/api\/).*/, (_req, res) => {
-    res.sendFile(path.join(publicDir, 'index.html'));
+  app.get(/^(?!\/api\/).*/, (req, res) => {
+    // Serve the prerendered per-route HTML when it exists (real content + meta
+    // for crawlers), e.g. '/' → index.html, '/podminky' → podminky/index.html.
+    // Client-only routes (dashboard, …) fall back to the SPA shell.
+    const rel = req.path.replace(/^\/+|\/+$/g, '');
+    const prerendered = rel
+      ? path.resolve(publicDir, rel, 'index.html')
+      : path.join(publicDir, 'index.html');
+    res.set('Cache-Control', 'no-cache');
+    if (prerendered.startsWith(publicDir) && existsSync(prerendered)) {
+      res.sendFile(prerendered);
+      return;
+    }
+    const spaFallback = path.join(publicDir, '__spa-fallback.html');
+    res.sendFile(existsSync(spaFallback) ? spaFallback : path.join(publicDir, 'index.html'));
   });
 }
 

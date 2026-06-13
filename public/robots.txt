@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /$
+Allow: /podminky
+Allow: /login
+Allow: /register
+Disallow: /dashboard
+Disallow: /documents
+Disallow: /settings
+Disallow: /api/
+
+Sitemap: https://foldera.cz/sitemap.xml

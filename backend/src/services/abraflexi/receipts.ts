@@ -30,9 +30,21 @@ const ENTITY_POKLADNI_POHYB = 'pokladni-pohyb' as const;
 /** Cache the resolved cash-movement type per connection (rarely changes). */
 const expenseTypeCache = new Map<string, string>();
 
+/** Strip diacritics + lowercase for tolerant text matching of číselník codes. */
+function normalizeText(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
 /**
- * Resolve the cash-register movement type (typDokl). Prefers an expense (výdej)
- * type from `typ-pokladni-pohyb`; falls back to the configured default.
+ * Resolve the cash-register movement type (typDokl) for a purchase receipt.
+ *
+ * A purchase receipt is money LEAVING the cash register, so it must be booked
+ * as an expense (výdej). We pick a type whose `typPohybuK` is explicitly výdej;
+ * if a deployment leaves `typPohybuK` blank (as the FlexiBee demo does for
+ * "VÝDAJE HOTOVĚ"), we fall back to matching the `kód` name. An explicit příjem
+ * type is never chosen. Only if nothing expense-like exists do we use the
+ * configured default — and we log loudly, because booking a receipt as příjem
+ * is wrong-direction.
  */
 async function resolveCashMovementType(cfg: AbraFlexiConfig): Promise<string> {
   const cacheKey = `${cfg.apiUrl}|${cfg.companyId}`;
@@ -46,12 +58,24 @@ async function resolveCashMovementType(cfg: AbraFlexiConfig): Promise<string> {
       '/typ-pokladni-pohyb.json?detail=custom:kod,typPohybuK&limit=100',
       'typ-pokladni-pohyb',
     );
-    const expense = rows.find((r) => {
-      const t = String((r as { typPohybuK?: unknown }).typPohybuK ?? '').toLowerCase();
-      return t.includes('vyd');
-    });
+    const isExpense = (r: unknown): boolean => {
+      const row = r as { typPohybuK?: unknown; kod?: unknown };
+      const t = String(row.typPohybuK ?? '').toLowerCase();
+      if (t.includes('vyd')) return true; // typPohybu.vydej — authoritative
+      if (t.includes('prijem')) return false; // explicit příjem — never an expense
+      // typPohybuK blank/unknown → infer from the kód naming (e.g. "VÝDAJE HOTOVĚ").
+      return /vyd/.test(normalizeText(String(row.kod ?? '')));
+    };
+    const expense = rows.find(isExpense);
     const kod = (expense as { kod?: string } | undefined)?.kod;
-    if (kod) resolved = kod;
+    if (kod) {
+      resolved = kod;
+    } else {
+      logger.warn(
+        { companyId: cfg.companyId, fallback: resolved },
+        '[AbraFlexi] No výdej cash-movement type found — receipt may be booked in the wrong direction',
+      );
+    }
   } catch (error) {
     logger.warn(
       { companyId: cfg.companyId, error: toError(error).message },
@@ -86,7 +110,15 @@ export async function exportReceiptToPokladna(
   const typDokl = await resolveCashMovementType(cfg);
   const currency = invoice.currency?.trim().toUpperCase() || 'CZK';
   const isForeign = currency !== 'CZK';
-  const vat = classifyVatBreakdown(invoice.vatBreakdown);
+  // A purchase receipt is booked as a cash výdej with POSITIVE amounts (the
+  // movement type carries the direction). Force positive in case an older/stored
+  // extraction still holds the negative the model occasionally returns.
+  const raw = classifyVatBreakdown(invoice.vatBreakdown);
+  const vat = {
+    baseStandard: Math.abs(raw.baseStandard),
+    baseReduced: Math.abs(raw.baseReduced),
+    baseZero: Math.abs(raw.baseZero),
+  };
 
   const pohyb: Record<string, unknown> = {
     typDokl: `code:${typDokl}`,
@@ -109,7 +141,7 @@ export async function exportReceiptToPokladna(
 
   // VAT recap in the header (recomputed base × rate to match ABRA's arithmetic).
   const hasBuckets = vat.baseStandard !== 0 || vat.baseReduced !== 0 || vat.baseZero !== 0;
-  const totalFallback = invoice.totalAmount ?? 0;
+  const totalFallback = Math.abs(invoice.totalAmount ?? 0);
 
   if (!isForeign) {
     if (vat.baseZero !== 0) pohyb.sumOsv = formatNumber(vat.baseZero);

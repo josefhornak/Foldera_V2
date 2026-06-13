@@ -206,6 +206,26 @@ export function mapModelOutputToInvoice(
     invoice.variableSymbol = asNumericSymbol(invoice.invoiceNumber);
   }
 
+  // A purchase receipt is an expense; ABRA records it as a cash výdej where the
+  // amount is entered POSITIVELY (the type carries the direction). The model
+  // sometimes returns the receipt total negative (read as a return) — normalize
+  // receipts to positive so display, confidence and export are all consistent.
+  // Credit notes keep their negative sign (that's how a dobropis is booked).
+  if (invoice.documentType === 'receipt') {
+    if (invoice.totalAmount != null) invoice.totalAmount = Math.abs(invoice.totalAmount);
+    if (invoice.totalWithoutVat != null) invoice.totalWithoutVat = Math.abs(invoice.totalWithoutVat);
+    invoice.vatBreakdown = invoice.vatBreakdown.map((b) => ({
+      ...b,
+      base: Math.abs(b.base),
+      vat: Math.abs(b.vat),
+    }));
+    invoice.lineItems = invoice.lineItems.map((li) => ({
+      ...li,
+      unitPrice: li.unitPrice == null ? li.unitPrice : Math.abs(li.unitPrice),
+      total: li.total == null ? li.total : Math.abs(li.total),
+    }));
+  }
+
   return invoice;
 }
 
