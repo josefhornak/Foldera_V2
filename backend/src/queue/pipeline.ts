@@ -145,7 +145,12 @@ async function runAbraExport(
       const supplier = await findSupplierByIco(cfg, invoice.supplierIco);
       if (supplier) {
         supplierCode = supplier.code;
-        defaults = await getSupplierDefaults(cfg, supplier.code);
+        // Zálohové faktury / DDPP have their own účtování — never apply the
+        // předkontace / členění DPH harvested from the supplier's regular
+        // invoices (ABRA rejects it on those document types).
+        if (!isAdvance && !isTaxPayment) {
+          defaults = await getSupplierDefaults(cfg, supplier.code);
+        }
       }
     } catch (error) {
       // Context enrichment is best-effort — export proceeds without defaults
@@ -167,7 +172,7 @@ async function runAbraExport(
   // hardcoded codes, and a suggestion never breaks the export (see below).
   const historyDefaults = defaults;
   const aiFilled: string[] = [];
-  if (company.accountingFillMode === 'ai') {
+  if (company.accountingFillMode === 'ai' && !isAdvance && !isTaxPayment) {
     const merged = { ...defaults };
     const [clenDph, typUcOp, clenKonVyk] = await Promise.all([
       defaults.cleneniDph == null ? suggestClenDph(cfg, invoice).catch(() => null) : null,
