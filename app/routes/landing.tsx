@@ -2,7 +2,6 @@ import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import {
   ArrowRight,
-  ArrowUpRight,
   Mail,
   ScanLine,
   CopyCheck,
@@ -101,7 +100,6 @@ export default function Landing() {
         <Pricing />
         <Faq />
         <Contact />
-        <Cta appHref={appHref} loggedIn={loggedIn} />
         <Footer />
       </div>
     </div>
@@ -390,26 +388,6 @@ function Contact() {
         )}
       </div>
     </Block>
-  );
-}
-
-function Cta({ appHref, loggedIn }: { appHref: string; loggedIn: boolean }) {
-  return (
-    <section className="border-t border-[var(--border-subtle)]">
-      <div className="mx-auto flex max-w-6xl flex-col items-start gap-8 px-6 py-24 md:flex-row md:items-end md:justify-between">
-        <h2 className="max-w-2xl font-heading text-4xl font-bold leading-[1.02] tracking-[-0.02em] md:text-6xl">
-          Začněte za<br /> <span className="text-[var(--brand-primary-light)]">dvě minuty.</span>
-        </h2>
-        <div className="flex flex-wrap items-center gap-3">
-          <Link to={appHref}>
-            <Button icon={<ArrowUpRight />}>{loggedIn ? 'Do aplikace' : 'Vyzkoušet 7 dní zdarma'}</Button>
-          </Link>
-          <a href="#cenik">
-            <Button variant="secondary">Ceník</Button>
-          </a>
-        </div>
-      </div>
-    </section>
   );
 }
 
