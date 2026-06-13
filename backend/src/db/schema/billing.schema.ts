@@ -50,6 +50,8 @@ export const invoices = pgTable(
     lineItems: jsonb('line_items').$type<InvoiceLine[]>().notNull(),
     status: text('status').$type<'sent' | 'failed'>().notNull().default('sent'),
     errorMessage: text('error_message'),
+    /** When the operator marked this invoice paid (null = unpaid). */
+    paidAt: timestamp('paid_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [uniqueIndex('invoices_company_period_uq').on(table.companyId, table.period)]

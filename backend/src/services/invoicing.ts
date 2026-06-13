@@ -237,10 +237,11 @@ export async function generateInvoiceFor(company: Company, period: string): Prom
   }
   const totalCzk = lines.reduce((s, l) => s + l.amountCzk, 0);
 
+  // Send to the company's chosen billing e-mail; fall back to the owner account.
   const [owner] = await db.select({ email: users.email }).from(users).where(eq(users.id, company.userId)).limit(1);
-  const recipientEmail = owner?.email;
+  const recipientEmail = company.billingEmail ?? owner?.email;
   if (!recipientEmail) {
-    logger.warn({ companyId: company.id }, '[Invoicing] No owner e-mail — skipping invoice');
+    logger.warn({ companyId: company.id }, '[Invoicing] No billing e-mail — skipping invoice');
     return null;
   }
 

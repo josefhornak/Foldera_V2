@@ -11,5 +11,6 @@ export default [
     route('dashboard', 'routes/dashboard.tsx'),
     route('documents', 'routes/documents.tsx'),
     route('settings/:section?', 'routes/settings.tsx'),
+    route('faktury', 'routes/admin-invoices.tsx'),
   ]),
 ] satisfies RouteConfig;

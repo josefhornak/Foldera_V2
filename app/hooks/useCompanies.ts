@@ -19,13 +19,18 @@ export function useCompanies() {
   };
 }
 
-export function createCompany(input: { name: string; ico?: string }) {
+export function createCompany(input: { name: string; ico?: string; billingEmail?: string }) {
   return api<{ company: Company }>('/api/companies', { method: 'POST', body: input });
 }
 
 export function updateCompany(
   id: string,
-  input: { name?: string; ico?: string | null; accountingFillMode?: Company['accountingFillMode'] }
+  input: {
+    name?: string;
+    ico?: string | null;
+    billingEmail?: string | null;
+    accountingFillMode?: Company['accountingFillMode'];
+  }
 ) {
   return api<{ company: Company }>(`/api/companies/${id}`, { method: 'PATCH', body: input });
 }

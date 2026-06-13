@@ -23,6 +23,12 @@ const companySchema = z.object({
       (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
       z.string().regex(/^\d{8}$/, 'IČO musí být přesně 8 číslic').nullish()
     ),
+  /** Where this company's invoices are e-mailed (defaults to the account e-mail). */
+  billingEmail: z
+    .preprocess(
+      (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+      z.string().email('Zadejte platný e-mail').nullish()
+    ),
   /** How accounting fields are filled when the supplier has no history. */
   accountingFillMode: z.enum(['history', 'ai']).optional(),
 });
@@ -46,6 +52,7 @@ function toPublicCompany(c: typeof companies.$inferSelect) {
     id: c.id,
     name: c.name,
     ico: c.ico,
+    billingEmail: c.billingEmail,
     abraApiUrl: c.abraApiUrl,
     abraApiUser: c.abraApiUser,
     abraConfigured: Boolean(c.abraApiUrl && c.abraApiUser && c.abraApiPasswordEnc),
@@ -87,6 +94,8 @@ router.post('/', async (req, res, next) => {
       userId: req.auth!.userId,
       name: body.name,
       ico: body.ico ?? null,
+      // Invoices go to the chosen billing e-mail, defaulting to the account e-mail.
+      billingEmail: body.billingEmail ?? req.auth!.email,
       trialEndsAt,
     });
     if (firstTrial) {

@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { db } from '../db/client.js';
 import { users } from '../db/schema/index.js';
 import { requireAuth, signAuthToken } from '../middleware/auth.js';
+import { isAdminEmail } from '../middleware/admin.js';
 import { AppError, ErrorCodes } from '../utils/errors.js';
 import { generateId } from '../utils/ids.js';
 import { sendVerificationCode } from '../utils/email.js';
@@ -194,7 +195,7 @@ router.get('/me', requireAuth, async (req, res, next) => {
       .where(eq(users.id, req.auth!.userId))
       .limit(1);
     if (!user) throw new AppError(ErrorCodes.UNAUTHORIZED, 'User not found', 401);
-    res.json({ user });
+    res.json({ user: { ...user, isAdmin: isAdminEmail(user.email) } });
   } catch (err) {
     next(err);
   }

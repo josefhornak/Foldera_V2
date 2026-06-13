@@ -4,6 +4,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  isAdmin?: boolean;
 }
 
 export interface AuthResponse {
@@ -17,6 +18,8 @@ export interface Company {
   id: string;
   name: string;
   ico: string | null;
+  /** Where this company's Foldera invoices are sent (defaults to account e-mail). */
+  billingEmail: string | null;
   abraApiUrl: string | null;
   abraApiUser: string | null;
   abraConfigured: boolean;

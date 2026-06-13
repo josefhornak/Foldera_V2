@@ -40,6 +40,8 @@ const envSchema = z.object({
   BILLING_INVOICE_BCC: z.string().default('josef.hornak@foldera.cz'),
   /** Master switch for the monthly invoice job (off until billing details are set). */
   BILLING_INVOICE_ENABLED: z.string().optional().transform((v) => v === 'true'),
+  /** Operator accounts (comma-separated e-mails) with access to the admin invoices overview. */
+  ADMIN_EMAILS: z.string().default('josef.hornak@foldera.cz,hornakjosef@outlook.cz,josef.hornak@socosit.cz'),
 
   // Fallback ABRA Flexi document type (typDokl) for received invoices, used when
   // a supplier has no prior invoices to harvest a type from. The type MUST have

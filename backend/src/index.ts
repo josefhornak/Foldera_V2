@@ -10,6 +10,7 @@ import { pinoHttp } from 'pino-http';
 
 import env from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import adminRouter from './routes/admin.js';
 import aresRouter from './routes/ares.js';
 import authRouter from './routes/auth.js';
 import companiesRouter from './routes/companies.js';
@@ -49,6 +50,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.use('/api/auth', authRouter);
+app.use('/api/admin', adminRouter);
 app.use('/api/ares', aresRouter);
 app.use('/api/contact', contactRouter);
 app.use('/api/companies', companiesRouter);

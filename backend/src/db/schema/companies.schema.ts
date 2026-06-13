@@ -16,6 +16,8 @@ export const companies = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     ico: text('ico'),
+    /** Where this company's Foldera subscription invoices are e-mailed. */
+    billingEmail: text('billing_email'),
 
     // ABRA Flexi connection — password encrypted with AES-256-GCM
     abraApiUrl: text('abra_api_url'),

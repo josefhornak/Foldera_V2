@@ -301,6 +301,7 @@ function CompanyStep(props: {
   const { error, setError, onDone } = props;
   const [name, setName] = useState('');
   const [ico, setIco] = useState('');
+  const [billingEmail, setBillingEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [aresLoading, setAresLoading] = useState(false);
   const [aresMsg, setAresMsg] = useState<string | null>(null);
@@ -328,7 +329,7 @@ function CompanyStep(props: {
     try {
       await api<{ company: Company }>('/api/companies', {
         method: 'POST',
-        body: { name, ico: ico.replace(/\D/g, '') || undefined },
+        body: { name, ico: ico.replace(/\D/g, '') || undefined, billingEmail: billingEmail || undefined },
       });
       onDone();
     } catch (err) {
@@ -359,6 +360,15 @@ function CompanyStep(props: {
       {aresMsg && <p className="text-xs text-[var(--text-tertiary)]">{aresMsg}</p>}
       <Field label="Název firmy" htmlFor="c-name">
         <Input id="c-name" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
+      </Field>
+      <Field label="E-mail pro fakturaci" htmlFor="c-billing" hint="Kam posílat faktury za Folderu. Nepovinné — jinak na váš účet.">
+        <Input
+          id="c-billing"
+          type="email"
+          value={billingEmail}
+          onChange={(e) => setBillingEmail(e.target.value)}
+          placeholder="fakturace@vasefirma.cz"
+        />
       </Field>
       {error && <p role="alert" className="text-xs text-[var(--status-error-text)]">{error}</p>}
       <Button type="submit" loading={submitting} className="w-full">Spustit Folderu</Button>
