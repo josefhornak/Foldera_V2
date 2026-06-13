@@ -1,6 +1,6 @@
 import { useEffect, useState, type ComponentType, type FormEvent } from 'react';
 import { Link, Navigate, NavLink, Outlet } from 'react-router';
-import { AlertTriangle, Building2, Check, ChevronsUpDown, FileText, LayoutDashboard, Plus, Receipt, Settings } from 'lucide-react';
+import { AlertTriangle, Building2, Check, ChevronsUpDown, Clock, FileText, LayoutDashboard, Plus, Receipt, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '~/components/ui/Button';
 import { Card } from '~/components/ui/Card';
@@ -325,20 +325,68 @@ function AddCompanyModal({ onClose, onCreated }: { onClose: () => void; onCreate
   );
 }
 
-/** Top banner shown when processing is paused by the trial/plan limit. */
+const BLOCK_MESSAGES: Record<string, string> = {
+  trial_expired: 'Zkušební období skončilo. Aktivujte předplatné, aby se doklady zase zpracovávaly.',
+  trial_docs: 'Vyčerpali jste 10 dokladů zdarma ze zkušebního období. Aktivujte předplatné.',
+  cancelled: 'Předplatné je zrušené. Obnovte ho, aby se doklady zase zpracovávaly.',
+};
+
+function pluralDays(n: number): string {
+  if (n === 1) return 'den';
+  if (n >= 2 && n <= 4) return 'dny';
+  return 'dní';
+}
+
+/**
+ * Top banner. While processing is paused (trial/plan limit) it warns in amber;
+ * during a running trial it shows a calm countdown to when the trial ends so
+ * the user always sees it coming. Hidden for healthy active subscriptions.
+ */
 function BillingBanner() {
   const companyId = useCompanyStore((s) => s.companyId);
   const { billing } = useBilling(companyId);
-  if (!billing?.blocked) return null;
-  return (
-    <div className="mx-auto mb-5 flex max-w-[1280px] flex-col items-start gap-3 rounded-[var(--radius-token-lg)] border border-[var(--status-warning)]/30 bg-[var(--status-warning-subtle)] px-4 py-3 sm:flex-row sm:items-center">
-      <AlertTriangle className="h-5 w-5 shrink-0 text-[var(--status-warning-text)]" aria-hidden="true" />
-      <p className="flex-1 text-sm text-[var(--status-warning-text)]">{billing.blockReason}</p>
-      <Link to="/settings/company" className="shrink-0">
-        <Button size="sm">Aktivovat předplatné</Button>
-      </Link>
-    </div>
-  );
+  if (!billing) return null;
+
+  // Paused — processing stopped. Amber, urgent.
+  if (billing.blocked) {
+    const msg = (billing.blockReason && BLOCK_MESSAGES[billing.blockReason]) ?? 'Zpracování dokladů je pozastaveno.';
+    return (
+      <div className="mx-auto mb-5 flex max-w-[1280px] flex-col items-start gap-3 rounded-[var(--radius-token-lg)] border border-[var(--status-warning)]/30 bg-[var(--status-warning-subtle)] px-4 py-3 sm:flex-row sm:items-center">
+        <AlertTriangle className="h-5 w-5 shrink-0 text-[var(--status-warning-text)]" aria-hidden="true" />
+        <p className="flex-1 text-sm text-[var(--status-warning-text)]">{msg}</p>
+        <Link to="/settings/company" className="shrink-0">
+          <Button size="sm">Aktivovat předplatné</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  // Running trial — show a countdown to the end date. Turns amber in the last 3 days.
+  if (billing.status === 'trial' && billing.trialEndsAt) {
+    const end = new Date(billing.trialEndsAt);
+    const days = Math.max(0, Math.ceil((end.getTime() - Date.now()) / 86_400_000));
+    const endLabel = end.toLocaleDateString('cs-CZ');
+    const when = days === 0 ? 'dnes' : days === 1 ? 'zítra' : `za ${days} ${pluralDays(days)}`;
+    const docsLeft = Math.max(0, billing.trialDocLimit - billing.trialDocsUsed);
+    const urgent = days <= 3;
+    const tone = urgent
+      ? { border: 'border-[var(--status-warning)]/30', bg: 'bg-[var(--status-warning-subtle)]', text: 'text-[var(--status-warning-text)]' }
+      : { border: 'border-[var(--status-info)]/30', bg: 'bg-[var(--status-info-subtle)]', text: 'text-[var(--status-info-text)]' };
+    return (
+      <div className={`mx-auto mb-5 flex max-w-[1280px] flex-col items-start gap-3 rounded-[var(--radius-token-lg)] border ${tone.border} ${tone.bg} px-4 py-3 sm:flex-row sm:items-center`}>
+        <Clock className={`h-5 w-5 shrink-0 ${tone.text}`} aria-hidden="true" />
+        <p className={`flex-1 text-sm ${tone.text}`}>
+          Zkušební období končí <strong>{when}</strong> ({endLabel}) · zbývá {docsLeft} z {billing.trialDocLimit} dokladů.
+          Pak je potřeba aktivovat předplatné.
+        </p>
+        <Link to="/settings/company" className="shrink-0">
+          <Button size="sm" variant={urgent ? 'primary' : 'secondary'}>Přejít na ostrý provoz</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  return null;
 }
 
 function Onboarding({ onCreated }: { onCreated: (companyId: string) => void }) {

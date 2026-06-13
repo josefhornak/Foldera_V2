@@ -133,6 +133,25 @@ export async function sendDocumentFailureAlert(
   });
 }
 
+/** Tell a company admin the free trial ended — ask them to confirm going paid. */
+export async function sendTrialEndedAlert(
+  to: string,
+  opts: { companyName: string; link: string }
+): Promise<void> {
+  const inner = `
+    <p style="font-size:15px;margin:0 0 8px">Dobrý den,</p>
+    <p style="font-size:15px;color:#9c9cac;margin:0 0 16px">zkušební období pro firmu <b style="color:#efeff4">${escapeHtml(opts.companyName)}</b> skončilo. Příchozí doklady se teď <b style="color:#efeff4">nezpracovávají</b>.</p>
+    <p style="font-size:15px;color:#9c9cac;margin:0 0 18px">Chcete-li přejít na ostrý provoz, je potřeba to potvrdit — aktivací se spustí předplatné <b style="color:#efeff4">199 Kč měsíčně</b> (100 dokladů v ceně, každý další 2 Kč). Bez vašeho potvrzení vám nic neúčtujeme.</p>
+    <a href="${opts.link}" style="display:inline-block;background:#8b5cf6;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 22px;border-radius:10px">Aktivovat předplatné</a>
+    <p style="font-size:13px;color:#666674;margin:18px 0 0">Aktivaci potvrzuje správce firmy přímo v aplikaci. Dokud ji nepotvrdíte, zůstává účet bez poplatku.</p>`;
+  await sendMail({
+    to,
+    subject: `Foldera – zkušební období skončilo (${opts.companyName})`,
+    html: SHELL(inner),
+    text: `Zkušební období pro firmu ${opts.companyName} skončilo a doklady se nezpracovávají. Chcete-li přejít na ostrý provoz (199 Kč/měs, 100 dokladů v ceně), potvrďte aktivaci předplatného zde: ${opts.link}. Bez potvrzení vám nic neúčtujeme.`,
+  });
+}
+
 /** Invite a person to join a company with a given role. */
 export async function sendCompanyInvite(
   to: string,

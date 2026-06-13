@@ -41,6 +41,8 @@ export const companies = pgTable(
       .notNull()
       .default('trial'),
     trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
+    /** Set when the "trial has ended" e-mail was sent, so it goes out only once. */
+    trialEndNotifiedAt: timestamp('trial_end_notified_at', { withTimezone: true }),
     /** Documents processed during the trial (lifetime, capped at 10). */
     trialDocsUsed: integer('trial_docs_used').notNull().default(0),
     /** When the paid subscription was activated (drives which months are billed). */

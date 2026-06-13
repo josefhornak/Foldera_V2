@@ -17,6 +17,7 @@ import { sources, SOURCE_STATUS } from './db/schema/index.js';
 import { pollSource } from './services/sources/index.js';
 import { startMaildirWatchers } from './services/sources/maildirWatcher.js';
 import { runMonthlyInvoicing } from './services/invoicing.js';
+import { runTrialEndNotifications } from './services/notifications.js';
 import { createRedisConnection } from './queue/connection.js';
 import { processIncomingFile, retryExport } from './queue/pipeline.js';
 import {
@@ -123,6 +124,7 @@ async function main(): Promise<void> {
   const invoicesWorker = new Worker(
     QUEUE_NAMES.MONTHLY_INVOICES,
     async () => {
+      await runTrialEndNotifications();
       await runMonthlyInvoicing();
     },
     { connection: createRedisConnection(), concurrency: 1 }
