@@ -28,11 +28,15 @@ import { lookupAres } from './ares.js';
 import { buildPaymentQrPng, toCzechIban } from './payment-qr.js';
 import { buildIsdocXml } from './isdoc.js';
 
-const FONT_PATH = path.resolve(process.cwd(), 'assets', 'DejaVuSans.ttf');
+const ASSETS = path.resolve(process.cwd(), 'assets');
+const FONT_REG = path.join(ASSETS, 'DejaVuSans.ttf');
+const FONT_BOLD = path.join(ASSETS, 'DejaVuSans-Bold.ttf');
+const FONT_MONO = path.join(ASSETS, 'DejaVuSansMono.ttf');
 const ACCENT = '#6d28d9';
 const INK = '#0b0b10';
-const MUTED = '#71717a';
-const LINE = '#e4e4e7';
+const MUTED = '#9b9ba6';
+const BODY = '#52525b';
+const LINE = '#e7e7ea';
 
 /** 'YYYY-MM' of the month before `date`. */
 function priorPeriod(date = new Date()): string {
@@ -65,9 +69,11 @@ interface InvoiceData {
 }
 
 export async function buildPdf(data: InvoiceData): Promise<Buffer> {
-  const left = 50;
-  const right = 545;
+  const left = 48;
+  const right = 547;
+  const W = right - left;
   const fmt = (n: number) => `${n.toLocaleString('cs-CZ')} Kč`;
+  const iban = toCzechIban(env.BILLING_SUPPLIER_BANK);
 
   const qrPng = await buildPaymentQrPng({
     account: env.BILLING_SUPPLIER_BANK,
@@ -77,117 +83,119 @@ export async function buildPdf(data: InvoiceData): Promise<Buffer> {
     recipientName: env.BILLING_SUPPLIER_NAME,
   });
 
-  const doc = new PDFDocument({ size: 'A4', margin: 50 });
+  const doc = new PDFDocument({ size: 'A4', margin: 48 });
   const chunks: Buffer[] = [];
   doc.on('data', (c: Buffer) => chunks.push(c));
   const done = new Promise<Buffer>((resolve) => doc.on('end', () => resolve(Buffer.concat(chunks))));
 
-  doc.registerFont('dv', FONT_PATH);
-  doc.font('dv');
+  doc.registerFont('reg', FONT_REG);
+  doc.registerFont('bold', FONT_BOLD);
+  doc.registerFont('mono', FONT_MONO);
 
-  // ── Header band ──────────────────────────────────────────────────────────
-  doc.rect(0, 0, 595, 96).fill(ACCENT);
-  doc.fillColor('#ffffff').fontSize(22).text('Foldera', left, 30);
-  doc.fontSize(9).fillColor('#ede9fe').text('Automatizace faktur do účetnictví', left, 58);
-  doc.fontSize(20).fillColor('#ffffff').text(`Faktura ${data.number}`, 0, 30, { width: right, align: 'right' });
-  doc.fontSize(9).fillColor('#ede9fe').text('Daňový doklad — neplátce DPH', 0, 60, { width: right, align: 'right' });
-  doc.fillColor(INK);
+  /** Monospace, letter-spaced uppercase micro-label — the signature element. */
+  const kicker = (text: string, x: number, y: number, opts: PDFKit.Mixins.TextOptions = {}) => {
+    doc.font('mono').fontSize(7).fillColor(MUTED).text(text.toUpperCase(), x, y, { characterSpacing: 1.4, ...opts });
+  };
 
-  // ── Supplier / customer ─────────────────────────────────────────────────
-  const topY = 130;
-  const colX = 320;
-  doc.fontSize(8).fillColor(MUTED).text('DODAVATEL', left, topY);
-  doc.fontSize(8).fillColor(MUTED).text('ODBĚRATEL', colX, topY);
-  doc.fillColor(INK).fontSize(11).text(env.BILLING_SUPPLIER_NAME, left, topY + 13);
-  doc.fontSize(9).fillColor('#3f3f46');
-  doc.text(env.BILLING_SUPPLIER_ADDRESS, left, topY + 30, { width: colX - left - 20 });
-  doc.text(`IČO: ${env.BILLING_SUPPLIER_ICO}`, left, topY + 46);
-  doc.text('Neplátce DPH', left, topY + 60);
-  doc.text(env.BILLING_SUPPLIER_EMAIL, left, topY + 74);
+  // ── Masthead ──────────────────────────────────────────────────────────────
+  doc.font('bold').fontSize(27).fillColor(INK).text('Foldera', left, 50, { continued: true });
+  doc.fillColor(ACCENT).text('.');
+  kicker('Fakturace · neplátce DPH', left, 84);
 
-  doc.fillColor(INK).fontSize(11).text(data.customerName, colX, topY + 13, { width: right - colX });
-  doc.fontSize(9).fillColor('#3f3f46');
-  let cy = topY + 30;
+  kicker('Faktura — daňový doklad', left, 52, { width: W, align: 'right' });
+  doc.font('bold').fontSize(21).fillColor(INK).text(`č. ${data.number}`, left, 64, { width: W, align: 'right' });
+
+  doc.moveTo(left, 106).lineTo(right, 106).lineWidth(2).strokeColor(ACCENT).stroke();
+
+  // ── Parties ────────────────────────────────────────────────────────────────
+  const py = 128;
+  const colB = 312;
+  kicker('Dodavatel', left, py);
+  kicker('Odběratel', colB, py);
+
+  doc.font('bold').fontSize(12).fillColor(INK).text(env.BILLING_SUPPLIER_NAME, left, py + 14, { width: colB - left - 16 });
+  doc.font('reg').fontSize(9).fillColor(BODY);
+  doc.text(env.BILLING_SUPPLIER_ADDRESS, left, py + 32, { width: colB - left - 16 });
+  doc.text(`IČO ${env.BILLING_SUPPLIER_ICO} · neplátce DPH`, left, py + 46);
+  doc.text(env.BILLING_SUPPLIER_EMAIL, left, py + 60);
+
+  doc.font('bold').fontSize(12).fillColor(INK).text(data.customerName, colB, py + 14, { width: right - colB });
+  doc.font('reg').fontSize(9).fillColor(BODY);
+  let cy = py + 32;
   if (data.customerAddress) {
-    doc.text(data.customerAddress, colX, cy, { width: right - colX });
+    doc.text(data.customerAddress, colB, cy, { width: right - colB });
     cy = doc.y + 2;
   }
-  if (data.customerIco) doc.text(`IČO: ${data.customerIco}`, colX, cy);
+  if (data.customerIco) doc.text(`IČO ${data.customerIco}`, colB, cy);
 
-  // ── Meta strip ──────────────────────────────────────────────────────────
-  const metaY = topY + 104;
-  doc.roundedRect(left, metaY, right - left, 30, 4).fill('#f4f4f5');
-  doc.fillColor(MUTED).fontSize(8);
-  const cells = [
+  // ── Meta row (hairline framed) ──────────────────────────────────────────────
+  const my = py + 92;
+  doc.moveTo(left, my).lineTo(right, my).lineWidth(0.75).strokeColor(LINE).stroke();
+  const cells: [string, string][] = [
     ['Vystaveno', data.issueDate],
     ['Splatnost', data.dueDate],
     ['Var. symbol', data.variableSymbol],
     ['Účet', env.BILLING_SUPPLIER_BANK],
   ];
-  const cellW = (right - left) / cells.length;
+  const cw = W / cells.length;
   cells.forEach(([label, value], i) => {
-    const x = left + i * cellW + 10;
-    doc.fillColor(MUTED).fontSize(7).text((label ?? '').toUpperCase(), x, metaY + 6);
-    doc.fillColor(INK).fontSize(9).text(value ?? '', x, metaY + 16);
+    const x = left + i * cw;
+    kicker(label, x, my + 12);
+    doc.font('bold').fontSize(10).fillColor(INK).text(value, x, my + 24, { width: cw - 8 });
   });
+  doc.moveTo(left, my + 48).lineTo(right, my + 48).lineWidth(0.75).strokeColor(LINE).stroke();
 
-  // ── Line items table ────────────────────────────────────────────────────
-  let y = metaY + 52;
-  doc.fontSize(8).fillColor(MUTED);
-  doc.text('POPIS', left, y);
-  doc.text('MNOŽSTVÍ', 320, y, { width: 60, align: 'right' });
-  doc.text('CENA', 390, y, { width: 70, align: 'right' });
-  doc.text('CELKEM', 465, y, { width: 80, align: 'right' });
-  y += 14;
-  doc.moveTo(left, y).lineTo(right, y).lineWidth(1).strokeColor(ACCENT).stroke();
-  y += 8;
-  doc.fontSize(10);
+  // ── Line items ──────────────────────────────────────────────────────────────
+  let y = my + 70;
+  kicker('Popis', left, y);
+  kicker('Množství', 318, y, { width: 62, align: 'right' });
+  kicker('Cena', 392, y, { width: 70, align: 'right' });
+  kicker('Celkem', 467, y, { width: 80, align: 'right' });
+  y += 13;
+  doc.moveTo(left, y).lineTo(right, y).lineWidth(1).strokeColor(INK).stroke();
+  y += 10;
   for (const ln of data.lines) {
-    doc.fillColor(INK).text(ln.description, left, y, { width: 260 });
+    doc.font('reg').fontSize(10).fillColor(INK).text(ln.description, left, y, { width: 250 });
     const rowH = doc.y - y;
-    doc.fillColor('#3f3f46');
-    doc.text(String(ln.quantity), 320, y, { width: 60, align: 'right' });
-    doc.text(fmt(ln.unitPriceCzk), 390, y, { width: 70, align: 'right' });
-    doc.fillColor(INK).text(fmt(ln.amountCzk), 465, y, { width: 80, align: 'right' });
-    y += Math.max(rowH, 14) + 8;
-    doc.moveTo(left, y - 4).lineTo(right, y - 4).lineWidth(0.5).strokeColor(LINE).stroke();
+    doc.fillColor(BODY);
+    doc.text(String(ln.quantity), 318, y, { width: 62, align: 'right' });
+    doc.text(fmt(ln.unitPriceCzk), 392, y, { width: 70, align: 'right' });
+    doc.font('bold').fillColor(INK).text(fmt(ln.amountCzk), 467, y, { width: 80, align: 'right' });
+    y += Math.max(rowH, 14) + 9;
+    doc.moveTo(left, y - 5).lineTo(right, y - 5).lineWidth(0.5).strokeColor(LINE).stroke();
   }
 
-  // ── Total box ───────────────────────────────────────────────────────────
-  y += 6;
-  doc.roundedRect(320, y, right - 320, 40, 4).fill(ACCENT);
-  doc.fillColor('#ede9fe').fontSize(9).text('CELKEM K ÚHRADĚ', 330, y + 9);
-  doc.fillColor('#ffffff').fontSize(18).text(fmt(data.totalCzk), 320, y + 19, { width: right - 320 - 10, align: 'right' });
+  // ── Total — oversized focal figure ──────────────────────────────────────────
+  y += 14;
+  kicker('Celkem k úhradě', left, y, { width: W, align: 'right' });
+  doc.font('bold').fontSize(38).fillColor(ACCENT).text(fmt(data.totalCzk), left, y + 12, { width: W, align: 'right' });
+  const totalBottom = y + 12 + 44;
 
-  // ── QR platba ───────────────────────────────────────────────────────────
-  const qrY = y;
+  // ── QR platba (framed) ───────────────────────────────────────────────────────
   if (qrPng) {
-    doc.image(qrPng, left, qrY, { width: 92, height: 92 });
-    doc.fillColor(INK).fontSize(9).text('QR platba', left + 102, qrY + 8);
-    doc.fillColor(MUTED).fontSize(8).text('Naskenujte v bankovní aplikaci', left + 102, qrY + 22, { width: 150 });
-    const iban = toCzechIban(env.BILLING_SUPPLIER_BANK);
-    if (iban) doc.fillColor('#3f3f46').fontSize(7).text(iban, left + 102, qrY + 44, { width: 160 });
+    const qy = y + 6;
+    doc.roundedRect(left, qy, 78, 78, 6).lineWidth(1).strokeColor(LINE).stroke();
+    doc.image(qrPng, left + 6, qy + 6, { width: 66, height: 66 });
+    kicker('QR platba', left + 92, qy + 8);
+    doc.font('reg').fontSize(8.5).fillColor(BODY).text('Naskenujte v bankovní aplikaci', left + 92, qy + 22, { width: 170 });
+    if (iban) doc.font('mono').fontSize(8).fillColor(INK).text(iban, left + 92, qy + 42, { width: 200, characterSpacing: 0.5 });
   }
 
-  // ── Footer ──────────────────────────────────────────────────────────────
-  doc
-    .fillColor(MUTED)
-    .fontSize(8)
-    .text(
-      `Nejsem plátce DPH. Úhradu zašlete na účet ${env.BILLING_SUPPLIER_BANK} pod variabilním symbolem ${data.variableSymbol}. ` +
-        `Součástí e-mailu je elektronická faktura ve formátu ISDOC pro snadný import do účetnictví.`,
-      left,
-      qrY + 110,
-      { width: right - left }
-    );
-  doc
-    .fillColor(MUTED)
-    .fontSize(8)
-    .text(`Foldera · ${env.BILLING_SUPPLIER_EMAIL} · IČO ${env.BILLING_SUPPLIER_ICO}`, left, 770, {
-      width: right - left,
-      align: 'center',
-      lineBreak: false,
-    });
+  // ── Footer (pinned) ──────────────────────────────────────────────────────────
+  const fy = Math.max(totalBottom + 40, 720);
+  doc.moveTo(left, fy).lineTo(right, fy).lineWidth(0.75).strokeColor(LINE).stroke();
+  doc.font('reg').fontSize(8).fillColor(MUTED).text(
+    `Neplátce DPH. Úhradu zašlete na účet ${env.BILLING_SUPPLIER_BANK}, variabilní symbol ${data.variableSymbol}. ` +
+      `K e-mailu je přiložena elektronická faktura (ISDOC) pro import do účetnictví.`,
+    left,
+    fy + 10,
+    { width: W }
+  );
+  kicker(`Foldera · ${env.BILLING_SUPPLIER_EMAIL} · IČO ${env.BILLING_SUPPLIER_ICO}`, left, Math.min(fy + 48, 778), {
+    width: W,
+    align: 'center',
+    lineBreak: false,
+  });
 
   doc.end();
   return done;
@@ -279,7 +287,9 @@ export async function generateInvoiceFor(company: Company, period: string): Prom
       text: `Faktura ${number} za období ${period}. K úhradě ${totalCzk} Kč, splatnost ${dueDate}, VS ${variableSymbol}.`,
       attachments: [
         { filename: `faktura-${number}.pdf`, content: pdf, contentType: 'application/pdf' },
-        { filename: `faktura-${number}.isdoc`, content: Buffer.from(isdocXml, 'utf8'), contentType: 'application/xml' },
+        // ISDOC XML attached as .xml (better e-mail deliverability than .isdoc,
+        // which spam filters treat as an unknown type); the content is unchanged.
+        { filename: `faktura-${number}.xml`, content: Buffer.from(isdocXml, 'utf8'), contentType: 'application/xml' },
       ],
     });
   } catch (error) {
