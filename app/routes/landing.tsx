@@ -53,9 +53,9 @@ export function meta() {
         description: OG_DESC,
         offers: {
           '@type': 'Offer',
-          price: '99',
+          price: '199',
           priceCurrency: 'CZK',
-          description: '99 Kč měsíčně za firmu, 50 dokladů v ceně, 7 dní zdarma.',
+          description: '199 Kč měsíčně za firmu, 100 dokladů v ceně, 7 dní zdarma.',
         },
         publisher: { '@type': 'Organization', name: 'Foldera', url: SITE_URL },
       },
@@ -294,7 +294,7 @@ function Features() {
 
 function Pricing() {
   const included = [
-    '50 dokladů v ceně každý měsíc',
+    '100 dokladů v ceně každý měsíc',
     'Každý další doklad jen 2 Kč',
     'Neomezeně uživatelů',
     'Sběrný e-mail, OneDrive i Google Drive',
@@ -307,7 +307,7 @@ function Pricing() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="font-heading text-5xl font-bold tracking-tight">99 Kč</span>
+              <span className="font-heading text-5xl font-bold tracking-tight">199 Kč</span>
               <span className="text-[var(--text-secondary)]">/ měsíc · firma</span>
             </div>
             <p className="mt-2 text-sm text-[var(--text-tertiary)]">7 dní zdarma (až 10 dokladů), bez karty.</p>

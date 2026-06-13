@@ -1,7 +1,7 @@
 /**
  * Billing: trial / subscription state, document metering and limit decisions.
  *
- * Pricing: 7-day / 10-document free trial → then 99 Kč/měsíc per company with 50
+ * Pricing: 7-day / 10-document free trial → then 199 Kč/měsíc per company with 100
  * documents included, each extra document 2 Kč (notify but keep running).
  * Invoiced monthly (see the monthly invoice job). One subscription per company.
  */
@@ -11,8 +11,8 @@ import { db } from '../db/client.js';
 import { companies, monthlyUsage, type Company } from '../db/schema/index.js';
 import { generateId } from '../utils/ids.js';
 
-export const PLAN_PRICE_CZK = 99;
-export const INCLUDED_DOCS = 50;
+export const PLAN_PRICE_CZK = 199;
+export const INCLUDED_DOCS = 100;
 export const OVERAGE_CZK = 2;
 export const TRIAL_DAYS = 7;
 export const TRIAL_DOC_LIMIT = 10;

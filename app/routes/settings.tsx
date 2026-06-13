@@ -268,7 +268,7 @@ function BillingCard({ companyId }: { companyId: string }) {
       <CardHeader>
         <CardTitle>Předplatné</CardTitle>
         <p className="mt-1 text-xs text-[var(--text-tertiary)]">
-          99 Kč/měsíc · 50 dokladů v ceně · každý další 2 Kč · fakturováno měsíčně.
+          199 Kč/měsíc · 100 dokladů v ceně · každý další 2 Kč · fakturováno měsíčně.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -297,7 +297,7 @@ function BillingCard({ companyId }: { companyId: string }) {
               </div>
             </div>
             <Button loading={busy} onClick={() => act(() => subscribeCompany(companyId))}>
-              Aktivovat předplatné (99 Kč/měsíc)
+              Aktivovat předplatné (199 Kč/měsíc)
             </Button>
           </>
         )}
@@ -306,7 +306,7 @@ function BillingCard({ companyId }: { companyId: string }) {
           <>
             <div className="flex items-center gap-2">
               <Pill tone="success" label="Aktivní" />
-              <span className="text-sm text-[var(--text-secondary)]">99 Kč/měsíc</span>
+              <span className="text-sm text-[var(--text-secondary)]">199 Kč/měsíc</span>
             </div>
             <div>
               <div className="mb-1 flex justify-between text-xs text-[var(--text-secondary)]">

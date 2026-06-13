@@ -76,7 +76,7 @@ export default function Terms() {
 
         <H2>5. Cena a platební podmínky</H2>
         <P>
-          Cena předplatného je <strong className="text-[var(--text-primary)]">99 Kč měsíčně za každou firmu</strong>. V ceně je zahrnuto 50 zpracovaných
+          Cena předplatného je <strong className="text-[var(--text-primary)]">199 Kč měsíčně za každou firmu</strong>. V ceně je zahrnuto 100 zpracovaných
           dokladů měsíčně; každý další doklad nad tento rámec je zpoplatněn částkou 2 Kč. Poskytovatel není plátcem DPH,
           ceny jsou konečné.
         </P>
