@@ -35,12 +35,6 @@ export const companies = pgTable(
     /** Attach the original e-mail (.eml) to the ABRA Flexi document for e-mail sources. */
     attachOriginalEmail: boolean('attach_original_email').notNull().default(false),
 
-    /** ABRA typ-faktury-prijate code for received advance invoices (zálohové
-     *  faktury) and for the tax document on a received payment (DDPP). Both are
-     *  booked into faktura-prijata with this type; null → the configured default. */
-    advanceInvoiceType: text('advance_invoice_type'),
-    taxPaymentType: text('tax_payment_type'),
-
     // Billing. trial → free 7 days / 10 docs, then blocked until active.
     billingStatus: text('billing_status')
       .$type<'trial' | 'active' | 'cancelled'>()

@@ -109,11 +109,11 @@ async function runAbraExport(
   const isTaxPayment = docType === 'tax_payment'; // daňový doklad k přijaté platbě (DDPP)
 
   // Zálohové faktury i DDPP se zakládají do faktura-prijata, jen s vlastním typem
-  // dokladu (na výběr v nastavení firmy; jinak konfigurovaný default).
+  // dokladu (Foldera podtyp pozná z dokladu; typ je konfigurovaný default).
   const exportOptions: { typDokl?: string } = isAdvance
-    ? { typDokl: company.advanceInvoiceType ?? env.ABRA_DEFAULT_TYP_ZALOHA }
+    ? { typDokl: env.ABRA_DEFAULT_TYP_ZALOHA }
     : isTaxPayment
-      ? { typDokl: company.taxPaymentType ?? env.ABRA_DEFAULT_TYP_DDPP }
+      ? { typDokl: env.ABRA_DEFAULT_TYP_DDPP }
       : {};
   const attachEntity = isReceipt ? ENTITY_POKLADNI_POHYB : undefined;
 

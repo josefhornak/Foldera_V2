@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/Card';
 import { Field, Input, Select } from '~/components/ui/Input';
 import { LogOut, Mail, ShieldCheck, Trash2, UserRound } from 'lucide-react';
 import { useBilling, subscribeCompany, cancelSubscription } from '~/hooks/useBilling';
-import { deleteCompany, updateCompany, useCompanies, useInvoiceTypes } from '~/hooks/useCompanies';
+import { deleteCompany, updateCompany, useCompanies } from '~/hooks/useCompanies';
 import {
   changeMemberRole,
   inviteMember,
@@ -163,85 +163,6 @@ function AccountingCard({ company, onChanged }: { company: Company; onChanged: (
             <option value="ai">{t('settings.accounting.ai')}</option>
           </Select>
         </Field>
-      </CardContent>
-    </Card>
-  );
-}
-
-/** Pick the ABRA document type for advance invoices (zálohové faktury) and DDPP. */
-function AdvanceDocsCard({ company, onChanged }: { company: Company; onChanged: () => void }) {
-  const { types, isLoading } = useInvoiceTypes(company.id, company.abraConfigured);
-  const [advance, setAdvance] = useState(company.advanceInvoiceType ?? '');
-  const [ddpp, setDdpp] = useState(company.taxPaymentType ?? '');
-  const [saving, setSaving] = useState<string | null>(null);
-
-  useEffect(() => {
-    setAdvance(company.advanceInvoiceType ?? '');
-    setDdpp(company.taxPaymentType ?? '');
-  }, [company.id, company.advanceInvoiceType, company.taxPaymentType]);
-
-  async function save(field: 'advanceInvoiceType' | 'taxPaymentType', value: string) {
-    setSaving(field);
-    try {
-      await updateCompany(company.id, { [field]: value || null });
-      onChanged();
-    } finally {
-      setSaving(null);
-    }
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Zálohové faktury a daňové doklady</CardTitle>
-        <p className="mt-1 text-xs text-[var(--text-tertiary)]">
-          Zálohové faktury i daňový doklad k přijaté platbě se zakládají do faktur přijatých s vybraným typem dokladu.
-          Vyberte typ ze svého číselníku ABRA Flexi (musí mít číselnou řadu).
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {!company.abraConfigured ? (
-          <p className="text-sm text-[var(--text-secondary)]">Nejdřív připojte ABRA Flexi.</p>
-        ) : (
-          <>
-            <Field label="Typ pro zálohové faktury" htmlFor="adv-type" className="max-w-md">
-              <Select
-                id="adv-type"
-                value={advance}
-                disabled={isLoading || saving === 'advanceInvoiceType'}
-                onChange={(e) => {
-                  setAdvance(e.target.value);
-                  void save('advanceInvoiceType', e.target.value);
-                }}
-              >
-                <option value="">Výchozí (CF_ZALOHA_PRIJATA)</option>
-                {(types ?? []).map((t) => (
-                  <option key={t.kod} value={t.kod}>
-                    {t.kod} — {t.nazev}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Typ pro daňový doklad k přijaté platbě" htmlFor="ddpp-type" className="max-w-md">
-              <Select
-                id="ddpp-type"
-                value={ddpp}
-                disabled={isLoading || saving === 'taxPaymentType'}
-                onChange={(e) => {
-                  setDdpp(e.target.value);
-                  void save('taxPaymentType', e.target.value);
-                }}
-              >
-                <option value="">Výchozí (CF_DDPP_PRIJATY)</option>
-                {(types ?? []).map((t) => (
-                  <option key={t.kod} value={t.kod}>
-                    {t.kod} — {t.nazev}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </>
-        )}
       </CardContent>
     </Card>
   );
@@ -492,8 +413,6 @@ function CompanySection({ company, onChanged }: { company: Company; onChanged: (
       <AccountingCard company={company} onChanged={onChanged} />
 
       <EmailOptionsCard company={company} onChanged={onChanged} />
-
-      <AdvanceDocsCard company={company} onChanged={onChanged} />
 
       <Card>
         <CardHeader>
