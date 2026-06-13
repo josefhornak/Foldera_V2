@@ -8,7 +8,6 @@ import {
   CopyCheck,
   FileCheck2,
   Receipt,
-  ShieldCheck,
   Sparkles,
   Check,
   Paperclip,
@@ -77,7 +76,6 @@ const FEATURES = [
   { icon: Sparkles, title: 'Automatické zaúčtování', text: 'Doplní řádek DPH, předkontaci i řádek kontrolního hlášení — podle historie dodavatele, nebo návrhem od AI.' },
   { icon: Paperclip, title: 'Originál i e-mail v příloze', text: 'Zdrojový doklad přiložíme k záznamu v ABRA. Volitelně k němu uložíme i původní e-mail (.eml) jako důkaz.' },
   { icon: Users, title: 'Více firem a tým', text: 'Pod jedním účtem spravujete více firem. Kolegy pozvete e-mailem jako správce, nebo jen pro nahlížení.' },
-  { icon: ShieldCheck, title: 'Soubory neukládáme', text: 'Originál se zpracuje, nahraje do ABRA Flexi a smaže. V aplikaci zůstanou jen vytěžená data.' },
 ];
 
 const FAQ = [
