@@ -4,11 +4,12 @@
  * failed doklad never silently stalls. Best-effort — never throws into the
  * pipeline; a mail outage must not break document processing.
  */
-import { and, eq, isNull, lte } from 'drizzle-orm';
+import { and, eq, gte, isNull, lte, or } from 'drizzle-orm';
 
 import env from '../config/env.js';
 import { db } from '../db/client.js';
 import { companies, companyMembers, users, type Company } from '../db/schema/index.js';
+import { TRIAL_DOC_LIMIT, decideBilling } from './billing.js';
 import { sendDocumentFailureAlert, sendTrialEndedAlert } from '../utils/email.js';
 import { logger } from '../utils/logger.js';
 import { toError } from '../utils/errors.js';
@@ -72,23 +73,29 @@ export async function notifyDocumentFailure(company: Company, failure: DocumentF
 }
 
 /**
- * Daily sweep: for every company whose free trial has just ended (still on the
- * 'trial' status, trialEndsAt in the past, not yet notified), e-mail its admins
- * that the trial is over and ask them to confirm activation before going paid.
- * Marks trialEndNotifiedAt so each company is notified only once. Best-effort.
+ * Daily sweep: for every company whose free trial has ended — by time OR by
+ * exhausting the free-doc quota — e-mail its admins that the trial is over and
+ * ask them to confirm activation before going paid. Considers a company "ended"
+ * when decideBilling no longer allows processing, so doc-exhausted trials are
+ * caught too, not just time-expired ones. Marks trialEndNotifiedAt only AFTER
+ * the send attempt so a transient mail outage retries next run rather than
+ * silently dropping the e-mail. Notified once per company. Best-effort.
  */
 export async function runTrialEndNotifications(): Promise<void> {
   const now = new Date();
-  let expired: Company[] = [];
+  let candidates: Company[] = [];
   try {
-    expired = await db
+    // SQL-bounded prefilter: only trials that have actually ended (time OR quota)
+    // and weren't notified yet — keeps the daily job from loading every running
+    // trial. decideBilling() below is the source-of-truth confirmation.
+    candidates = await db
       .select()
       .from(companies)
       .where(
         and(
           eq(companies.billingStatus, 'trial'),
-          lte(companies.trialEndsAt, now),
-          isNull(companies.trialEndNotifiedAt)
+          isNull(companies.trialEndNotifiedAt),
+          or(lte(companies.trialEndsAt, now), gte(companies.trialDocsUsed, TRIAL_DOC_LIMIT))
         )
       );
   } catch (error) {
@@ -97,26 +104,39 @@ export async function runTrialEndNotifications(): Promise<void> {
   }
 
   const link = `${env.APP_BASE_URL.replace(/\/$/, '')}/settings/company`;
-  for (const company of expired) {
+  for (const company of candidates) {
+    if (decideBilling(company).allowed) continue; // belt-and-suspenders
     try {
       const admins = await adminEmails(company.id);
-      // Mark as notified even with no admins, so we don't re-scan it forever.
-      await db
-        .update(companies)
-        .set({ trialEndNotifiedAt: new Date() })
-        .where(eq(companies.id, company.id));
-      if (!admins.length) continue;
-      await Promise.all(
+      const results = await Promise.all(
         admins.map((email) =>
-          sendTrialEndedAlert(email, { companyName: company.name, link }).catch((error) =>
-            logger.error(
-              { companyId: company.id, to: email, error: toError(error).message },
-              '[Notifications] Failed to send trial-ended alert'
-            )
-          )
+          sendTrialEndedAlert(email, { companyName: company.name, link })
+            .then(() => true)
+            .catch((error) => {
+              logger.error(
+                { companyId: company.id, to: email, error: toError(error).message },
+                '[Notifications] Failed to send trial-ended alert'
+              );
+              return false;
+            })
         )
       );
-      logger.info({ companyId: company.id, admins: admins.length }, '[Notifications] Trial-ended alert sent');
+
+      // Mark notified only once we've actually reached someone (or there is no
+      // admin to reach). If every send failed — e.g. an SMTP outage — leave the
+      // company unmarked so the next daily run retries instead of dropping it.
+      if (admins.length === 0 || results.some(Boolean)) {
+        await db
+          .update(companies)
+          .set({ trialEndNotifiedAt: new Date() })
+          .where(eq(companies.id, company.id));
+        logger.info({ companyId: company.id, admins: admins.length }, '[Notifications] Trial-ended alert sent');
+      } else {
+        logger.warn(
+          { companyId: company.id, admins: admins.length },
+          '[Notifications] Trial-ended alert failed for all admins — will retry next run'
+        );
+      }
     } catch (error) {
       logger.error(
         { companyId: company.id, error: toError(error).message },

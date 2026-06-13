@@ -124,7 +124,12 @@ async function main(): Promise<void> {
   const invoicesWorker = new Worker(
     QUEUE_NAMES.MONTHLY_INVOICES,
     async () => {
-      await runTrialEndNotifications();
+      // Isolated so a failure in the trial sweep can never block invoicing.
+      try {
+        await runTrialEndNotifications();
+      } catch (error) {
+        logger.error({ error: toError(error).message }, '[Worker] Trial-end sweep failed');
+      }
       await runMonthlyInvoicing();
     },
     { connection: createRedisConnection(), concurrency: 1 }
