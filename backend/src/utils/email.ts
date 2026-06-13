@@ -49,6 +49,16 @@ export async function sendMail(opts: {
   }
 }
 
+/** Escape user-controlled text before interpolating into an HTML e-mail body. */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 const SHELL = (inner: string): string =>
   `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#0b0b10;color:#efeff4;padding:32px">
      <div style="max-width:480px;margin:0 auto;background:#14141c;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:32px">
@@ -60,8 +70,9 @@ const SHELL = (inner: string): string =>
 
 /** Send the 6-digit signup verification code. */
 export async function sendVerificationCode(to: string, name: string, code: string): Promise<void> {
+  const safeName = name ? escapeHtml(name) : '';
   const inner = `
-    <p style="font-size:15px;margin:0 0 8px">Dobrý den${name ? ` ${name}` : ''},</p>
+    <p style="font-size:15px;margin:0 0 8px">Dobrý den${safeName ? ` ${safeName}` : ''},</p>
     <p style="font-size:15px;color:#9c9cac;margin:0 0 20px">váš ověřovací kód pro registraci do Foldera je:</p>
     <div style="font-size:34px;font-weight:700;letter-spacing:8px;text-align:center;background:#0e0e13;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:18px 0;color:#efeff4">${code}</div>
     <p style="font-size:13px;color:#666674;margin:18px 0 0">Kód platí 15 minut. Pokud jste o registraci nežádali, e-mail ignorujte.</p>`;

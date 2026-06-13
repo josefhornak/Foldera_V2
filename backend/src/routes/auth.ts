@@ -1,3 +1,5 @@
+import { randomInt, timingSafeEqual } from 'node:crypto';
+
 import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { Router } from 'express';
@@ -38,8 +40,19 @@ const loginSchema = z.object({
   password: z.string().min(1).max(200),
 });
 
-const sixDigitCode = (): string => String(Math.floor(100000 + Math.random() * 900000));
+/** Cryptographically-random 6-digit verification code. */
+const sixDigitCode = (): string => String(randomInt(100000, 1000000));
 const codeExpiry = (): Date => new Date(Date.now() + 15 * 60 * 1000);
+/** Wrong-code guesses before the code is invalidated and a resend is required. */
+const MAX_VERIFY_ATTEMPTS = 5;
+
+/** Constant-time equality for two short ASCII strings (avoids a timing oracle). */
+function safeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a, 'utf8');
+  const bb = Buffer.from(b, 'utf8');
+  if (ab.length !== bb.length) return false;
+  return timingSafeEqual(ab, bb);
+}
 
 /**
  * Register: create the user as unverified and e-mail a 6-digit code. No token is
@@ -65,7 +78,13 @@ router.post('/register', authLimiter, async (req, res, next) => {
     if (existing) {
       await db
         .update(users)
-        .set({ passwordHash, name: body.name, verifyCode: code, verifyCodeExpires: codeExpiry() })
+        .set({
+          passwordHash,
+          name: body.name,
+          verifyCode: code,
+          verifyCodeExpires: codeExpiry(),
+          verifyAttempts: 0,
+        })
         .where(eq(users.id, existing.id));
     } else {
       await db.insert(users).values({
@@ -94,13 +113,31 @@ router.post('/verify-email', authLimiter, async (req, res, next) => {
     if (!user || !user.verifyCode || !user.verifyCodeExpires) {
       throw new AppError(ErrorCodes.BAD_REQUEST, 'Neplatný nebo expirovaný kód.', 400);
     }
-    if (user.verifyCodeExpires.getTime() < Date.now() || user.verifyCode !== body.code) {
+    if (user.verifyCodeExpires.getTime() < Date.now()) {
+      throw new AppError(ErrorCodes.BAD_REQUEST, 'Neplatný nebo expirovaný kód.', 400);
+    }
+    if (!safeEqual(user.verifyCode, body.code)) {
+      // Per-account brute-force cap: invalidate the code after too many wrong
+      // guesses so the 10^6 space can't be walked within the 15-min window.
+      const attempts = user.verifyAttempts + 1;
+      if (attempts >= MAX_VERIFY_ATTEMPTS) {
+        await db
+          .update(users)
+          .set({ verifyCode: null, verifyCodeExpires: null, verifyAttempts: 0 })
+          .where(eq(users.id, user.id));
+        throw new AppError(
+          ErrorCodes.BAD_REQUEST,
+          'Příliš mnoho pokusů. Vyžádejte si nový kód.',
+          400
+        );
+      }
+      await db.update(users).set({ verifyAttempts: attempts }).where(eq(users.id, user.id));
       throw new AppError(ErrorCodes.BAD_REQUEST, 'Neplatný nebo expirovaný kód.', 400);
     }
 
     await db
       .update(users)
-      .set({ emailVerified: true, verifyCode: null, verifyCodeExpires: null })
+      .set({ emailVerified: true, verifyCode: null, verifyCodeExpires: null, verifyAttempts: 0 })
       .where(eq(users.id, user.id));
 
     const token = await signAuthToken({ userId: user.id, email: user.email });
@@ -120,7 +157,7 @@ router.post('/resend-code', authLimiter, async (req, res, next) => {
       const code = sixDigitCode();
       await db
         .update(users)
-        .set({ verifyCode: code, verifyCodeExpires: codeExpiry() })
+        .set({ verifyCode: code, verifyCodeExpires: codeExpiry(), verifyAttempts: 0 })
         .where(eq(users.id, user.id));
       await sendVerificationCode(user.email, user.name, code);
     }

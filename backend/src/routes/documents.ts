@@ -12,6 +12,7 @@ import { db } from '../db/client.js';
 import { documents, DOCUMENT_STATUS, type DocumentStatus } from '../db/schema/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireCompany } from '../middleware/companyScope.js';
+import { uploadLimiter } from '../middleware/rateLimit.js';
 import { enqueueExportRetry, enqueueProcessDocument } from '../queue/queues.js';
 import {
   filterInvoiceAttachments,
@@ -30,6 +31,8 @@ router.use(requireAuth, requireCompany);
 
 const MAX_UPLOAD_SIZE = 25 * 1024 * 1024;
 const MAX_UPLOAD_FILES = 10;
+/** Upper bound on MIME parts examined when unwrapping a container (DoS guard). */
+const MAX_MIME_PARTS = 50;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -179,7 +182,9 @@ function manualMultipartExtract(buffer: Buffer): ReadyFile[] {
   if (!boundary) return [];
 
   const out: ReadyFile[] = [];
-  for (const segment of text.split('--' + boundary).slice(1)) {
+  // Bound the work: a hostile body could declare thousands of tiny parts.
+  const segments = text.split('--' + boundary).slice(1, 1 + MAX_MIME_PARTS);
+  for (const segment of segments) {
     const part = segment.replace(/^\r?\n/, '');
     if (!part || part.startsWith('--')) continue; // closing delimiter / epilogue
     const sepMatch = /\r?\n\r?\n/.exec(part);
@@ -231,7 +236,7 @@ function carveEmbeddedPdf(buffer: Buffer, fallbackName: string): ReadyFile | nul
  * pipeline as documents from polled sources: written to the shared temp dir,
  * queued for processing, deleted afterwards — never stored by the app.
  */
-router.post('/upload', upload.array('files', MAX_UPLOAD_FILES), async (req, res, next) => {
+router.post('/upload', uploadLimiter, upload.array('files', MAX_UPLOAD_FILES), async (req, res, next) => {
   try {
     const files = (req.files ?? []) as Express.Multer.File[];
     if (files.length === 0) {

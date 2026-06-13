@@ -5,7 +5,7 @@
  * All queries are company-scoped (defense-in-depth on top of requireCompany).
  * Encrypted secrets / tokens are NEVER returned to the client.
  */
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, count, eq } from 'drizzle-orm';
 import { Router } from 'express';
 import type { Request } from 'express';
 import { z } from 'zod';
@@ -22,6 +22,7 @@ import {
 } from '../db/schema/sources.schema.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireCompany } from '../middleware/companyScope.js';
+import { pollLimiter, sourceWriteLimiter } from '../middleware/rateLimit.js';
 import { enqueuePollSource } from '../queue/queues.js';
 import {
   deprovisionCollectionMailbox,
@@ -37,6 +38,24 @@ import { generateId } from '../utils/ids.js';
 const router = Router({ mergeParams: true });
 router.use(requireAuth);
 router.use(requireCompany);
+
+/** Hard cap on sources per company — bounds the worker's per-poll fan-out. */
+const MAX_SOURCES_PER_COMPANY = 25;
+
+/** Throw 409 when the company is already at the source cap. */
+async function assertSourceCapacity(companyId: string): Promise<void> {
+  const [row] = await db
+    .select({ n: count() })
+    .from(sources)
+    .where(eq(sources.companyId, companyId));
+  if ((row?.n ?? 0) >= MAX_SOURCES_PER_COMPANY) {
+    throw new AppError(
+      ErrorCodes.CONFLICT,
+      `Dosáhli jste maximálního počtu zdrojů (${MAX_SOURCES_PER_COMPANY}).`,
+      409
+    );
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Validation schemas
@@ -143,9 +162,10 @@ router.get('/', async (req, res, next) => {
 });
 
 /** POST /collection-email — provision an app-managed collection mailbox */
-router.post('/collection-email', async (req, res, next) => {
+router.post('/collection-email', sourceWriteLimiter, async (req, res, next) => {
   try {
     const company = req.company!;
+    await assertSourceCapacity(company.id);
     const config = await provisionCollectionMailbox(company.name);
 
     const id = generateId('src');
@@ -168,7 +188,7 @@ router.post('/collection-email', async (req, res, next) => {
 });
 
 /** POST /imap/test — test an IMAP connection without creating a source */
-router.post('/imap/test', async (req, res, next) => {
+router.post('/imap/test', sourceWriteLimiter, async (req, res, next) => {
   try {
     const body = imapConnectionSchema.parse(req.body);
     const result = await testImapConnection(body);
@@ -179,9 +199,10 @@ router.post('/imap/test', async (req, res, next) => {
 });
 
 /** POST /imap — create an IMAP source (connection is validated first) */
-router.post('/imap', async (req, res, next) => {
+router.post('/imap', sourceWriteLimiter, async (req, res, next) => {
   try {
     const body = imapCreateSchema.parse(req.body);
+    await assertSourceCapacity(req.company!.id);
 
     const test = await testImapConnection(body);
     if (!test.ok) {
@@ -291,7 +312,7 @@ router.delete('/:sourceId', async (req, res, next) => {
 });
 
 /** POST /:sourceId/poll — enqueue an on-demand poll job */
-router.post('/:sourceId/poll', async (req, res, next) => {
+router.post('/:sourceId/poll', pollLimiter, async (req, res, next) => {
   try {
     const source = await loadSource(req);
     await enqueuePollSource(source.id);

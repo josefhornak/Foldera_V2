@@ -19,6 +19,7 @@ import { SOURCE_TYPE } from '../../db/schema/sources.schema.js';
 import type { IncomingFile, PollResult } from '../../types/contracts.js';
 import { decryptSecret } from '../../utils/crypto.js';
 import { AppError, ErrorCodes, toError } from '../../utils/errors.js';
+import { assertPublicHost } from '../../utils/urlValidation.js';
 import { logger } from '../../utils/logger.js';
 import { filterInvoiceAttachments, resolveMimeType } from './attachmentFilter.js';
 import { uniqueTempFileName } from './common.js';
@@ -27,6 +28,8 @@ const DEFAULT_FOLDER = 'INBOX';
 const FIRST_RUN_LOOKBACK_DAYS = 7;
 /** Upper bound of messages handled in a single poll run */
 const MAX_MESSAGES_PER_POLL = 100;
+/** Skip attachments larger than this — bounds disk/CPU from a hostile mailbox. */
+const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 
 export interface ImapConnectionConfig {
   host: string;
@@ -67,6 +70,9 @@ export async function pollImapSource(source: Source, tmpDir: string): Promise<Po
   const config = source.config as ImapSourceConfig;
   const folder = config.folder || DEFAULT_FOLDER;
   const password = decryptSecret(config.passwordEnc);
+
+  // SSRF guard: never connect to an internal address, even for a stored source.
+  await assertPublicHost(config.host, 'IMAP');
 
   const client = createClient({ ...config, password, folder });
   const files: IncomingFile[] = [];
@@ -137,6 +143,13 @@ export async function pollImapSource(source: Source, tmpDir: string): Promise<Po
               : (parsed.date ?? new Date());
 
         for (const [index, attachment] of candidates.entries()) {
+          if (!attachment.content || attachment.content.length > MAX_ATTACHMENT_BYTES) {
+            logger.warn(
+              { sourceId: source.id, uid, size: attachment.content?.length ?? 0 },
+              '[IMAP] Attachment too large — skipping'
+            );
+            continue;
+          }
           const mimeType =
             resolveMimeType(attachment.contentType, attachment.filename) ?? attachment.contentType;
           const fileName = attachment.filename || `attachment-${uid}-${index}`;
@@ -173,6 +186,12 @@ export async function pollImapSource(source: Source, tmpDir: string): Promise<Po
 export async function testImapConnection(
   cfg: ImapConnectionConfig
 ): Promise<{ ok: boolean; error?: string }> {
+  try {
+    // SSRF guard runs before any connection attempt (covers /imap/test + create).
+    await assertPublicHost(cfg.host, 'IMAP');
+  } catch (err) {
+    return { ok: false, error: toError(err).message };
+  }
   const client = createClient(cfg);
   try {
     await client.connect();

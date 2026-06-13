@@ -1,4 +1,4 @@
-import { boolean, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { boolean, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: text('id').primaryKey(),
@@ -10,6 +10,10 @@ export const users = pgTable('users', {
   emailVerified: boolean('email_verified').notNull().default(false),
   verifyCode: text('verify_code'),
   verifyCodeExpires: timestamp('verify_code_expires', { withTimezone: true }),
+  /** Wrong-code attempts for the current verifyCode; the code is invalidated past a cap. */
+  verifyAttempts: integer('verify_attempts').notNull().default(0),
+  /** When this user first started a free trial — gates one trial per account (not per company). */
+  trialStartedAt: timestamp('trial_started_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 
 import { db } from '../db/client.js';
-import { companies } from '../db/schema/index.js';
+import { companies, users } from '../db/schema/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireCompany } from '../middleware/companyScope.js';
 import { testAbraConnection } from '../services/abraflexi/index.js';
@@ -68,8 +68,20 @@ router.post('/', async (req, res, next) => {
   try {
     const body = companySchema.parse(req.body);
     const id = generateId('cmp');
-    // Start the 7-day free trial on company creation.
-    const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    // The free trial is granted ONCE per user account, not per company —
+    // otherwise a user could reset their trial by creating another company.
+    // The first company a user ever creates gets the 7-day window; later
+    // companies start already expired (must subscribe).
+    const [owner] = await db
+      .select({ trialStartedAt: users.trialStartedAt })
+      .from(users)
+      .where(eq(users.id, req.auth!.userId))
+      .limit(1);
+    const now = new Date();
+    const firstTrial = !owner?.trialStartedAt;
+    const trialEndsAt = firstTrial ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) : now;
+
     await db.insert(companies).values({
       id,
       userId: req.auth!.userId,
@@ -77,6 +89,9 @@ router.post('/', async (req, res, next) => {
       ico: body.ico ?? null,
       trialEndsAt,
     });
+    if (firstTrial) {
+      await db.update(users).set({ trialStartedAt: now }).where(eq(users.id, req.auth!.userId));
+    }
     const [row] = await db.select().from(companies).where(eq(companies.id, id)).limit(1);
     res.status(201).json({ company: toPublicCompany(row!) });
   } catch (err) {

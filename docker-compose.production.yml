@@ -39,14 +39,15 @@ services:
     depends_on:
       - postgres
       - valkey
-    # Reads incoming mail from the maildir (gid 5000) — see api service above.
+    # Reads incoming mail from the maildir and moves new/ → cur/ (gid 5000).
+    # The worker never provisions mailboxes, so it gets NO access to the host
+    # Postfix config — only the maildir it actually reads/writes.
     group_add:
       - '5000'
     cap_add:
       - CHOWN
     volumes:
       - tmpfiles:/tmp/foldera-v2
-      - /etc/postfix:/etc/postfix:rw
       - /var/mail/vhosts:/var/mail/vhosts
 
   postgres:

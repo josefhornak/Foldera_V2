@@ -103,3 +103,40 @@ export function assertPublicUrl(urlStr: string, context: string): void {
     throw new Error(`SSRF blocked: ${context} URL targets a private/restricted network range`);
   }
 }
+
+/** True if a bare hostname literal (IP or `localhost`) is private/reserved. */
+function isPrivateHostLiteral(host: string): boolean {
+  const h = host.toLowerCase().replace(/^\[|\]$/g, '');
+  if (h === 'localhost' || h.endsWith('.localhost')) return true;
+  if (isPrivateIPv4(h)) return true;
+  if (h.includes(':')) return isPrivateIPv6(h);
+  return false;
+}
+
+/**
+ * SSRF guard for a bare host:port target (e.g. an IMAP server) where there is no
+ * URL/scheme. Resolves the hostname and rejects if the literal OR any resolved
+ * A/AAAA record falls in a private/reserved range — closing the gap a textual
+ * check leaves open (a public name pointing at an internal IP). Async by nature.
+ */
+export async function assertPublicHost(host: string, context: string): Promise<void> {
+  const trimmed = host.trim();
+  if (!trimmed || isPrivateHostLiteral(trimmed)) {
+    throw new Error(`SSRF blocked: ${context} host targets a private/restricted network range`);
+  }
+  // If it's already an IP literal, the textual check above is authoritative.
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(trimmed) || trimmed.includes(':')) return;
+
+  const { lookup } = await import('node:dns/promises');
+  let records: { address: string }[];
+  try {
+    records = await lookup(trimmed, { all: true });
+  } catch {
+    throw new Error(`SSRF blocked: ${context} host could not be resolved`);
+  }
+  for (const { address } of records) {
+    if (isPrivateIPv4(address) || isPrivateIPv6(address)) {
+      throw new Error(`SSRF blocked: ${context} host resolves to a private/restricted network range`);
+    }
+  }
+}

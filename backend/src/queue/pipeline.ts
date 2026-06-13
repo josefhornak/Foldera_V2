@@ -34,7 +34,7 @@ import {
   uploadInvoiceAttachment,
 } from '../services/abraflexi/index.js';
 import { isKnownCzBankCode } from '../services/abraflexi/helpers.js';
-import { blockMessage, decideBilling, recordDocumentUsage } from '../services/billing.js';
+import { blockMessage, consumeBillingSlot, recordDocumentUsage } from '../services/billing.js';
 import { extractInvoice } from '../services/extraction/index.js';
 import type {
   AbraExportResult,
@@ -271,8 +271,10 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
       status: DOCUMENT_STATUS.PROCESSING,
     });
 
-    // Billing gate — block BEFORE spending OCR when the trial/plan limit is hit.
-    const decision = decideBilling(company);
+    // Billing gate — atomically reserve a slot BEFORE spending OCR so concurrent
+    // jobs can't both slip past the trial limit (the count is incremented here,
+    // not after extraction).
+    const decision = await consumeBillingSlot(company);
     if (!decision.allowed) {
       await db
         .update(documents)
