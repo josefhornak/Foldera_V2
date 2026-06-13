@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Navigate, useNavigate } from 'react-router';
+import { Link, Navigate, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button } from '~/components/ui/Button';
 import { Card } from '~/components/ui/Card';
@@ -9,16 +9,12 @@ import { api, ApiError } from '~/lib/api';
 import { useAuthStore } from '~/stores/auth';
 import type { AuthResponse } from '~/types';
 
-type Mode = 'login' | 'register';
-
 export default function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const token = useAuthStore((s) => s.token);
   const setAuth = useAuthStore((s) => s.setAuth);
 
-  const [mode, setMode] = useState<Mode>('login');
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -33,9 +29,10 @@ export default function LoginPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const body = mode === 'login' ? { email, password } : { email, password, name };
-      const path = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
-      const res = await api<AuthResponse>(path, { method: 'POST', body });
+      const res = await api<AuthResponse>('/api/auth/login', {
+        method: 'POST',
+        body: { email, password },
+      });
       setAuth(res.token, res.user);
       navigate('/dashboard', { replace: true });
     } catch (err) {
@@ -48,27 +45,14 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--surface-ground)] px-4">
       <Card className="w-full max-w-sm p-8">
-        <div className="mb-8 flex flex-col items-center text-center">
+        <Link to="/" className="mb-8 flex flex-col items-center text-center">
           <Logo className="scale-125" />
           <p className="mt-3 text-xs text-[var(--text-tertiary)]">{t('app.tagline')}</p>
-        </div>
+        </Link>
 
-        <h1 className="mb-5 text-sm font-semibold text-[var(--text-primary)]">
-          {mode === 'login' ? t('auth.loginTitle') : t('auth.registerTitle')}
-        </h1>
+        <h1 className="mb-5 text-sm font-semibold text-[var(--text-primary)]">{t('auth.loginTitle')}</h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === 'register' && (
-            <Field label={t('auth.name')} htmlFor="login-name">
-              <Input
-                id="login-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                autoComplete="name"
-                required
-              />
-            </Field>
-          )}
           <Field label={t('auth.email')} htmlFor="login-email">
             <Input
               id="login-email"
@@ -85,9 +69,8 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              autoComplete="current-password"
               required
-              minLength={8}
             />
           </Field>
 
@@ -98,20 +81,16 @@ export default function LoginPage() {
           )}
 
           <Button type="submit" loading={submitting} className="w-full">
-            {mode === 'login' ? t('auth.submitLogin') : t('auth.submitRegister')}
+            {t('auth.submitLogin')}
           </Button>
         </form>
 
-        <button
-          type="button"
-          onClick={() => {
-            setMode(mode === 'login' ? 'register' : 'login');
-            setError(null);
-          }}
-          className="mt-5 w-full text-center text-xs text-[var(--text-link)] underline-offset-4 hover:underline"
-        >
-          {mode === 'login' ? t('auth.toggleToRegister') : t('auth.toggleToLogin')}
-        </button>
+        <p className="mt-5 text-center text-xs text-[var(--text-tertiary)]">
+          {t('auth.toggleToRegister')}{' '}
+          <Link to="/register" className="text-[var(--text-link)] underline-offset-4 hover:underline">
+            {t('auth.registerTitle')}
+          </Link>
+        </p>
       </Card>
     </div>
   );

@@ -18,6 +18,17 @@ const envSchema = z.object({
   MISTRAL_API_KEY: z.string().optional(),
   MISTRAL_API_URL: z.string().default('https://api.mistral.ai'),
 
+  // Outbound e-mail (verification codes, notifications). Defaults suit a
+  // transactional SMTP provider (e.g. Resend). When SMTP_HOST is unset, e-mails
+  // are logged instead of sent (dev fallback).
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_SECURE: z.string().optional().transform((v) => v === 'true'),
+  SMTP_REQUIRE_TLS: z.string().optional().transform((v) => v !== 'false'),
+  MAIL_FROM: z.string().default('Foldera <noreply@foldera.cz>'),
+
   // Fallback ABRA Flexi document type (typDokl) for received invoices, used when
   // a supplier has no prior invoices to harvest a type from. The type MUST have
   // a number series (číselná řada) configured, otherwise ABRA cannot assign an

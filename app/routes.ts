@@ -4,6 +4,7 @@ export default [
   // Public marketing landing
   index('routes/landing.tsx'),
   route('login', 'routes/login.tsx'),
+  route('register', 'routes/register.tsx'),
   // Authenticated app
   layout('routes/app-layout.tsx', [
     route('dashboard', 'routes/dashboard.tsx'),

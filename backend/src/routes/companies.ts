@@ -49,6 +49,7 @@ function toPublicCompany(c: typeof companies.$inferSelect) {
     abraApiUser: c.abraApiUser,
     abraConfigured: Boolean(c.abraApiUrl && c.abraApiUser && c.abraApiPasswordEnc),
     accountingFillMode: c.accountingFillMode,
+    trialEndsAt: c.trialEndsAt,
     createdAt: c.createdAt,
   };
 }
@@ -66,11 +67,14 @@ router.post('/', async (req, res, next) => {
   try {
     const body = companySchema.parse(req.body);
     const id = generateId('cmp');
+    // Start the 7-day free trial on company creation.
+    const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await db.insert(companies).values({
       id,
       userId: req.auth!.userId,
       name: body.name,
       ico: body.ico ?? null,
+      trialEndsAt,
     });
     const [row] = await db.select().from(companies).where(eq(companies.id, id)).limit(1);
     res.status(201).json({ company: toPublicCompany(row!) });

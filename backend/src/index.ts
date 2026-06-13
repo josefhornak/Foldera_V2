@@ -9,6 +9,7 @@ import { pinoHttp } from 'pino-http';
 
 import env from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import aresRouter from './routes/ares.js';
 import authRouter from './routes/auth.js';
 import companiesRouter from './routes/companies.js';
 import contactRouter from './routes/contact.js';
@@ -47,6 +48,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.use('/api/auth', authRouter);
+app.use('/api/ares', aresRouter);
 app.use('/api/contact', contactRouter);
 app.use('/api/companies', companiesRouter);
 app.use('/api/companies/:companyId/documents', documentsRouter);

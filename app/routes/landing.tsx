@@ -75,7 +75,7 @@ const FAQ = [
 
 export default function Landing() {
   const token = useAuthStore((s) => s.token);
-  const appHref = token ? '/dashboard' : '/login';
+  const appHref = token ? '/dashboard' : '/register';
 
   return (
     <div className="min-h-screen bg-[var(--surface-ground)] text-[var(--text-primary)]">
@@ -287,7 +287,7 @@ function Pricing() {
               </li>
             ))}
           </ul>
-          <Link to="/login" className="mt-7 block">
+          <Link to="/register" className="mt-7 block">
             <Button className="w-full">Vyzkoušet 7 dní zdarma</Button>
           </Link>
         </div>

@@ -30,6 +30,9 @@ export const companies = pgTable(
       .notNull()
       .default('history'),
 
+    // Billing: free trial end (set on creation). Subscription state lands here later.
+    trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
+
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

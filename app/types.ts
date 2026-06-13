@@ -21,6 +21,7 @@ export interface Company {
   abraApiUser: string | null;
   abraConfigured: boolean;
   accountingFillMode: AccountingFillMode;
+  trialEndsAt: string | null;
   createdAt: string;
 }
 
