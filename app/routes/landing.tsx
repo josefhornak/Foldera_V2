@@ -11,6 +11,8 @@ import {
   ShieldCheck,
   Sparkles,
   Check,
+  Paperclip,
+  Users,
 } from 'lucide-react';
 import { Button } from '~/components/ui/Button';
 import { api, ApiError } from '~/lib/api';
@@ -18,16 +20,16 @@ import { cn } from '~/lib/utils';
 import { useAuthStore } from '~/stores/auth';
 
 const SITE_URL = 'https://foldera.cz';
-const OG_TITLE = 'Foldera — faktury do ABRA Flexi bez přepisování';
+const OG_TITLE = 'Foldera — doklady do ABRA Flexi bez přepisování';
 const OG_DESC =
-  'Foldera běží bezobslužně: příchozí faktury, dobropisy i účtenky sama vytěží a založí jako hotový doklad v ABRA Flexi i s přílohou. Vy už jen kontrolujete ve svém účetnictví. 7 dní zdarma.';
+  'Foldera běží bezobslužně: příchozí doklady — faktury, zálohové faktury, dobropisy, účtenky i daňové doklady — sama vytěží a založí do ABRA Flexi i s přílohou. Vy už jen kontrolujete ve svém účetnictví. 7 dní zdarma.';
 
 export function meta() {
   return [
     { title: OG_TITLE },
     { name: 'description', content: OG_DESC },
     { name: 'robots', content: 'index, follow' },
-    { name: 'keywords', content: 'faktury, ABRA Flexi, FlexiBee, účetnictví, automatizace faktur, faktura přijatá, ISDOC, OCR' },
+    { name: 'keywords', content: 'doklady, faktury, zálohová faktura, dobropis, účtenka, daňový doklad, ABRA Flexi, FlexiBee, účetnictví, automatizace dokladů, faktura přijatá, ISDOC, OCR' },
     { tagName: 'link', rel: 'canonical', href: `${SITE_URL}/` },
     { property: 'og:type', content: 'website' },
     { property: 'og:site_name', content: 'Foldera' },
@@ -62,24 +64,26 @@ export function meta() {
 }
 
 const STEPS = [
-  { title: 'Připojíte zdroj faktur', text: 'Sběrný e-mail, OneDrive nebo Google Drive. Faktury pak stačí přeposlat nebo uložit do složky.' },
-  { title: 'Foldera vytěží údaje', text: 'Z každé faktury přečte dodavatele, IČO, částky, sazby DPH i položky a ověří, jestli už v ABRA Flexi není.' },
+  { title: 'Připojíte zdroj dokladů', text: 'Sběrný e-mail, OneDrive nebo Google Drive. Doklady pak stačí přeposlat nebo uložit do složky.' },
+  { title: 'Foldera vytěží údaje', text: 'Z každého dokladu přečte dodavatele, IČO, částky, sazby DPH i položky a ověří, jestli už v ABRA Flexi není.' },
   { title: 'Vy už jen zkontrolujete', text: 'Hotový doklad i s přílohou a zaúčtováním na vás čeká v ABRA Flexi. Stačí projít, co přišlo.' },
 ];
 
 const FEATURES = [
+  { icon: Receipt, title: 'Všechny typy dokladů', text: 'Faktury, zálohové faktury, dobropisy a daňové doklady k přijaté platbě do faktur přijatých, účtenky rovnou do pokladny — vše se správným typem dokladu.' },
   { icon: Mail, title: 'Sběrný e-mail i cloud', text: 'Vlastní adresa @inbox.foldera.cz, OneDrive i Google Drive. Foldera je kontroluje každých pár minut.' },
-  { icon: ScanLine, title: 'Spolehlivé vytěžení', text: 'Přesné čtení dat, u elektronických faktur rovnou z ISDOC. Zvládne cizí měny, přenesenou daňovou povinnost i více sazeb DPH.' },
-  { icon: CopyCheck, title: 'Kontrola duplicit', text: 'Stejná faktura se nezaloží dvakrát. Porovnáváme podle IČO, čísla i variabilního symbolu.' },
-  { icon: Receipt, title: 'Faktury, dobropisy i účtenky', text: 'Faktury a dobropisy mezi faktury přijaté, účtenky rovnou do pokladny — všechno i s přílohou.' },
+  { icon: ScanLine, title: 'Spolehlivé vytěžení', text: 'Přesné čtení dat, u elektronických dokladů rovnou z ISDOC. Zvládne cizí měny, přenesenou daňovou povinnost i více sazeb DPH.' },
+  { icon: CopyCheck, title: 'Kontrola duplicit', text: 'Stejný doklad se nezaloží dvakrát. Porovnáváme podle IČO, čísla i variabilního symbolu.' },
   { icon: Sparkles, title: 'Automatické zaúčtování', text: 'Doplní řádek DPH, předkontaci i řádek kontrolního hlášení — podle historie dodavatele, nebo návrhem od AI.' },
+  { icon: Paperclip, title: 'Originál i e-mail v příloze', text: 'Zdrojový doklad přiložíme k záznamu v ABRA. Volitelně k němu uložíme i původní e-mail (.eml) jako důkaz.' },
+  { icon: Users, title: 'Více firem a tým', text: 'Pod jedním účtem spravujete více firem. Kolegy pozvete e-mailem jako správce, nebo jen pro nahlížení.' },
   { icon: ShieldCheck, title: 'Soubory neukládáme', text: 'Originál se zpracuje, nahraje do ABRA Flexi a smaže. V aplikaci zůstanou jen vytěžená data.' },
 ];
 
 const FAQ = [
   { q: 'Ukládáte naše soubory?', a: 'Ne. Soubor se jen zpracuje, nahraje jako příloha do ABRA Flexi a poté smaže. V aplikaci zůstanou pouze vytěžená metadata, abyste mohli export případně zopakovat.' },
   { q: 'Funguje to s mojí verzí ABRA Flexi?', a: 'Ano. Připojujeme se přes REST API ABRA Flexi (FlexiBee). Stačí zadat adresu instance, firmu a přihlašovací údaje.' },
-  { q: 'Co když se faktura nerozpozná správně?', a: 'Nízká přesnost se označí a doklad lze znovu exportovat z uložených dat. ABRA odmítnutí jsou retryovatelná, nic se neztratí.' },
+  { q: 'Co když se doklad nerozpozná správně?', a: 'Nízká přesnost se označí a doklad lze znovu exportovat z uložených dat. ABRA odmítnutí jsou retryovatelná, nic se neztratí.' },
   { q: 'Platí se za uživatele?', a: 'Ne. Platíte za firmu a počet zpracovaných dokladů, uživatelů můžete mít kolik chcete.' },
 ];
 
@@ -161,16 +165,17 @@ function Hero({ appHref, loggedIn }: { appHref: string; loggedIn: boolean }) {
     <section id="top" className="relative mx-auto max-w-6xl px-6 pb-10 pt-16 md:pt-24">
       <div className="kicker flex items-center gap-3 animate-rise">
         <span className="h-px w-8 bg-[var(--brand-primary)]" />
-        Faktury → ABRA Flexi · bez přepisování
+        Doklady → ABRA Flexi · bez přepisování
       </div>
       <h1 className="mt-6 max-w-4xl font-heading text-[2.7rem] font-bold leading-[0.98] tracking-[-0.02em] animate-rise md:text-[4.6rem]">
-        Konec přepisování faktur.
+        Konec přepisování dokladů.
         <br />
         Vy jen kontrolujete v <span className="text-[var(--brand-primary-light)]">ABRA&nbsp;Flexi</span>.
       </h1>
       <div className="mt-8 flex flex-col gap-8 animate-rise md:flex-row md:items-end md:justify-between [animation-delay:80ms]">
-        <p className="max-w-md text-lg leading-relaxed text-[var(--text-secondary)]">
-          Příchozí faktury, dobropisy i účtenky se do ABRA Flexi založí samy. Vy už jen zkontrolujete, co přišlo.
+        <p className="max-w-lg text-lg leading-relaxed text-[var(--text-secondary)]">
+          Faktury, zálohové faktury, dobropisy, účtenky i daňové doklady — vše se do ABRA Flexi založí samo. Vy už jen
+          zkontrolujete, co přišlo.
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <Link to={appHref}>
@@ -248,7 +253,7 @@ function Block({ id, index, kicker, title, intro, children }: {
 
 function HowItWorks() {
   return (
-    <Block id="jak" index="01" kicker="Jak to funguje" title="Nastavíte jednou, dál to běží samo" intro="Zdroj faktur připojíte jednou. Od té chvíle Foldera pracuje sama a vy se k fakturám vrátíte už jen na kontrolu v ABRA Flexi.">
+    <Block id="jak" index="01" kicker="Jak to funguje" title="Nastavíte jednou, dál to běží samo" intro="Zdroj dokladů připojíte jednou. Od té chvíle Foldera pracuje sama a vy se k dokladům vrátíte už jen na kontrolu v ABRA Flexi.">
       <div>
         {STEPS.map((s, i) => (
           <div key={s.title} className="flex gap-6 border-t border-[var(--border-subtle)] py-7 first:border-t-0">
@@ -292,7 +297,7 @@ function Pricing() {
     'Každý další doklad jen 2 Kč',
     'Neomezeně uživatelů',
     'Sběrný e-mail, OneDrive i Google Drive',
-    'Faktury, dobropisy i účtenky',
+    'Faktury, zálohovky, dobropisy, účtenky i daňové doklady',
     'Automatické zaúčtování (historie / AI)',
   ];
   return (
@@ -416,7 +421,7 @@ function Footer() {
         <div className="flex items-center gap-2.5">
           <BrandMark className="h-7 w-7 rounded-[8px] text-[13px]" />
           <span className="font-heading font-bold text-[var(--text-secondary)]">Foldera</span>
-          <span className="kicker ml-2 hidden sm:block">© 2026 · faktury do ABRA Flexi</span>
+          <span className="kicker ml-2 hidden sm:block">© 2026 · doklady do ABRA Flexi</span>
         </div>
         <div className="flex items-center gap-6">
           <Link to="/podminky" className="ul-grow hover:text-[var(--text-primary)]">Obchodní podmínky</Link>
