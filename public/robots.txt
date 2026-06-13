@@ -1,6 +1,8 @@
 User-agent: *
 Allow: /$
 Allow: /podminky
+Allow: /ochrana-udaju
+Allow: /zpracovani-udaju
 Allow: /login
 Allow: /register
 Disallow: /dashboard
