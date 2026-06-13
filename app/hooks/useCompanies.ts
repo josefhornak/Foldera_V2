@@ -30,6 +30,7 @@ export function updateCompany(
     ico?: string | null;
     billingEmail?: string | null;
     accountingFillMode?: Company['accountingFillMode'];
+    attachOriginalEmail?: boolean;
   }
 ) {
   return api<{ company: Company }>(`/api/companies/${id}`, { method: 'PATCH', body: input });

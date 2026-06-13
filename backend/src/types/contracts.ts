@@ -166,6 +166,8 @@ export interface IncomingFile {
   /** Temp file on local disk — the pipeline deletes it when done */
   filePath: string;
   receivedAt: Date;
+  /** For e-mail sources: temp path to the original message (.eml), if captured. */
+  originalEmailPath?: string;
 }
 
 export interface PollResult {

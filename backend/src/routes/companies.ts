@@ -35,6 +35,8 @@ const companySchema = z.object({
     ),
   /** How accounting fields are filled when the supplier has no history. */
   accountingFillMode: z.enum(['history', 'ai']).optional(),
+  /** Attach the original e-mail (.eml) to the ABRA document (e-mail sources). */
+  attachOriginalEmail: z.boolean().optional(),
 });
 
 const abraConfigSchema = z.object({
@@ -61,6 +63,7 @@ function toPublicCompany(c: typeof companies.$inferSelect, role: 'admin' | 'memb
     abraApiUser: c.abraApiUser,
     abraConfigured: Boolean(c.abraApiUrl && c.abraApiUser && c.abraApiPasswordEnc),
     accountingFillMode: c.accountingFillMode,
+    attachOriginalEmail: c.attachOriginalEmail,
     trialEndsAt: c.trialEndsAt,
     createdAt: c.createdAt,
     /** The requesting user's role in this company. */

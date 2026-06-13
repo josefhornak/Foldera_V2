@@ -24,6 +24,8 @@ export interface ProcessDocumentJobData {
     mimeType: string;
     filePath: string;
     receivedAt: string;
+    /** For e-mail sources: temp path to the original message (.eml), if captured. */
+    originalEmailPath?: string;
   };
 }
 

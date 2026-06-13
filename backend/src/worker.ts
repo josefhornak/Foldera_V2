@@ -53,6 +53,7 @@ async function pollOneSource(sourceId: string): Promise<void> {
           mimeType: file.mimeType,
           filePath: file.filePath,
           receivedAt: file.receivedAt.toISOString(),
+          originalEmailPath: file.originalEmailPath,
         },
       });
     }

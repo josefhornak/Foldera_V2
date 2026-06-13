@@ -91,7 +91,8 @@ interface ExportOutcome {
 async function runAbraExport(
   company: Company,
   invoice: ExtractedInvoice,
-  attachmentPath: { filePath: string; fileName: string; mimeType: string } | null
+  attachmentPath: { filePath: string; fileName: string; mimeType: string } | null,
+  originalEmail: { filePath: string; fileName: string } | null = null
 ): Promise<ExportOutcome> {
   const cfg = getAbraConfig(company);
   if (!cfg) {
@@ -225,6 +226,26 @@ async function runAbraExport(
     }
   }
 
+  // Optionally attach the original e-mail (.eml) alongside the invoice file.
+  if (originalEmail) {
+    try {
+      await uploadInvoiceAttachment(
+        cfg,
+        result.id,
+        originalEmail.filePath,
+        originalEmail.fileName,
+        'message/rfc822',
+        isReceipt ? ENTITY_POKLADNI_POHYB : undefined
+      );
+    } catch (error) {
+      notes.push(`Originální e-mail se nepodařilo přiložit: ${toError(error).message}`);
+      logger.warn(
+        { companyId: company.id, abraId: result.id, error: toError(error).message },
+        '[Pipeline] Original e-mail attachment failed'
+      );
+    }
+  }
+
   return {
     status: DOCUMENT_STATUS.EXPORTED,
     abraId: result.id,
@@ -336,13 +357,21 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
       return;
     }
 
+    // Attach the original e-mail to the ABRA doc when the company opted in and
+    // the document came from an e-mail source (.eml captured by the poller).
+    const originalEmail =
+      company.attachOriginalEmail && file.originalEmailPath
+        ? { filePath: file.originalEmailPath, fileName: `puvodni-email-${invoice.variableSymbol ?? invoice.invoiceNumber ?? 'doklad'}.eml` }
+        : null;
+
     let outcome: ExportOutcome;
     try {
-      outcome = await runAbraExport(company, invoice, {
-        filePath: file.filePath,
-        fileName: file.fileName,
-        mimeType: file.mimeType,
-      });
+      outcome = await runAbraExport(
+        company,
+        invoice,
+        { filePath: file.filePath, fileName: file.fileName, mimeType: file.mimeType },
+        originalEmail
+      );
     } catch (error) {
       outcome = {
         status: DOCUMENT_STATUS.EXPORT_FAILED,
@@ -375,6 +404,7 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
     );
   } finally {
     await safeUnlink(file.filePath);
+    if (file.originalEmailPath) await safeUnlink(file.originalEmailPath);
   }
 }
 

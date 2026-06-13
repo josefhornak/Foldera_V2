@@ -24,6 +24,8 @@ export interface Company {
   abraApiUser: string | null;
   abraConfigured: boolean;
   accountingFillMode: AccountingFillMode;
+  /** Attach the original e-mail (.eml) to the ABRA document for e-mail sources. */
+  attachOriginalEmail: boolean;
   trialEndsAt: string | null;
   createdAt: string;
   /** The signed-in user's role in this company: 'admin' = správce, 'member' = jen nahlíží. */

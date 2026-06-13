@@ -1,4 +1,4 @@
-import { index, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
 import { users } from './users.schema.js';
 
@@ -31,6 +31,9 @@ export const companies = pgTable(
       .$type<'history' | 'ai'>()
       .notNull()
       .default('history'),
+
+    /** Attach the original e-mail (.eml) to the ABRA Flexi document for e-mail sources. */
+    attachOriginalEmail: boolean('attach_original_email').notNull().default(false),
 
     // Billing. trial → free 7 days / 10 docs, then blocked until active.
     billingStatus: text('billing_status')

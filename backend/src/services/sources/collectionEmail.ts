@@ -210,7 +210,19 @@ export async function pollCollectionEmailSource(source: Source, tmpDir: string):
         const fileName = attachment.filename || `attachment-${index}`;
         const filePath = path.join(tmpDir, uniqueTempFileName(fileName));
         await fs.writeFile(filePath, attachment.content);
-        files.push({ externalRef: `${messageRef}:${index}`, fileName, mimeType, filePath, receivedAt });
+
+        // Keep a copy of the original message (.eml) for optional ABRA attachment.
+        const originalEmailPath = path.join(tmpDir, uniqueTempFileName(`email-${index}.eml`));
+        await fs.writeFile(originalEmailPath, raw);
+
+        files.push({
+          externalRef: `${messageRef}:${index}`,
+          fileName,
+          mimeType,
+          filePath,
+          receivedAt,
+          originalEmailPath,
+        });
       }
 
       // Message handled (with or without usable attachments) — delete it so it

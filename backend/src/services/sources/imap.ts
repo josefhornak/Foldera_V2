@@ -156,12 +156,18 @@ export async function pollImapSource(source: Source, tmpDir: string): Promise<Po
           const filePath = path.join(tmpDir, uniqueTempFileName(fileName));
           await fs.writeFile(filePath, attachment.content);
 
+          // Keep a copy of the original message (.eml) so it can be attached to
+          // the ABRA document when the company has that option enabled.
+          const originalEmailPath = path.join(tmpDir, uniqueTempFileName(`email-${uid}-${index}.eml`));
+          await fs.writeFile(originalEmailPath, message.source);
+
           files.push({
             externalRef: `${messageRef}:${index}`,
             fileName,
             mimeType,
             filePath,
             receivedAt,
+            originalEmailPath,
           });
         }
       }

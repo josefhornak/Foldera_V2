@@ -168,6 +168,67 @@ function AccountingCard({ company, onChanged }: { company: Company; onChanged: (
   );
 }
 
+/** Toggle: attach the original e-mail (.eml) to the ABRA document. */
+function EmailOptionsCard({ company, onChanged }: { company: Company; onChanged: () => void }) {
+  const [on, setOn] = useState(company.attachOriginalEmail);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => setOn(company.attachOriginalEmail), [company.attachOriginalEmail]);
+
+  async function toggle() {
+    const next = !on;
+    setOn(next);
+    setSaving(true);
+    try {
+      await updateCompany(company.id, { attachOriginalEmail: next });
+      onChanged();
+    } catch {
+      setOn(!next);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Zpracování e-mailů</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-[var(--text-primary)]">
+              Ukládat originální e-mail (.eml) do ABRA Flexi
+            </p>
+            <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+              U dokladů přijatých e-mailem se k dokladu v ABRA přiloží i původní zpráva (.eml). Týká se sběrného
+              e-mailu a IMAP; faktura z cloudu (OneDrive / Google Drive) e-mail nemá.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={on}
+            disabled={saving}
+            onClick={toggle}
+            className={cn(
+              'relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors',
+              on ? 'bg-[var(--brand-primary)]' : 'bg-[var(--surface-interactive)]'
+            )}
+          >
+            <span
+              className={cn(
+                'absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform',
+                on ? 'translate-x-[22px]' : 'translate-x-0.5'
+              )}
+            />
+          </button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 /** Trial / subscription status + usage, with activate / cancel. */
 function BillingCard({ companyId }: { companyId: string }) {
   const { billing, mutate } = useBilling(companyId);
@@ -350,6 +411,8 @@ function CompanySection({ company, onChanged }: { company: Company; onChanged: (
       <BillingCard companyId={company.id} />
 
       <AccountingCard company={company} onChanged={onChanged} />
+
+      <EmailOptionsCard company={company} onChanged={onChanged} />
 
       <Card>
         <CardHeader>
