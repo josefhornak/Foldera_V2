@@ -383,7 +383,8 @@ router.get('/stats', async (req, res, next) => {
         total += row.count;
         const isSkipped =
           row.status === DOCUMENT_STATUS.SKIPPED_DUPLICATE ||
-          row.status === DOCUMENT_STATUS.SKIPPED_NOT_INVOICE;
+          row.status === DOCUMENT_STATUS.SKIPPED_NOT_INVOICE ||
+          row.status === DOCUMENT_STATUS.SKIPPED_LIMIT;
         if (row.status === DOCUMENT_STATUS.EXPORTED) exported += row.count;
         else if (row.status === DOCUMENT_STATUS.EXPORT_FAILED || row.status === DOCUMENT_STATUS.EXTRACTION_FAILED)
           failed += row.count;

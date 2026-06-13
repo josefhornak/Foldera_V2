@@ -126,7 +126,8 @@
     "export_failed": "Export failed",
     "extraction_failed": "Extraction failed",
     "skipped_duplicate": "Duplicate",
-    "skipped_not_invoice": "Not an invoice"
+    "skipped_not_invoice": "Not an invoice",
+    "skipped_limit": "Limit reached"
   },
   "sourceStatus": {
     "ok": "OK",

@@ -9,6 +9,7 @@ const DOCUMENT_STATUS_VARIANT: Record<DocumentStatus, BadgeVariant> = {
   extraction_failed: 'error',
   skipped_duplicate: 'default',
   skipped_not_invoice: 'default',
+  skipped_limit: 'warning',
 };
 
 export function documentStatusVariant(status: DocumentStatus): BadgeVariant {

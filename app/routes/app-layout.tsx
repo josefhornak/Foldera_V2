@@ -1,11 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Navigate, NavLink, Outlet } from 'react-router';
-import { FileText, LayoutDashboard, Settings } from 'lucide-react';
+import { Link, Navigate, NavLink, Outlet } from 'react-router';
+import { AlertTriangle, FileText, LayoutDashboard, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '~/components/ui/Button';
 import { Card } from '~/components/ui/Card';
 import { Field, Input } from '~/components/ui/Input';
 import { StateWrapper } from '~/components/ui/StateWrapper';
+import { useBilling } from '~/hooks/useBilling';
 import { createCompany, useCompanies } from '~/hooks/useCompanies';
 import { ApiError } from '~/lib/api';
 import { cn } from '~/lib/utils';
@@ -51,6 +52,7 @@ function AuthedShell() {
     <div className="flex min-h-screen overflow-x-hidden bg-[var(--surface-ground)]">
       <Sidebar />
       <main className="min-w-0 flex-1 px-4 py-6 pb-24 sm:px-5 md:px-10 md:py-9 md:pb-9">
+        <BillingBanner />
         <Outlet />
       </main>
       <MobileNav />
@@ -166,6 +168,22 @@ function MobileNav() {
         </NavLink>
       ))}
     </nav>
+  );
+}
+
+/** Top banner shown when processing is paused by the trial/plan limit. */
+function BillingBanner() {
+  const companyId = useCompanyStore((s) => s.companyId);
+  const { billing } = useBilling(companyId);
+  if (!billing?.blocked) return null;
+  return (
+    <div className="mx-auto mb-5 flex max-w-[1280px] flex-col items-start gap-3 rounded-[var(--radius-token-lg)] border border-[var(--status-warning)]/30 bg-[var(--status-warning-subtle)] px-4 py-3 sm:flex-row sm:items-center">
+      <AlertTriangle className="h-5 w-5 shrink-0 text-[var(--status-warning-text)]" aria-hidden="true" />
+      <p className="flex-1 text-sm text-[var(--status-warning-text)]">{billing.blockReason}</p>
+      <Link to="/settings/company" className="shrink-0">
+        <Button size="sm">Aktivovat předplatné</Button>
+      </Link>
+    </div>
   );
 }
 

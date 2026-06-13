@@ -7,6 +7,7 @@ import { companies } from '../db/schema/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireCompany } from '../middleware/companyScope.js';
 import { testAbraConnection } from '../services/abraflexi/index.js';
+import { getBillingSummary } from '../services/billing.js';
 import { decryptSecret, encryptSecret } from '../utils/crypto.js';
 import { AppError, ErrorCodes } from '../utils/errors.js';
 import { generateId } from '../utils/ids.js';
@@ -92,6 +93,45 @@ router.patch('/:companyId', requireCompany, async (req, res, next) => {
       .where(and(eq(companies.id, req.company!.id), eq(companies.userId, req.auth!.userId)));
     const [row] = await db.select().from(companies).where(eq(companies.id, req.company!.id)).limit(1);
     res.json({ company: toPublicCompany(row!) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Trial / subscription status + current-month usage. */
+router.get('/:companyId/billing', requireCompany, async (req, res, next) => {
+  try {
+    const [c] = await db.select().from(companies).where(eq(companies.id, req.company!.id)).limit(1);
+    if (!c) throw new AppError(ErrorCodes.NOT_FOUND, 'Company not found', 404);
+    res.json({ billing: await getBillingSummary(c) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Activate the paid subscription (billed monthly by invoice). */
+router.post('/:companyId/subscribe', requireCompany, async (req, res, next) => {
+  try {
+    await db
+      .update(companies)
+      .set({ billingStatus: 'active', updatedAt: new Date() })
+      .where(and(eq(companies.id, req.company!.id), eq(companies.userId, req.auth!.userId)));
+    const [c] = await db.select().from(companies).where(eq(companies.id, req.company!.id)).limit(1);
+    res.json({ billing: await getBillingSummary(c!) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Cancel the subscription (processing stops). */
+router.post('/:companyId/cancel', requireCompany, async (req, res, next) => {
+  try {
+    await db
+      .update(companies)
+      .set({ billingStatus: 'cancelled', updatedAt: new Date() })
+      .where(and(eq(companies.id, req.company!.id), eq(companies.userId, req.auth!.userId)));
+    const [c] = await db.select().from(companies).where(eq(companies.id, req.company!.id)).limit(1);
+    res.json({ billing: await getBillingSummary(c!) });
   } catch (err) {
     next(err);
   }

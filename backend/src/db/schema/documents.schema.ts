@@ -26,6 +26,8 @@ export const DOCUMENT_STATUS = {
   SKIPPED_DUPLICATE: 'skipped_duplicate',
   /** Document classified as something other than a purchase invoice */
   SKIPPED_NOT_INVOICE: 'skipped_not_invoice',
+  /** Trial or plan limit reached — not processed (no OCR spent) */
+  SKIPPED_LIMIT: 'skipped_limit',
 } as const;
 
 export type DocumentStatus = (typeof DOCUMENT_STATUS)[keyof typeof DOCUMENT_STATUS];

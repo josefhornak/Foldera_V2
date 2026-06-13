@@ -126,7 +126,8 @@
     "export_failed": "Export selhal",
     "extraction_failed": "Vytěžení selhalo",
     "skipped_duplicate": "Duplicita",
-    "skipped_not_invoice": "Není faktura"
+    "skipped_not_invoice": "Není faktura",
+    "skipped_limit": "Limit vyčerpán"
   },
   "sourceStatus": {
     "ok": "V pořádku",

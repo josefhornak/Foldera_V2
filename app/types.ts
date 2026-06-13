@@ -32,6 +32,7 @@ export const DOCUMENT_STATUSES = [
   'extraction_failed',
   'skipped_duplicate',
   'skipped_not_invoice',
+  'skipped_limit',
 ] as const;
 
 export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number];
@@ -84,6 +85,22 @@ export interface StatsBucket {
 export interface StatsResponse {
   allTime: StatsBucket;
   last30Days: StatsBucket;
+}
+
+export interface Billing {
+  status: 'trial' | 'active' | 'cancelled';
+  trialEndsAt: string | null;
+  trialDocsUsed: number;
+  trialDocLimit: number;
+  blocked: boolean;
+  blockReason: string | null;
+  period: string;
+  used: number;
+  included: number;
+  overage: number;
+  overageCostCzk: number;
+  estimatedTotalCzk: number;
+  planPriceCzk: number;
 }
 
 export type SourceStatus = 'ok' | 'error' | 'pending_auth';

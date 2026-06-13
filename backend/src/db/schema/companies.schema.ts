@@ -1,4 +1,4 @@
-import { index, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { index, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
 import { users } from './users.schema.js';
 
@@ -30,8 +30,14 @@ export const companies = pgTable(
       .notNull()
       .default('history'),
 
-    // Billing: free trial end (set on creation). Subscription state lands here later.
+    // Billing. trial → free 7 days / 10 docs, then blocked until active.
+    billingStatus: text('billing_status')
+      .$type<'trial' | 'active' | 'cancelled'>()
+      .notNull()
+      .default('trial'),
     trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
+    /** Documents processed during the trial (lifetime, capped at 10). */
+    trialDocsUsed: integer('trial_docs_used').notNull().default(0),
 
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

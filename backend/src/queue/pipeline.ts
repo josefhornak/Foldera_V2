@@ -34,6 +34,7 @@ import {
   uploadInvoiceAttachment,
 } from '../services/abraflexi/index.js';
 import { isKnownCzBankCode } from '../services/abraflexi/helpers.js';
+import { blockMessage, decideBilling, recordDocumentUsage } from '../services/billing.js';
 import { extractInvoice } from '../services/extraction/index.js';
 import type {
   AbraExportResult,
@@ -270,6 +271,21 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
       status: DOCUMENT_STATUS.PROCESSING,
     });
 
+    // Billing gate — block BEFORE spending OCR when the trial/plan limit is hit.
+    const decision = decideBilling(company);
+    if (!decision.allowed) {
+      await db
+        .update(documents)
+        .set({
+          status: DOCUMENT_STATUS.SKIPPED_LIMIT,
+          errorMessage: blockMessage(decision.reason!),
+          processedAt: new Date(),
+        })
+        .where(and(eq(documents.id, documentId), eq(documents.companyId, companyId)));
+      log.info({ documentId, reason: decision.reason }, '[Pipeline] Skipped — billing limit reached');
+      return;
+    }
+
     const extraction = await extractInvoice({
       filePath: file.filePath,
       mimeType: file.mimeType,
@@ -288,6 +304,9 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
       log.warn({ documentId, error: extraction.error }, '[Pipeline] Extraction failed');
       return;
     }
+
+    // Extraction succeeded → the document used OCR and counts toward usage.
+    await recordDocumentUsage(company);
 
     const invoice = extraction.fields;
     const baseFields = {

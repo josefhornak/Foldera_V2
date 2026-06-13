@@ -7,6 +7,7 @@ import { Button } from '~/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/Card';
 import { Field, Input, Select } from '~/components/ui/Input';
 import { LogOut } from 'lucide-react';
+import { useBilling, subscribeCompany, cancelSubscription } from '~/hooks/useBilling';
 import { deleteCompany, updateCompany, useCompanies } from '~/hooks/useCompanies';
 import { ApiError } from '~/lib/api';
 import { cn } from '~/lib/utils';
@@ -152,6 +153,131 @@ function AccountingCard({ company, onChanged }: { company: Company; onChanged: (
   );
 }
 
+/** Trial / subscription status + usage, with activate / cancel. */
+function BillingCard({ companyId }: { companyId: string }) {
+  const { billing, mutate } = useBilling(companyId);
+  const [busy, setBusy] = useState(false);
+
+  if (!billing) return null;
+
+  const daysLeft = billing.trialEndsAt
+    ? Math.max(0, Math.ceil((new Date(billing.trialEndsAt).getTime() - Date.now()) / 86_400_000))
+    : 0;
+
+  async function act(fn: () => Promise<unknown>) {
+    setBusy(true);
+    try {
+      await fn();
+      await mutate();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const Pill = ({ tone, label }: { tone: 'success' | 'warning' | 'info'; label: string }) => (
+    <span
+      className={cn(
+        'rounded-[var(--radius-token-full)] px-2.5 py-0.5 text-xs font-medium',
+        tone === 'success' && 'bg-[var(--status-success-subtle)] text-[var(--status-success-text)]',
+        tone === 'warning' && 'bg-[var(--status-warning-subtle)] text-[var(--status-warning-text)]',
+        tone === 'info' && 'bg-[var(--brand-primary-subtle)] text-[var(--brand-primary-light)]'
+      )}
+    >
+      {label}
+    </span>
+  );
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Předplatné</CardTitle>
+        <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+          99 Kč/měsíc · 50 dokladů v ceně · každý další 2 Kč · fakturováno měsíčně.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {billing.status === 'trial' && (
+          <>
+            <div className="flex items-center gap-2">
+              <Pill tone={billing.blocked ? 'warning' : 'info'} label="Zkušební období" />
+              <span className="text-sm text-[var(--text-secondary)]">
+                {billing.blocked
+                  ? 'Vyčerpáno — aktivujte předplatné'
+                  : `zbývá ${daysLeft} ${daysLeft === 1 ? 'den' : daysLeft < 5 ? 'dny' : 'dní'}`}
+              </span>
+            </div>
+            <div>
+              <div className="mb-1 flex justify-between text-xs text-[var(--text-secondary)]">
+                <span>Doklady zdarma</span>
+                <span className="tabular-nums">
+                  {billing.trialDocsUsed} / {billing.trialDocLimit}
+                </span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-interactive)]">
+                <span
+                  className="block h-full rounded-full bg-[var(--brand-primary)]"
+                  style={{ width: `${Math.min(100, (billing.trialDocsUsed / billing.trialDocLimit) * 100)}%` }}
+                />
+              </div>
+            </div>
+            <Button loading={busy} onClick={() => act(() => subscribeCompany(companyId))}>
+              Aktivovat předplatné (99 Kč/měsíc)
+            </Button>
+          </>
+        )}
+
+        {billing.status === 'active' && (
+          <>
+            <div className="flex items-center gap-2">
+              <Pill tone="success" label="Aktivní" />
+              <span className="text-sm text-[var(--text-secondary)]">99 Kč/měsíc</span>
+            </div>
+            <div>
+              <div className="mb-1 flex justify-between text-xs text-[var(--text-secondary)]">
+                <span>Doklady tento měsíc</span>
+                <span className="tabular-nums">
+                  {billing.used} / {billing.included}
+                </span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-interactive)]">
+                <span
+                  className="block h-full rounded-full"
+                  style={{
+                    width: `${Math.min(100, (billing.used / billing.included) * 100)}%`,
+                    background: billing.overage > 0 ? 'var(--status-warning)' : 'var(--status-success)',
+                  }}
+                />
+              </div>
+            </div>
+            {billing.overage > 0 && (
+              <p className="text-sm text-[var(--text-secondary)]">
+                Nad limit: <span className="font-medium text-[var(--text-primary)]">{billing.overage} dokladů</span>{' '}
+                (+{billing.overageCostCzk} Kč). Odhad faktury:{' '}
+                <span className="font-semibold text-[var(--text-primary)]">{billing.estimatedTotalCzk} Kč</span>.
+              </p>
+            )}
+            <Button variant="ghost" loading={busy} onClick={() => act(() => cancelSubscription(companyId))}>
+              Zrušit předplatné
+            </Button>
+          </>
+        )}
+
+        {billing.status === 'cancelled' && (
+          <>
+            <Pill tone="warning" label="Zrušeno" />
+            <p className="text-sm text-[var(--text-secondary)]">
+              Předplatné je zrušené, nové doklady se nezpracovávají.
+            </p>
+            <Button loading={busy} onClick={() => act(() => subscribeCompany(companyId))}>
+              Obnovit předplatné
+            </Button>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function CompanySection({ company, onChanged }: { company: Company; onChanged: () => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -205,6 +331,8 @@ function CompanySection({ company, onChanged }: { company: Company; onChanged: (
   return (
     <div className="space-y-6">
       <AccountCard />
+
+      <BillingCard companyId={company.id} />
 
       <AccountingCard company={company} onChanged={onChanged} />
 
