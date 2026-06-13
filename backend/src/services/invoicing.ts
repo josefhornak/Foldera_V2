@@ -32,14 +32,13 @@ const ASSETS = path.resolve(process.cwd(), 'assets');
 const FONT_REG = path.join(ASSETS, 'DejaVuSans.ttf');
 const FONT_BOLD = path.join(ASSETS, 'DejaVuSans-Bold.ttf');
 const FONT_MONO = path.join(ASSETS, 'DejaVuSansMono.ttf');
-// Dark editorial palette — mirrors the app + landing page.
-const PAGE = '#0b0b10'; // surface-ground
-const TXT = '#efeff4'; // text-primary
-const SEC = '#9c9cac'; // text-secondary
-const MUTED = '#74748a'; // mono micro-labels
-const ACCENT = '#8b5cf6'; // brand-primary
-const ACCENT_LIGHT = '#b9a3ff'; // brand-primary-light
-const HAIR = '#2a2a35'; // hairline on dark
+// Light editorial palette — print-friendly, brand violet accent.
+const TXT = '#0b0b10'; // ink
+const SEC = '#52525b'; // secondary text
+const MUTED = '#9b9ba6'; // mono micro-labels
+const ACCENT = '#6d28d9'; // brand violet (reads on white)
+const ACCENT_LIGHT = '#8b5cf6'; // lighter violet for gradient
+const HAIR = '#e7e7ea'; // hairline
 
 function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -94,21 +93,13 @@ export async function buildPdf(data: InvoiceData, isdocXml?: string): Promise<Bu
     doc.font('mono').fontSize(7).fillColor(MUTED).text(text.toUpperCase(), x, y, { characterSpacing: 1.4, ...opts });
   };
 
-  // ── Dark page background + subtle violet glow top-right ─────────────────────
-  doc.rect(0, 0, 595, 842).fill(PAGE);
-  const glow = doc.radialGradient(560, 40, 0, 560, 40, 220);
-  glow.stop(0, ACCENT, 0.18);
-  glow.stop(1, ACCENT, 0);
-  doc.rect(300, 0, 295, 240).fill(glow);
-
-  /** Hairline on the dark page. */
+  /** Hairline. */
   const rule = (yy: number, w = 0.75, color = HAIR) =>
     doc.moveTo(left, yy).lineTo(right, yy).lineWidth(w).strokeColor(color).stroke();
 
   // ── Masthead ──────────────────────────────────────────────────────────────
-  doc.font('bold').fontSize(27).fillColor(TXT).text('Foldera', left, 50, { continued: true });
-  doc.fillColor(ACCENT_LIGHT).text('.');
-  kicker('Doklady do ABRA Flexi', left, 84);
+  doc.font('bold').fontSize(27).fillColor(TXT).text('Foldera', left, 56, { continued: true });
+  doc.fillColor(ACCENT).text('.');
 
   kicker('Faktura — daňový doklad', left, 52, { width: W, align: 'right' });
   doc.font('bold').fontSize(21).fillColor(TXT).text(`č. ${data.number}`, left, 64, { width: W, align: 'right' });
@@ -124,11 +115,12 @@ export async function buildPdf(data: InvoiceData, isdocXml?: string): Promise<Bu
   kicker('Dodavatel', left, py);
   kicker('Odběratel', colB, py);
 
-  doc.font('bold').fontSize(12).fillColor(TXT).text(env.BILLING_SUPPLIER_NAME, left, py + 14, { width: colB - left - 16 });
+  doc.font('bold').fontSize(12).fillColor(TXT).text('Foldera', left, py + 14, { width: colB - left - 16 });
   doc.font('reg').fontSize(9).fillColor(SEC);
-  doc.text(env.BILLING_SUPPLIER_ADDRESS, left, py + 32, { width: colB - left - 16 });
-  doc.text(`IČO ${env.BILLING_SUPPLIER_ICO} · neplátce DPH`, left, py + 46);
-  doc.text(env.BILLING_SUPPLIER_EMAIL, left, py + 60);
+  doc.text(env.BILLING_SUPPLIER_NAME, left, py + 30, { width: colB - left - 16 });
+  doc.text(env.BILLING_SUPPLIER_ADDRESS, left, py + 44, { width: colB - left - 16 });
+  doc.text(`IČO ${env.BILLING_SUPPLIER_ICO} · neplátce DPH`, left, py + 58);
+  doc.text(env.BILLING_SUPPLIER_EMAIL, left, py + 72);
 
   doc.font('bold').fontSize(12).fillColor(TXT).text(data.customerName, colB, py + 14, { width: right - colB });
   doc.font('reg').fontSize(9).fillColor(SEC);
@@ -179,13 +171,13 @@ export async function buildPdf(data: InvoiceData, isdocXml?: string): Promise<Bu
   // ── Total — oversized focal figure ──────────────────────────────────────────
   y += 14;
   kicker('Celkem k úhradě', left, y, { width: W, align: 'right' });
-  doc.font('bold').fontSize(38).fillColor(ACCENT_LIGHT).text(fmt(data.totalCzk), left, y + 12, { width: W, align: 'right' });
+  doc.font('bold').fontSize(38).fillColor(ACCENT).text(fmt(data.totalCzk), left, y + 12, { width: W, align: 'right' });
   const totalBottom = y + 12 + 44;
 
   // ── QR platba (light card so it always scans) ────────────────────────────────
   if (qrPng) {
     const qy = y + 6;
-    doc.roundedRect(left, qy, 82, 82, 8).fill('#ffffff');
+    doc.roundedRect(left, qy, 82, 82, 8).lineWidth(1).strokeColor(HAIR).stroke();
     doc.image(qrPng, left + 8, qy + 8, { width: 66, height: 66 });
     kicker('QR platba', left + 96, qy + 10);
     doc.font('reg').fontSize(8.5).fillColor(SEC).text('Naskenujte v bankovní aplikaci', left + 96, qy + 24, { width: 170 });
