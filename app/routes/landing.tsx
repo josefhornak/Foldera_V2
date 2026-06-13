@@ -275,7 +275,7 @@ function Features() {
       id="funkce"
       index="02"
       kicker="Funkce"
-      title="Od schránky až do účetnictví"
+      title="Autonomní pracovník"
       intro="Na rozdíl od jiných nástrojů nepracujete v žádné další aplikaci. Všechno máte rovnou ve svém účetnictví."
     >
       <div className="grid border-l border-[var(--border-subtle)] sm:grid-cols-2">
