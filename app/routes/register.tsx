@@ -100,7 +100,7 @@ export default function RegisterPage() {
             defaultName=""
             error={error}
             setError={setError}
-            onDone={() => navigate('/dashboard', { replace: true })}
+            onDone={() => navigate('/vitejte', { replace: true })}
           />
         )}
 

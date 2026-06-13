@@ -9,6 +9,7 @@ export default [
   route('pozvanka/:token', 'routes/invite-accept.tsx'),
   route('login', 'routes/login.tsx'),
   route('register', 'routes/register.tsx'),
+  route('vitejte', 'routes/onboarding.tsx'),
   // Authenticated app
   layout('routes/app-layout.tsx', [
     route('dashboard', 'routes/dashboard.tsx'),

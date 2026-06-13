@@ -1,15 +1,41 @@
 import { Link } from 'react-router';
-import { AlertTriangle, ArrowRight } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Rocket } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { DocumentStatusBadge } from '~/components/ui/Badge';
+import { Button } from '~/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/Card';
 import { StateWrapper } from '~/components/ui/StateWrapper';
 import { useBilling } from '~/hooks/useBilling';
+import { useCompanies } from '~/hooks/useCompanies';
 import { useDocuments } from '~/hooks/useDocuments';
+import { useSources } from '~/hooks/useSources';
 import { useStats } from '~/hooks/useStats';
 import { formatNumber, formatRelative } from '~/lib/format';
 import { cn } from '~/lib/utils';
 import { useCompanyStore } from '~/stores/company';
+
+/** Nudge to finish setup (ABRA + a source) when onboarding was skipped. */
+function SetupReminder({ companyId }: { companyId: string }) {
+  const { companies } = useCompanies();
+  const { sources, isLoading } = useSources(companyId);
+  const company = companies?.find((c) => c.id === companyId);
+  if (!company || isLoading || !sources) return null;
+  const needsAbra = !company.abraConfigured;
+  const needsSource = sources.length === 0;
+  if (!needsAbra && !needsSource) return null;
+  const missing = [needsAbra && 'připojení k ABRA Flexi', needsSource && 'zdroj dokladů'].filter(Boolean).join(' a ');
+  return (
+    <div className="flex flex-col items-start gap-3 rounded-[var(--radius-token-lg)] border border-[var(--brand-primary)]/30 bg-[var(--brand-primary-subtle)] px-4 py-3.5 sm:flex-row sm:items-center">
+      <Rocket className="h-5 w-5 shrink-0 text-[var(--brand-primary-light)]" aria-hidden="true" />
+      <p className="flex-1 text-sm text-[var(--text-secondary)]">
+        Dokončete nastavení — chybí {missing}. Pak Foldera začne doklady zpracovávat automaticky.
+      </p>
+      <Link to="/vitejte" className="shrink-0">
+        <Button size="sm">Dokončit nastavení</Button>
+      </Link>
+    </div>
+  );
+}
 
 const POLL_INTERVAL = 15000;
 
@@ -61,6 +87,8 @@ export default function DashboardPage() {
         </h1>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">{t('dashboard.subtitle')}</p>
       </header>
+
+      {companyId && <SetupReminder companyId={companyId} />}
 
       <StateWrapper loading={isLoading && !stats} error={!stats ? error : undefined} onRetry={() => mutate()}>
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

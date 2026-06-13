@@ -31,6 +31,7 @@ export function updateCompany(
     billingEmail?: string | null;
     accountingFillMode?: Company['accountingFillMode'];
     attachOriginalEmail?: boolean;
+    lineItemMode?: Company['lineItemMode'];
   }
 ) {
   return api<{ company: Company }>(`/api/companies/${id}`, { method: 'PATCH', body: input });
