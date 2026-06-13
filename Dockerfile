@@ -25,6 +25,7 @@ COPY --from=backend /build/node_modules ./node_modules
 COPY --from=backend /build/dist ./dist
 COPY backend/drizzle ./drizzle
 COPY backend/drizzle.config.ts ./
+COPY backend/assets ./assets
 COPY --from=frontend /build/build/client ./public
 EXPOSE 3000
 CMD ["node", "dist/index.js"]

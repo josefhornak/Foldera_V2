@@ -38,6 +38,8 @@ export const companies = pgTable(
     trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
     /** Documents processed during the trial (lifetime, capped at 10). */
     trialDocsUsed: integer('trial_docs_used').notNull().default(0),
+    /** When the paid subscription was activated (drives which months are billed). */
+    subscriptionStartedAt: timestamp('subscription_started_at', { withTimezone: true }),
 
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

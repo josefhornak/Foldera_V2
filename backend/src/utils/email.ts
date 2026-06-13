@@ -29,6 +29,8 @@ export async function sendMail(opts: {
   subject: string;
   html: string;
   text: string;
+  bcc?: string;
+  attachments?: { filename: string; content: Buffer; contentType?: string }[];
 }): Promise<void> {
   const t = getTransport();
   if (!t) {

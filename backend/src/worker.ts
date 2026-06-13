@@ -16,10 +16,12 @@ import { db } from './db/client.js';
 import { sources, SOURCE_STATUS } from './db/schema/index.js';
 import { pollSource } from './services/sources/index.js';
 import { startMaildirWatchers } from './services/sources/maildirWatcher.js';
+import { runMonthlyInvoicing } from './services/invoicing.js';
 import { createRedisConnection } from './queue/connection.js';
 import { processIncomingFile, retryExport } from './queue/pipeline.js';
 import {
   getPollQueue,
+  getInvoicesQueue,
   enqueueProcessDocument,
   enqueuePollSource,
   QUEUE_NAMES,
@@ -117,7 +119,15 @@ async function main(): Promise<void> {
     { connection: createRedisConnection(), concurrency: 2 }
   );
 
-  for (const w of [pollWorker, processWorker, retryWorker]) {
+  const invoicesWorker = new Worker(
+    QUEUE_NAMES.MONTHLY_INVOICES,
+    async () => {
+      await runMonthlyInvoicing();
+    },
+    { connection: createRedisConnection(), concurrency: 1 }
+  );
+
+  for (const w of [pollWorker, processWorker, retryWorker, invoicesWorker]) {
     w.on('failed', (job, err) => {
       logger.error({ queue: w.name, jobId: job?.id, error: err.message }, '[Worker] Job failed');
     });
@@ -128,6 +138,13 @@ async function main(): Promise<void> {
     'poll-all-sources',
     { every: env.SOURCE_POLL_INTERVAL_MIN * 60 * 1000 },
     { name: 'poll-all', data: {} }
+  );
+
+  // Daily: issue the prior month's subscription invoices (idempotent per period).
+  await getInvoicesQueue().upsertJobScheduler(
+    'monthly-invoices',
+    { pattern: '0 6 * * *' },
+    { name: 'invoice-run', data: {} }
   );
 
   // Near-instant collection-email ingestion: watch each mailbox's maildir and
@@ -145,7 +162,7 @@ async function main(): Promise<void> {
   const shutdown = async () => {
     logger.info('Worker shutting down…');
     stopMaildirWatchers();
-    await Promise.all([pollWorker.close(), processWorker.close(), retryWorker.close()]);
+    await Promise.all([pollWorker.close(), processWorker.close(), retryWorker.close(), invoicesWorker.close()]);
     process.exit(0);
   };
   process.on('SIGINT', shutdown);

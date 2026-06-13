@@ -29,6 +29,18 @@ const envSchema = z.object({
   SMTP_REQUIRE_TLS: z.string().optional().transform((v) => v !== 'false'),
   MAIL_FROM: z.string().default('Foldera <noreply@foldera.cz>'),
 
+  // Billing supplier (who issues the Foldera subscription invoices) + invoicing.
+  BILLING_SUPPLIER_NAME: z.string().default('Ing. Josef Horňák'),
+  BILLING_SUPPLIER_ICO: z.string().default('19910916'),
+  BILLING_SUPPLIER_ADDRESS: z.string().default('Topolová 4411, 276 01 Mělník'),
+  BILLING_SUPPLIER_EMAIL: z.string().default('josef.hornak@foldera.cz'),
+  BILLING_SUPPLIER_BANK: z.string().default('2002272017/3030'),
+  BILLING_SUPPLIER_IBAN: z.string().default(''),
+  /** Copy of every invoice goes here. */
+  BILLING_INVOICE_BCC: z.string().default('josef.hornak@foldera.cz'),
+  /** Master switch for the monthly invoice job (off until billing details are set). */
+  BILLING_INVOICE_ENABLED: z.string().optional().transform((v) => v === 'true'),
+
   // Fallback ABRA Flexi document type (typDokl) for received invoices, used when
   // a supplier has no prior invoices to harvest a type from. The type MUST have
   // a number series (číselná řada) configured, otherwise ABRA cannot assign an

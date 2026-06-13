@@ -112,9 +112,19 @@ router.get('/:companyId/billing', requireCompany, async (req, res, next) => {
 /** Activate the paid subscription (billed monthly by invoice). */
 router.post('/:companyId/subscribe', requireCompany, async (req, res, next) => {
   try {
+    const [existing] = await db
+      .select({ startedAt: companies.subscriptionStartedAt })
+      .from(companies)
+      .where(eq(companies.id, req.company!.id))
+      .limit(1);
     await db
       .update(companies)
-      .set({ billingStatus: 'active', updatedAt: new Date() })
+      .set({
+        billingStatus: 'active',
+        // Preserve the original activation date across re-subscribes.
+        subscriptionStartedAt: existing?.startedAt ?? new Date(),
+        updatedAt: new Date(),
+      })
       .where(and(eq(companies.id, req.company!.id), eq(companies.userId, req.auth!.userId)));
     const [c] = await db.select().from(companies).where(eq(companies.id, req.company!.id)).limit(1);
     res.json({ billing: await getBillingSummary(c!) });
