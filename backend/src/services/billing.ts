@@ -5,7 +5,7 @@
  * documents included, each extra document 2 Kč (notify but keep running).
  * Invoiced monthly (see the monthly invoice job). One subscription per company.
  */
-import { and, eq, gt, lt, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '../db/client.js';
 import { companies, monthlyUsage, type Company } from '../db/schema/index.js';
@@ -111,46 +111,6 @@ export function decideBilling(company: Pick<Company, 'billingStatus' | 'trialEnd
   return { allowed: true };
 }
 
-/**
- * Atomically reserve a processing slot BEFORE the expensive OCR step.
- *
- * For trial companies this is a single conditional UPDATE that increments
- * `trialDocsUsed` only while the trial is live and under the limit, so two
- * concurrent jobs can never both pass at `trialDocsUsed = 9` (the race that a
- * read-then-write check left open). Active plans have no hard cap (overage is
- * billed, not blocked); cancelled companies are rejected.
- */
-export async function consumeBillingSlot(
-  company: Pick<Company, 'id' | 'billingStatus'>
-): Promise<BillingDecision> {
-  if (company.billingStatus === 'active') return { allowed: true };
-  if (company.billingStatus === 'cancelled') return { allowed: false, reason: 'cancelled' };
-
-  // trial — reserve the slot atomically.
-  const reserved = await db
-    .update(companies)
-    .set({ trialDocsUsed: sql`${companies.trialDocsUsed} + 1` })
-    .where(
-      and(
-        eq(companies.id, company.id),
-        eq(companies.billingStatus, 'trial'),
-        gt(companies.trialEndsAt, new Date()),
-        lt(companies.trialDocsUsed, TRIAL_DOC_LIMIT)
-      )
-    )
-    .returning({ id: companies.id });
-  if (reserved.length > 0) return { allowed: true };
-
-  // Blocked — distinguish "trial window over" from "free docs used up".
-  const [c] = await db
-    .select({ trialEndsAt: companies.trialEndsAt, trialDocsUsed: companies.trialDocsUsed })
-    .from(companies)
-    .where(eq(companies.id, company.id))
-    .limit(1);
-  const trialEnded = !c?.trialEndsAt || c.trialEndsAt.getTime() < Date.now();
-  return { allowed: false, reason: trialEnded ? 'trial_expired' : 'trial_docs' };
-}
-
 export function blockMessage(reason: BlockReason): string {
   switch (reason) {
     case 'trial_expired':
@@ -163,9 +123,10 @@ export function blockMessage(reason: BlockReason): string {
 }
 
 /**
- * Record one processed document toward the monthly usage counter (drives
- * invoicing). The trial counter is incremented atomically up-front by
- * {@link consumeBillingSlot}, so it is intentionally not touched here.
+ * Record ONE document that was actually sent to ABRA Flexi (status EXPORTED).
+ * Only exported documents count toward usage — duplicates, non-invoices and
+ * failed exports are free. Increments the monthly usage counter (drives
+ * invoicing) and, during the trial, the trial counter.
  */
 export async function recordDocumentUsage(
   company: Pick<Company, 'id' | 'billingStatus' | 'subscriptionStartedAt'>
@@ -178,6 +139,12 @@ export async function recordDocumentUsage(
       target: [monthlyUsage.companyId, monthlyUsage.period],
       set: { docCount: sql`${monthlyUsage.docCount} + 1`, updatedAt: new Date() },
     });
+  if (company.billingStatus === 'trial') {
+    await db
+      .update(companies)
+      .set({ trialDocsUsed: sql`${companies.trialDocsUsed} + 1` })
+      .where(eq(companies.id, company.id));
+  }
 }
 
 export interface BillingSummary {

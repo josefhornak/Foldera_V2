@@ -34,7 +34,7 @@ import {
   uploadInvoiceAttachment,
 } from '../services/abraflexi/index.js';
 import { isKnownCzBankCode } from '../services/abraflexi/helpers.js';
-import { blockMessage, consumeBillingSlot, recordDocumentUsage } from '../services/billing.js';
+import { blockMessage, decideBilling, recordDocumentUsage } from '../services/billing.js';
 import { extractInvoice } from '../services/extraction/index.js';
 import type {
   AbraExportResult,
@@ -271,10 +271,9 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
       status: DOCUMENT_STATUS.PROCESSING,
     });
 
-    // Billing gate — atomically reserve a slot BEFORE spending OCR so concurrent
-    // jobs can't both slip past the trial limit (the count is incremented here,
-    // not after extraction).
-    const decision = await consumeBillingSlot(company);
+    // Billing gate — block BEFORE spending OCR when the trial/plan limit is hit.
+    // Usage is only counted later, when the document is actually exported.
+    const decision = decideBilling(company);
     if (!decision.allowed) {
       await db
         .update(documents)
@@ -306,9 +305,6 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
       log.warn({ documentId, error: extraction.error }, '[Pipeline] Extraction failed');
       return;
     }
-
-    // Extraction succeeded → the document used OCR and counts toward usage.
-    await recordDocumentUsage(company);
 
     const invoice = extraction.fields;
     const baseFields = {
@@ -367,6 +363,12 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
       })
       .where(and(eq(documents.id, documentId), eq(documents.companyId, companyId)));
 
+    // Count usage only for documents actually sent to ABRA Flexi. Duplicates,
+    // non-invoices and failed exports are free.
+    if (outcome.status === DOCUMENT_STATUS.EXPORTED) {
+      await recordDocumentUsage(company);
+    }
+
     log.info(
       { documentId, status: outcome.status, abraCode: outcome.abraCode, confidence: extraction.confidence },
       '[Pipeline] Document processed'
@@ -410,6 +412,11 @@ export async function retryExport(documentId: string, companyId: string): Promis
       processedAt: new Date(),
     })
     .where(and(eq(documents.id, documentId), eq(documents.companyId, companyId)));
+
+  // A retry that now succeeds is the first time this document reaches ABRA — count it.
+  if (outcome.status === DOCUMENT_STATUS.EXPORTED) {
+    await recordDocumentUsage(company);
+  }
 
   logger.info({ documentId, companyId, status: outcome.status }, '[Pipeline] Export retry finished');
 }
