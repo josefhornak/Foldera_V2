@@ -68,7 +68,7 @@ interface InvoiceData {
   totalCzk: number;
 }
 
-export async function buildPdf(data: InvoiceData): Promise<Buffer> {
+export async function buildPdf(data: InvoiceData, isdocXml?: string): Promise<Buffer> {
   const left = 48;
   const right = 547;
   const W = right - left;
@@ -197,6 +197,19 @@ export async function buildPdf(data: InvoiceData): Promise<Buffer> {
     lineBreak: false,
   });
 
+  // Embed the ISDOC XML directly inside the PDF — one clean hybrid file that is
+  // both human-readable and machine-importable (like ZUGFeRD / Factur-X). Czech
+  // accounting software detects the embedded .isdoc and imports it.
+  if (isdocXml) {
+    (doc as unknown as {
+      file(src: Buffer, options: { name: string; type?: string; description?: string }): void;
+    }).file(Buffer.from(isdocXml, 'utf8'), {
+      name: `faktura-${data.number}.isdoc`,
+      type: 'application/xml',
+      description: `ISDOC faktura ${data.number}`,
+    });
+  }
+
   doc.end();
   return done;
 }
@@ -245,17 +258,6 @@ export async function generateInvoiceFor(company: Company, period: string): Prom
   let status: 'sent' | 'failed' = 'sent';
   let errorMessage: string | null = null;
   try {
-    const pdf = await buildPdf({
-      number,
-      issueDate,
-      dueDate,
-      variableSymbol,
-      customerName: company.name,
-      customerIco: company.ico,
-      customerAddress,
-      lines,
-      totalCzk,
-    });
     const isdocXml = buildIsdocXml({
       number,
       issueDate,
@@ -279,18 +281,28 @@ export async function generateInvoiceFor(company: Company, period: string): Prom
       })),
       totalCzk,
     });
+    // One clean file: the PDF with the ISDOC embedded inside it.
+    const pdf = await buildPdf(
+      {
+        number,
+        issueDate,
+        dueDate,
+        variableSymbol,
+        customerName: company.name,
+        customerIco: company.ico,
+        customerAddress,
+        lines,
+        totalCzk,
+      },
+      isdocXml
+    );
     await sendMail({
       to: recipientEmail,
       bcc: env.BILLING_INVOICE_BCC,
       subject: `Foldera – faktura ${number} (${period})`,
-      html: `<p>Dobrý den,</p><p>v příloze posíláme fakturu č. <b>${number}</b> za předplatné Foldera za období ${period}.</p><p>Částka k úhradě: <b>${totalCzk} Kč</b>, splatnost ${dueDate}, variabilní symbol ${variableSymbol}.</p><p>Fakturu přikládáme i ve formátu <b>ISDOC</b> pro snadný import do účetnictví. V PDF najdete QR platbu.</p><p>Děkujeme, Foldera.</p>`,
+      html: `<p>Dobrý den,</p><p>v příloze posíláme fakturu č. <b>${number}</b> za předplatné Foldera za období ${period}.</p><p>Částka k úhradě: <b>${totalCzk} Kč</b>, splatnost ${dueDate}, variabilní symbol ${variableSymbol}.</p><p>V PDF najdete QR platbu a je v něm vložená i elektronická faktura <b>ISDOC</b> pro snadný import do účetnictví.</p><p>Děkujeme, Foldera.</p>`,
       text: `Faktura ${number} za období ${period}. K úhradě ${totalCzk} Kč, splatnost ${dueDate}, VS ${variableSymbol}.`,
-      attachments: [
-        { filename: `faktura-${number}.pdf`, content: pdf, contentType: 'application/pdf' },
-        // ISDOC XML attached as .xml (better e-mail deliverability than .isdoc,
-        // which spam filters treat as an unknown type); the content is unchanged.
-        { filename: `faktura-${number}.xml`, content: Buffer.from(isdocXml, 'utf8'), contentType: 'application/xml' },
-      ],
+      attachments: [{ filename: `faktura-${number}.pdf`, content: pdf, contentType: 'application/pdf' }],
     });
   } catch (error) {
     status = 'failed';
