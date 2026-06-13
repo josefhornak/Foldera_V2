@@ -36,6 +36,7 @@ import {
 } from '../services/abraflexi/index.js';
 import { isKnownCzBankCode } from '../services/abraflexi/helpers.js';
 import { blockMessage, decideBilling, recordDocumentUsage } from '../services/billing.js';
+import { notifyDocumentFailure } from '../services/notifications.js';
 import { extractInvoice } from '../services/extraction/index.js';
 import type {
   AbraExportResult,
@@ -342,6 +343,11 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
         })
         .where(and(eq(documents.id, documentId), eq(documents.companyId, companyId)));
       log.warn({ documentId, error: extraction.error }, '[Pipeline] Extraction failed');
+      await notifyDocumentFailure(company, {
+        fileName: file.fileName,
+        phase: 'processing',
+        errorMessage: extraction.error ?? 'Doklad se nepodařilo přečíst.',
+      });
       return;
     }
 
@@ -416,6 +422,15 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
     // non-invoices and failed exports are free.
     if (outcome.status === DOCUMENT_STATUS.EXPORTED) {
       await recordDocumentUsage(company);
+    } else if (outcome.status === DOCUMENT_STATUS.EXPORT_FAILED) {
+      await notifyDocumentFailure(company, {
+        fileName: file.fileName,
+        supplierName: invoice.supplierName,
+        totalAmount: baseFields.totalAmount,
+        currency: invoice.currency,
+        phase: 'export',
+        errorMessage: outcome.errorMessage,
+      });
     }
 
     log.info(
@@ -466,6 +481,15 @@ export async function retryExport(documentId: string, companyId: string): Promis
   // A retry that now succeeds is the first time this document reaches ABRA — count it.
   if (outcome.status === DOCUMENT_STATUS.EXPORTED) {
     await recordDocumentUsage(company);
+  } else if (outcome.status === DOCUMENT_STATUS.EXPORT_FAILED) {
+    await notifyDocumentFailure(company, {
+      fileName: row.fileName,
+      supplierName: row.supplierName,
+      totalAmount: row.totalAmount,
+      currency: row.currency,
+      phase: 'export',
+      errorMessage: outcome.errorMessage,
+    });
   }
 
   logger.info({ documentId, companyId, status: outcome.status }, '[Pipeline] Export retry finished');

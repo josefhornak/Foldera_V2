@@ -84,6 +84,55 @@ export async function sendVerificationCode(to: string, name: string, code: strin
   });
 }
 
+/** Alert a company admin that a document failed to process or export. */
+export async function sendDocumentFailureAlert(
+  to: string,
+  opts: {
+    companyName: string;
+    fileName: string;
+    supplierName?: string | null;
+    amount?: string | null;
+    phase: 'export' | 'processing';
+    errorMessage?: string | null;
+    link: string;
+  }
+): Promise<void> {
+  const phaseLabel = opts.phase === 'export' ? 'při exportu do ABRA Flexi' : 'při zpracování';
+  const rows: string[] = [
+    `<tr><td style="color:#9c9cac;padding:4px 0">Firma</td><td style="color:#efeff4;text-align:right">${escapeHtml(opts.companyName)}</td></tr>`,
+    `<tr><td style="color:#9c9cac;padding:4px 0">Soubor</td><td style="color:#efeff4;text-align:right">${escapeHtml(opts.fileName)}</td></tr>`,
+  ];
+  if (opts.supplierName)
+    rows.push(`<tr><td style="color:#9c9cac;padding:4px 0">Dodavatel</td><td style="color:#efeff4;text-align:right">${escapeHtml(opts.supplierName)}</td></tr>`);
+  if (opts.amount)
+    rows.push(`<tr><td style="color:#9c9cac;padding:4px 0">Částka</td><td style="color:#efeff4;text-align:right">${escapeHtml(opts.amount)}</td></tr>`);
+
+  const reason = opts.errorMessage
+    ? `<div style="background:#0e0e13;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px 14px;margin:16px 0;color:#f0a3a3;font-size:13px;line-height:1.5">${escapeHtml(opts.errorMessage)}</div>`
+    : '';
+
+  const inner = `
+    <p style="font-size:15px;margin:0 0 8px">Dobrý den,</p>
+    <p style="font-size:15px;color:#9c9cac;margin:0 0 16px">u jednoho dokladu nastala chyba <b style="color:#efeff4">${phaseLabel}</b>. Doklad <b style="color:#efeff4">nebyl</b> založen do účetnictví.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;margin:0 0 4px">${rows.join('')}</table>
+    ${reason}
+    <a href="${opts.link}" style="display:inline-block;background:#8b5cf6;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 22px;border-radius:10px;margin-top:6px">Zobrazit doklady</a>
+    <p style="font-size:13px;color:#666674;margin:18px 0 0">${
+      opts.phase === 'export'
+        ? 'Po opravě nastavení můžete export zopakovat přímo v aplikaci.'
+        : 'Doklad se nepodařilo přečíst — zkontrolujte ho v aplikaci a případně nahrajte znovu.'
+    } Tato upozornění chodí správcům firmy.</p>`;
+
+  await sendMail({
+    to,
+    subject: `Foldera – chyba u dokladu (${opts.companyName})`,
+    html: SHELL(inner),
+    text: `U dokladu "${opts.fileName}" ve firmě ${opts.companyName} nastala chyba ${phaseLabel}. ${
+      opts.errorMessage ? `Důvod: ${opts.errorMessage}. ` : ''
+    }Doklad nebyl založen. Detail: ${opts.link}`,
+  });
+}
+
 /** Invite a person to join a company with a given role. */
 export async function sendCompanyInvite(
   to: string,
