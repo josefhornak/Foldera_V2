@@ -101,7 +101,10 @@ export async function buildPdf(data: InvoiceData, isdocXml?: string): Promise<Bu
   doc.font('bold').fontSize(27).fillColor(TXT).text('Foldera', left, 56, { continued: true });
   doc.fillColor(ACCENT).text('.');
 
-  kicker('Faktura — daňový doklad', left, 52, { width: W, align: 'right' });
+  // Neplátce DPH vystavuje "fakturu", nikoli "daňový doklad" (ten je pojmem
+  // zákona o DPH § 26+). Jméno + IČO + sídlo + zápis v ŽR plní náležitosti
+  // obchodní listiny dle § 435 obč. zák.
+  kicker('Faktura', left, 52, { width: W, align: 'right' });
   doc.font('bold').fontSize(21).fillColor(TXT).text(`č. ${data.number}`, left, 64, { width: W, align: 'right' });
 
   // violet gradient rule under the masthead
@@ -120,6 +123,7 @@ export async function buildPdf(data: InvoiceData, isdocXml?: string): Promise<Bu
   doc.text(env.BILLING_SUPPLIER_NAME, left, py + 30, { width: colB - left - 16 });
   doc.text(env.BILLING_SUPPLIER_ADDRESS, left, py + 44, { width: colB - left - 16 });
   doc.text(`IČO ${env.BILLING_SUPPLIER_ICO} · neplátce DPH`, left, py + 58);
+  doc.fillColor(MUTED).fontSize(8).text('Zapsáno v živnostenském rejstříku', left, py + 72);
 
   doc.font('bold').fontSize(12).fillColor(TXT).text(data.customerName, colB, py + 14, { width: right - colB });
   doc.font('reg').fontSize(9).fillColor(SEC);
