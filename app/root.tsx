@@ -10,6 +10,7 @@ import {
 } from 'react-router';
 import { Loader2 } from 'lucide-react';
 import { SWRConfig } from 'swr';
+import { CookieConsent } from '~/components/CookieConsent';
 import i18n from '~/i18n';
 import { swrFetcher } from '~/lib/api';
 import './index.css';
@@ -68,6 +69,7 @@ export default function App() {
       <Suspense fallback={<FullPageSpinner />}>
         <Outlet />
       </Suspense>
+      <CookieConsent />
     </SWRConfig>
   );
 }

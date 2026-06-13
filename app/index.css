@@ -209,6 +209,57 @@
   .animate-rise {
     animation: foldera-rise 0.7s var(--ease-out) both;
   }
+
+  /* ---- Editorial landing system -------------------------------------- */
+
+  /* Monospace kicker label (section eyebrows, meta). */
+  .kicker {
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 11px;
+    color: var(--text-tertiary);
+  }
+
+  /* Fine film-grain over the whole page — a human, non-template texture. */
+  .grain::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Infinite horizontal marquee (supplier ticker). */
+  .marquee {
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+    mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+  }
+  .marquee-track {
+    display: inline-flex;
+    width: max-content;
+    animation: foldera-marquee 38s linear infinite;
+  }
+
+  /* Thin underline that draws in on hover (nav links). */
+  .ul-grow {
+    background-image: linear-gradient(var(--brand-primary-light), var(--brand-primary-light));
+    background-size: 0% 1px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    transition: background-size var(--duration-normal) var(--ease-out);
+  }
+  .ul-grow:hover {
+    background-size: 100% 1px;
+  }
+}
+
+@keyframes foldera-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
 
 @keyframes foldera-float {
