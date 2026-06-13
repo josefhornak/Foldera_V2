@@ -110,7 +110,7 @@ async function main(): Promise<void> {
     async (job) => {
       await processIncomingFile(job.data);
     },
-    { connection: createRedisConnection(), concurrency: 2 }
+    { connection: createRedisConnection(), concurrency: env.WORKER_PROCESS_CONCURRENCY }
   );
 
   const retryWorker = new Worker<ExportRetryJobData>(
@@ -118,7 +118,7 @@ async function main(): Promise<void> {
     async (job) => {
       await retryExport(job.data.documentId, job.data.companyId);
     },
-    { connection: createRedisConnection(), concurrency: 2 }
+    { connection: createRedisConnection(), concurrency: env.WORKER_RETRY_CONCURRENCY }
   );
 
   const invoicesWorker = new Worker(

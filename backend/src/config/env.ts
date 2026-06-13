@@ -79,6 +79,12 @@ const envSchema = z.object({
 
   SOURCE_POLL_INTERVAL_MIN: z.coerce.number().default(5),
 
+  // Worker concurrency. Document processing (OCR → extract → export) is I/O-bound
+  // — it mostly waits on the Mistral and ABRA APIs — so a value well above the
+  // core count is fine. Tunable without a rebuild via env.
+  WORKER_PROCESS_CONCURRENCY: z.coerce.number().default(6),
+  WORKER_RETRY_CONCURRENCY: z.coerce.number().default(4),
+
   // Collection email (app-provisioned mailbox on the host Postfix). The feature
   // self-detects availability by checking these paths are writable at runtime.
   COLLECTION_EMAIL_DOMAIN: z.string().default('inbox.foldera.cz'),
