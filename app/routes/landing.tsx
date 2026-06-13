@@ -76,14 +76,6 @@ const FEATURES = [
   { icon: ShieldCheck, title: 'Soubory neukládáme', text: 'Originál se zpracuje, nahraje do ABRA a smaže. V aplikaci zůstává jen metadata.' },
 ];
 
-const STATS = [
-  { value: '< 60 s', label: 'od přijetí po doklad v ABRA' },
-  { value: '98 %', label: 'přesnost u běžných faktur' },
-  { value: '0', label: 'ručního přepisování' },
-];
-
-const SUPPLIERS = ['Alza.cz', 'ČEZ', 'O2', 'MAKRO', 'Rohlík', 'Notino', 'Datart', 'Kaufland', 'T-Mobile', 'Shoptet'];
-
 const FAQ = [
   { q: 'Ukládáte naše soubory?', a: 'Ne. Soubor se jen zpracuje, nahraje jako příloha do ABRA Flexi a poté smaže. V aplikaci zůstanou pouze vytěžená metadata, abyste mohli export případně zopakovat.' },
   { q: 'Funguje to s mojí verzí ABRA Flexi?', a: 'Ano. Připojujeme se přes REST API ABRA Flexi (FlexiBee). Stačí zadat adresu instance, firmu a přihlašovací údaje.' },
@@ -101,7 +93,6 @@ export default function Landing() {
       <div className="relative z-[1]">
         <Nav appHref={appHref} loggedIn={loggedIn} />
         <Hero appHref={appHref} loggedIn={loggedIn} />
-        <Marquee />
         <HowItWorks />
         <Features />
         <Pricing />
@@ -201,10 +192,10 @@ function Hero({ appHref, loggedIn }: { appHref: string; loggedIn: boolean }) {
 /** Clean framed product window — bordered, with a thin accent top rule. */
 function HeroFrame() {
   const rows = [
-    { sup: 'Alza.cz a.s.', num: '26100412', amt: '18 540', color: 'var(--status-success)', label: 'Zpracováno' },
-    { sup: 'ČEZ Prodej, a.s.', num: 'FV-262214', amt: '1 249', color: 'var(--status-success)', label: 'Zpracováno' },
-    { sup: 'MAKRO ČR s.r.o.', num: '2611008842', amt: '23 118', color: 'var(--status-info)', label: 'Čeká' },
-    { sup: 'O2 Czech Republic', num: 'FV-998120', amt: '849', color: 'var(--status-warning)', label: 'Zpracovává se' },
+    { sup: 'Dodavatel materiálu s.r.o.', num: '26100412', amt: '18 540', color: 'var(--status-success)', label: 'Zpracováno' },
+    { sup: 'Energie a teplo a.s.', num: 'FV-262214', amt: '1 249', color: 'var(--status-success)', label: 'Zpracováno' },
+    { sup: 'Velkoobchod CZ s.r.o.', num: '2611008842', amt: '23 118', color: 'var(--status-info)', label: 'Čeká' },
+    { sup: 'Telekomunikace s.r.o.', num: 'FV-998120', amt: '849', color: 'var(--status-warning)', label: 'Zpracovává se' },
   ];
   return (
     <div className="mt-14 overflow-hidden rounded-[var(--radius-token-lg)] border border-[var(--border-strong)] bg-[var(--surface-default)] shadow-[var(--shadow-lg)] animate-rise [animation-delay:140ms]">
@@ -214,7 +205,6 @@ function HeroFrame() {
         <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
         <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
         <span className="ml-2 font-mono text-[11px] text-[var(--text-tertiary)]">foldera.cz / dokumenty</span>
-        <span className="ml-auto kicker hidden sm:block">12 dnes zpracováno</span>
       </div>
       <div className="divide-y divide-[var(--border-subtle)]">
         {rows.map((r) => (
@@ -232,25 +222,6 @@ function HeroFrame() {
         ))}
       </div>
     </div>
-  );
-}
-
-function Marquee() {
-  const items = [...SUPPLIERS, ...SUPPLIERS];
-  return (
-    <section className="border-y border-[var(--border-subtle)] py-6">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="marquee">
-          <div className="marquee-track">
-            {items.map((name, i) => (
-              <span key={i} className="mx-6 font-heading text-xl font-semibold text-[var(--text-tertiary)] opacity-70">
-                {name}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
   );
 }
 
@@ -288,14 +259,6 @@ function HowItWorks() {
             </div>
           </div>
         ))}
-        <div className="mt-10 flex flex-wrap gap-x-12 gap-y-5 border-t border-[var(--border-subtle)] pt-8">
-          {STATS.map((s) => (
-            <div key={s.label}>
-              <div className="font-heading text-3xl font-bold tracking-tight">{s.value}</div>
-              <div className="mt-1 kicker">{s.label}</div>
-            </div>
-          ))}
-        </div>
       </div>
     </Block>
   );
