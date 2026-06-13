@@ -246,8 +246,11 @@ export function buildInvoicePayload(
 
   // --- Dates (ISO YYYY-MM-DD pass-through; DUZP falls back to issue date) ---
   const issueDate = isoDateOrNull(invoice.issueDate);
-  const dueDate = isoDateOrNull(invoice.dueDate);
   const taxDate = isoDateOrNull(invoice.taxDate) ?? issueDate;
+  // ABRA requires datSplat ("Splatnost") on faktura-prijata. When the document
+  // carries no explicit due date (common on dobropisy / some účtenky), fall back
+  // to the due date → tax date → issue date so the export still books.
+  const dueDate = isoDateOrNull(invoice.dueDate) ?? taxDate ?? issueDate;
   if (issueDate) faktura.datVyst = issueDate;
   if (dueDate) faktura.datSplat = dueDate;
   if (taxDate) faktura.duzpPuv = taxDate;
