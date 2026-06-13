@@ -131,22 +131,22 @@ export async function buildPdf(data: InvoiceData, isdocXml?: string): Promise<Bu
   }
   if (data.customerIco) doc.text(`IČO ${data.customerIco}`, colB, cy);
 
-  // ── Meta row (hairline framed) ──────────────────────────────────────────────
-  const my = py + 92;
-  rule(my);
+  // ── Meta strip (soft rounded card) ──────────────────────────────────────────
+  const my = py + 96;
+  doc.roundedRect(left, my, W, 46, 8).fill('#f6f6f9');
   const cells: [string, string][] = [
     ['Vystaveno', data.issueDate],
     ['Splatnost', data.dueDate],
     ['Var. symbol', data.variableSymbol],
     ['Účet', env.BILLING_SUPPLIER_BANK],
   ];
-  const cw = W / cells.length;
+  const mp = 16;
+  const cw = (W - mp * 2) / cells.length;
   cells.forEach(([label, value], i) => {
-    const x = left + i * cw;
-    kicker(label, x, my + 12);
-    doc.font('bold').fontSize(10).fillColor(TXT).text(value, x, my + 24, { width: cw - 8 });
+    const x = left + mp + i * cw;
+    kicker(label, x, my + 13);
+    doc.font('bold').fontSize(10).fillColor(TXT).text(value, x, my + 25, { width: cw - 6 });
   });
-  rule(my + 48);
 
   // ── Line items ──────────────────────────────────────────────────────────────
   let y = my + 70;
@@ -156,7 +156,7 @@ export async function buildPdf(data: InvoiceData, isdocXml?: string): Promise<Bu
   kicker('Celkem', 467, y, { width: 80, align: 'right' });
   y += 13;
   rule(y, 1, ACCENT);
-  y += 10;
+  y += 11;
   for (const ln of data.lines) {
     doc.font('reg').fontSize(10).fillColor(TXT).text(ln.description, left, y, { width: 250 });
     const rowH = doc.y - y;
@@ -164,25 +164,31 @@ export async function buildPdf(data: InvoiceData, isdocXml?: string): Promise<Bu
     doc.text(String(ln.quantity), 318, y, { width: 62, align: 'right' });
     doc.text(fmt(ln.unitPriceCzk), 392, y, { width: 70, align: 'right' });
     doc.font('bold').fillColor(TXT).text(fmt(ln.amountCzk), 467, y, { width: 80, align: 'right' });
-    y += Math.max(rowH, 14) + 9;
-    rule(y - 5, 0.5);
+    y += Math.max(rowH, 14) + 10;
+    rule(y - 6, 0.5);
   }
 
-  // ── Total — oversized focal figure ──────────────────────────────────────────
-  y += 14;
-  kicker('Celkem k úhradě', left, y, { width: W, align: 'right' });
-  doc.font('bold').fontSize(38).fillColor(ACCENT).text(fmt(data.totalCzk), left, y + 12, { width: W, align: 'right' });
-  const totalBottom = y + 12 + 44;
+  // ── Payment block: framed QR (left) + violet total card (right) ──────────────
+  const by = y + 18;
+  const cardH = 88;
 
-  // ── QR platba (light card so it always scans) ────────────────────────────────
+  // total card (right, soft violet tint)
+  const tcX = 300;
+  const tcW = right - tcX;
+  doc.roundedRect(tcX, by, tcW, cardH, 12).fill('#f2effb');
+  kicker('Celkem k úhradě', tcX + 18, by + 20);
+  doc.font('bold').fontSize(32).fillColor(ACCENT).text(fmt(data.totalCzk), tcX + 18, by + 36, { width: tcW - 36, align: 'right' });
+
+  // QR card (left, white framed so it always scans)
   if (qrPng) {
-    const qy = y + 6;
-    doc.roundedRect(left, qy, 82, 82, 8).lineWidth(1).strokeColor(HAIR).stroke();
-    doc.image(qrPng, left + 8, qy + 8, { width: 66, height: 66 });
-    kicker('QR platba', left + 96, qy + 10);
-    doc.font('reg').fontSize(8.5).fillColor(SEC).text('Naskenujte v bankovní aplikaci', left + 96, qy + 24, { width: 170 });
-    if (iban) doc.font('mono').fontSize(8).fillColor(TXT).text(iban, left + 96, qy + 44, { width: 200, characterSpacing: 0.5 });
+    doc.roundedRect(left, by, cardH, cardH, 12).lineWidth(1).strokeColor(HAIR).stroke();
+    doc.image(qrPng, left + 11, by + 11, { width: cardH - 22, height: cardH - 22 });
+    const qx = left + cardH + 16;
+    kicker('QR platba', qx, by + 18);
+    doc.font('reg').fontSize(8.5).fillColor(SEC).text('Naskenujte v bankovní aplikaci', qx, by + 32, { width: 150 });
+    if (iban) doc.font('mono').fontSize(8).fillColor(TXT).text(iban, qx, by + 52, { width: 160, characterSpacing: 0.5 });
   }
+  const totalBottom = by + cardH;
 
   // ── Footer (pinned) ──────────────────────────────────────────────────────────
   const fy = Math.max(totalBottom + 40, 720);
