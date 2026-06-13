@@ -120,7 +120,6 @@ export async function buildPdf(data: InvoiceData, isdocXml?: string): Promise<Bu
   doc.text(env.BILLING_SUPPLIER_NAME, left, py + 30, { width: colB - left - 16 });
   doc.text(env.BILLING_SUPPLIER_ADDRESS, left, py + 44, { width: colB - left - 16 });
   doc.text(`IČO ${env.BILLING_SUPPLIER_ICO} · neplátce DPH`, left, py + 58);
-  doc.text(env.BILLING_SUPPLIER_EMAIL, left, py + 72);
 
   doc.font('bold').fontSize(12).fillColor(TXT).text(data.customerName, colB, py + 14, { width: right - colB });
   doc.font('reg').fontSize(9).fillColor(SEC);
@@ -200,7 +199,7 @@ export async function buildPdf(data: InvoiceData, isdocXml?: string): Promise<Bu
     fy + 10,
     { width: W }
   );
-  kicker(`Foldera · ${env.BILLING_SUPPLIER_EMAIL} · IČO ${env.BILLING_SUPPLIER_ICO}`, left, Math.min(fy + 48, 778), {
+  kicker(`Foldera · ${env.BILLING_SUPPLIER_NAME} · IČO ${env.BILLING_SUPPLIER_ICO}`, left, Math.min(fy + 48, 778), {
     width: W,
     align: 'center',
     lineBreak: false,
