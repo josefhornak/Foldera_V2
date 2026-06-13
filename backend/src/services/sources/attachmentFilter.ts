@@ -134,6 +134,9 @@ export function validateMagicNumber(content: Buffer, mimeType: SupportedMimeType
     return validateXmlContent(content);
   }
 
+  // Too small to carry a real signature / document (real PDFs and images are KBs).
+  if (content.length < 16) return false;
+
   // PDF: allow only a UTF-8 BOM and leading whitespace before %PDF (real PDFs
   // may start with a newline). A larger scan would wrongly accept MIME/email
   // containers that embed a PDF further down — those must be unwrapped, not OCR'd.
@@ -148,7 +151,6 @@ export function validateMagicNumber(content: Buffer, mimeType: SupportedMimeType
 
   const signatures = MAGIC_SIGNATURES[mimeType];
   if (!signatures) return true; // no signature defined — allow through
-  if (content.length < 16) return false;
 
   return signatures.some(({ signature, offset }) =>
     signature.every((expected, i) => byteAt(content, offset + i) === expected)
