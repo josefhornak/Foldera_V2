@@ -102,7 +102,11 @@ export default function Terms() {
         </P>
         <P>
           Poskytovatel zpracovává osobní údaje v rozsahu nezbytném pro poskytování služby a v souladu s nařízením GDPR.
-          Žádost týkající se osobních údajů lze zaslat na uvedený kontaktní e-mail.
+          Podrobnosti upravují{' '}
+          <Link to="/ochrana-udaju" className="text-[var(--text-link)] underline underline-offset-2">zásady ochrany osobních údajů</Link>{' '}
+          a pro údaje v dokladech{' '}
+          <Link to="/zpracovani-udaju" className="text-[var(--text-link)] underline underline-offset-2">podmínky zpracování osobních údajů</Link>{' '}
+          (zpracovatelská smlouva dle čl. 28 GDPR). Žádost týkající se osobních údajů lze zaslat na uvedený kontaktní e-mail.
         </P>
 
         <H2>8. Dostupnost a odpovědnost</H2>

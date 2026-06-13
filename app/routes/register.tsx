@@ -105,12 +105,20 @@ export default function RegisterPage() {
         )}
 
         {step === 'account' && (
-          <p className="mt-6 text-center text-xs text-[var(--text-tertiary)]">
-            Už máte účet?{' '}
-            <Link to="/login" className="text-[var(--text-link)] underline underline-offset-4">
-              Přihlaste se
-            </Link>
-          </p>
+          <>
+            <p className="mt-6 text-center text-xs leading-relaxed text-[var(--text-tertiary)]">
+              Registrací souhlasíte s{' '}
+              <Link to="/podminky" className="text-[var(--text-link)] underline underline-offset-4">obchodními podmínkami</Link>{' '}
+              a berete na vědomí{' '}
+              <Link to="/ochrana-udaju" className="text-[var(--text-link)] underline underline-offset-4">zásady ochrany osobních údajů</Link>.
+            </p>
+            <p className="mt-4 text-center text-xs text-[var(--text-tertiary)]">
+              Už máte účet?{' '}
+              <Link to="/login" className="text-[var(--text-link)] underline underline-offset-4">
+                Přihlaste se
+              </Link>
+            </p>
+          </>
         )}
       </Card>
     </div>

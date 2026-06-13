@@ -4,9 +4,10 @@ import { Link } from 'react-router';
 const STORAGE_KEY = 'foldera.cookies';
 
 /**
- * Minimal cookie notice. Foldera uses storage only for sign-in (functional) and
- * optional anonymous usage measurement — so this is a lightweight notice with an
- * explicit choice, remembered in localStorage. Client-only (renders after hydration).
+ * Minimal cookie notice. Foldera uses cookies / local storage only for sign-in
+ * (strictly necessary) — no analytics, marketing or tracking — so this is an
+ * informational acknowledgement, not a consent choice. The dismissal is
+ * remembered in localStorage. Client-only (renders after hydration).
  */
 export function CookieConsent() {
   const [show, setShow] = useState(false);
@@ -36,9 +37,10 @@ export function CookieConsent() {
         <div className="max-w-2xl">
           <div className="kicker text-[var(--brand-primary-light)]">Cookies</div>
           <p className="mt-1.5 text-sm text-[var(--text-secondary)]">
-            Používáme nezbytné cookies pro provoz a přihlášení, plus anonymní statistiky návštěvnosti. Více v{' '}
-            <Link to="/podminky" className="text-[var(--text-link)] underline underline-offset-2">
-              podmínkách
+            Používáme jen nezbytné cookies pro provoz a přihlášení. Žádné marketingové ani sledovací cookies
+            nenasazujeme. Více v{' '}
+            <Link to="/ochrana-udaju" className="text-[var(--text-link)] underline underline-offset-2">
+              zásadách ochrany osobních údajů
             </Link>
             .
           </p>
@@ -46,16 +48,10 @@ export function CookieConsent() {
         <div className="flex shrink-0 items-center gap-2">
           <button
             onClick={() => choose('necessary')}
-            className="h-9 rounded-[var(--radius-token-md)] border border-[var(--border-default)] px-4 text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-          >
-            Jen nezbytné
-          </button>
-          <button
-            onClick={() => choose('all')}
             className="h-9 rounded-[var(--radius-token-md)] px-4 text-sm font-medium text-white [background:var(--accent-gradient)]"
             style={{ boxShadow: 'var(--accent-glow)' }}
           >
-            Přijmout vše
+            Rozumím
           </button>
         </div>
       </div>

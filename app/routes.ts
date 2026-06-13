@@ -4,6 +4,8 @@ export default [
   // Public marketing landing
   index('routes/landing.tsx'),
   route('podminky', 'routes/terms.tsx'),
+  route('ochrana-udaju', 'routes/privacy.tsx'),
+  route('zpracovani-udaju', 'routes/dpa.tsx'),
   route('pozvanka/:token', 'routes/invite-accept.tsx'),
   route('login', 'routes/login.tsx'),
   route('register', 'routes/register.tsx'),

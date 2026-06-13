@@ -78,7 +78,7 @@ const FEATURES = [
 ];
 
 const FAQ = [
-  { q: 'Kam putují moje data?', a: 'Doklady zpracováváme přes pokročilou evropskou AI s OCR — data zůstávají v EU a řídíme se GDPR. Soubory navíc trvale neukládáme: po vytěžení a nahrání do ABRA Flexi se originál smaže.' },
+  { q: 'Kam putují moje data?', a: 'Vytěžení dokladů běží na evropské AI s OCR (Mistral, Francie) a servery i databázi hostujeme v EU (Německo). Pro odesílání e-mailů využíváme službu Resend (USA) — přenos je ošetřen standardními smluvními doložkami. Řídíme se GDPR a soubory trvale neukládáme: po vytěžení a nahrání do ABRA Flexi se originál smaže. Podrobnosti najdete v zásadách ochrany osobních údajů.' },
   { q: 'Ukládáte naše soubory?', a: 'Ne. Soubor se jen zpracuje, nahraje jako příloha do ABRA Flexi a poté smaže. V aplikaci zůstanou pouze vytěžená metadata, abyste mohli export případně zopakovat.' },
   { q: 'Funguje to s mojí verzí ABRA Flexi?', a: 'Ano. Připojujeme se přes REST API ABRA Flexi (FlexiBee). Stačí zadat adresu instance, firmu a přihlašovací údaje.' },
   { q: 'Co když se doklad nerozpozná správně?', a: 'Nízká přesnost se označí a doklad lze znovu exportovat z uložených dat. Nepovedený export jde kdykoli zopakovat, nic se neztratí.' },
@@ -400,8 +400,10 @@ function Footer() {
           <span className="font-heading font-bold text-[var(--text-secondary)]">Foldera</span>
           <span className="kicker ml-2 hidden sm:block">© 2026 · doklady do ABRA Flexi</span>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
           <Link to="/podminky" className="ul-grow hover:text-[var(--text-primary)]">Obchodní podmínky</Link>
+          <Link to="/ochrana-udaju" className="ul-grow hover:text-[var(--text-primary)]">Ochrana údajů</Link>
+          <Link to="/zpracovani-udaju" className="ul-grow hover:text-[var(--text-primary)]">Zpracování údajů</Link>
           <Link to="/login" className="ul-grow hover:text-[var(--text-primary)]">Přihlásit</Link>
           <a href="#cenik" className="ul-grow hover:text-[var(--text-primary)]">Ceník</a>
         </div>

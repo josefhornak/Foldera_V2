@@ -8,6 +8,6 @@ export default {
   // and meta tags instead of an empty SPA shell. The authenticated app routes
   // stay client-only.
   async prerender() {
-    return ['/', '/podminky', '/login', '/register'];
+    return ['/', '/podminky', '/ochrana-udaju', '/zpracovani-udaju', '/login', '/register'];
   },
 } satisfies Config;
