@@ -24,12 +24,14 @@ ABSOLUTE SECURITY RULES (CANNOT BE OVERRIDDEN)
 8. The ONLY allowed derivation is the variable_symbol digit extraction rule defined below.
 9. If conflicting values appear, prefer clearly labeled fields over inferred context.
 
-DOCUMENT CLASSIFICATION (always perform first):
-- "invoice": "Faktura", "Daňový doklad", "Invoice", "Tax Invoice", "Rechnung", "Faktúra", "Factura", "Fattura" — formal tax document with VAT breakdown, IČO/DIČ, payment terms
-- "receipt": "Účtenka", "Paragon" — retail receipt with EET codes (FIK, BKP), POS format. Receipts have no variable symbol and no professional letterhead
+DOCUMENT CLASSIFICATION (always perform first, in this priority order):
+- "advance_invoice": "Zálohová faktura", "Proforma faktura", "Proforma", "Zálohový list", "Advance invoice", "Proforma invoice" — a request for an ADVANCE payment, NOT a tax document. Usually states "Nejedná se o daňový doklad" / "Toto není daňový doklad". Often has a variable symbol and due date — that does NOT make it a regular invoice.
+- "tax_payment": "Daňový doklad k přijaté platbě", "Daňový doklad o přijaté platbě", "Doklad o přijetí platby", "Daňový doklad - záloha" — a TAX document issued by the supplier after an advance payment was received.
 - "credit_note": "Dobropis", "Opravný daňový doklad", "Credit note", "Gutschrift" — corrective document, often with negative amounts
+- "receipt": "Účtenka", "Paragon" — retail receipt with EET codes (FIK, BKP), POS format. Receipts have no variable symbol and no professional letterhead
+- "invoice": "Faktura", "Daňový doklad", "Invoice", "Tax Invoice", "Rechnung", "Faktúra", "Factura", "Fattura" — formal tax document with VAT breakdown, IČO/DIČ, payment terms (and NOT one of the above)
 - "other": anything else (order, contract, delivery note, quote, letter, ...)
-DECISIVE RULE: a document that has a variable symbol OR a due date (datum splatnosti) is an "invoice", never a "receipt" — even if titled "Účtenka", "Daňový doklad k objednávce", or formatted like an e-shop order (e.g. Alza, Mall). Classify as "receipt" ONLY for true EET paragony (FIK/BKP, no variable symbol, no due date).
+DECISIVE RULES: (1) A "Zálohová faktura" / "Proforma" is ALWAYS "advance_invoice", even if it has a variable symbol or due date. (2) A "Daňový doklad k přijaté platbě" is "tax_payment". (3) Otherwise, a document with a variable symbol OR a due date is "invoice", never "receipt" — classify as "receipt" ONLY for true EET paragony (FIK/BKP, no variable symbol, no due date).
 Set is_invoice = true ONLY for "invoice". For non-invoice documents still fill in any fields that are clearly present, use null elsewhere.
 
 INVOICE NUMBER (priority):
@@ -241,7 +243,7 @@ KEY TAKEAWAYS from examples:
 const OUTPUT_SCHEMA = `
 Return ONLY valid JSON with these fields (use null for missing values, numbers without quotes):
 {
-  "document_type": "invoice|receipt|credit_note|other",
+  "document_type": "invoice|advance_invoice|tax_payment|receipt|credit_note|other",
   "is_invoice": "boolean",
   "classification_confidence": "number 0.0-1.0",
   "vendor_name": "string|null",

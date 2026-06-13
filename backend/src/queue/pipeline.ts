@@ -14,6 +14,7 @@ import fs from 'node:fs/promises';
 
 import { and, eq } from 'drizzle-orm';
 
+import env from '../config/env.js';
 import { db } from '../db/client.js';
 import {
   companies,
@@ -102,11 +103,23 @@ async function runAbraExport(
     };
   }
 
-  const isReceipt = invoice.documentType === 'receipt';
+  const docType = invoice.documentType;
+  const isReceipt = docType === 'receipt';
+  const isAdvance = docType === 'advance_invoice'; // zálohová faktura
+  const isTaxPayment = docType === 'tax_payment'; // daňový doklad k přijaté platbě (DDPP)
 
-  // Receipts live in the pokladni-pohyb evidence; the invoice duplicate check
-  // only covers faktura-prijata, so skip it for receipts.
-  if (!isReceipt) {
+  // Zálohové faktury i DDPP se zakládají do faktura-prijata, jen s vlastním typem
+  // dokladu (na výběr v nastavení firmy; jinak konfigurovaný default).
+  const exportOptions: { typDokl?: string } = isAdvance
+    ? { typDokl: company.advanceInvoiceType ?? env.ABRA_DEFAULT_TYP_ZALOHA }
+    : isTaxPayment
+      ? { typDokl: company.taxPaymentType ?? env.ABRA_DEFAULT_TYP_DDPP }
+      : {};
+  const attachEntity = isReceipt ? ENTITY_POKLADNI_POHYB : undefined;
+
+  // The duplicate check only covers regular faktura-prijata — skip it for
+  // receipts (pokladna) and zálohové faktury (different document class).
+  if (!isReceipt && !isAdvance) {
     const duplicate = await findDuplicateInvoice(cfg, {
       supplierIco: invoice.supplierIco,
       variableSymbol: invoice.variableSymbol,
@@ -172,7 +185,7 @@ async function runAbraExport(
   const doExport = (d: AbraSupplierDefaults): Promise<AbraExportResult> =>
     isReceipt
       ? exportReceiptToPokladna(cfg, invoice, supplierCode, d)
-      : exportPurchaseInvoice(cfg, invoice, d);
+      : exportPurchaseInvoice(cfg, invoice, d, exportOptions);
 
   let result: AbraExportResult;
   try {
@@ -214,7 +227,7 @@ async function runAbraExport(
         attachmentPath.filePath,
         attachmentPath.fileName,
         attachmentPath.mimeType,
-        isReceipt ? ENTITY_POKLADNI_POHYB : undefined
+        attachEntity
       );
     } catch (error) {
       // Attachment failure must never flip a successful export
@@ -235,7 +248,7 @@ async function runAbraExport(
         originalEmail.filePath,
         originalEmail.fileName,
         'message/rfc822',
-        isReceipt ? ENTITY_POKLADNI_POHYB : undefined
+        attachEntity
       );
     } catch (error) {
       notes.push(`Originální e-mail se nepodařilo přiložit: ${toError(error).message}`);
@@ -347,7 +360,9 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
     const exportable =
       invoice.isInvoice ||
       invoice.documentType === 'credit_note' ||
-      invoice.documentType === 'receipt';
+      invoice.documentType === 'receipt' ||
+      invoice.documentType === 'advance_invoice' ||
+      invoice.documentType === 'tax_payment';
     if (!exportable) {
       await db
         .update(documents)

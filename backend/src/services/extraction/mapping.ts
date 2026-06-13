@@ -96,7 +96,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-const DOCUMENT_TYPES = ['invoice', 'receipt', 'credit_note', 'other'] as const;
+const DOCUMENT_TYPES = ['invoice', 'advance_invoice', 'tax_payment', 'receipt', 'credit_note', 'other'] as const;
 
 function asDocumentType(value: unknown): ExtractedInvoice['documentType'] {
   const text = asString(value)?.toLowerCase() ?? '';

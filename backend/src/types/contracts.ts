@@ -31,7 +31,7 @@ export interface VatBucket {
 export interface ExtractedInvoice {
   /** Document classification — only purchase invoices are exported */
   isInvoice: boolean;
-  documentType: 'invoice' | 'receipt' | 'credit_note' | 'other';
+  documentType: 'invoice' | 'advance_invoice' | 'tax_payment' | 'receipt' | 'credit_note' | 'other';
 
   supplierName: string | null;
   supplierIco: string | null;

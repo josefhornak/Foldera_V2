@@ -9,6 +9,7 @@ import { db } from '../db/client.js';
 import { companies, companyInvitations, companyMembers, users } from '../db/schema/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireCompany, requireCompanyAdmin } from '../middleware/companyScope.js';
+import { abraGetList } from '../services/abraflexi/client.js';
 import { testAbraConnection } from '../services/abraflexi/index.js';
 import { getBillingSummary } from '../services/billing.js';
 import { decryptSecret, encryptSecret } from '../utils/crypto.js';
@@ -37,6 +38,9 @@ const companySchema = z.object({
   accountingFillMode: z.enum(['history', 'ai']).optional(),
   /** Attach the original e-mail (.eml) to the ABRA document (e-mail sources). */
   attachOriginalEmail: z.boolean().optional(),
+  /** ABRA typ-faktury-prijate codes for advance invoices / DDPP ('' clears → default). */
+  advanceInvoiceType: z.preprocess((v) => (v === '' ? null : v), z.string().nullish()),
+  taxPaymentType: z.preprocess((v) => (v === '' ? null : v), z.string().nullish()),
 });
 
 const abraConfigSchema = z.object({
@@ -64,6 +68,8 @@ function toPublicCompany(c: typeof companies.$inferSelect, role: 'admin' | 'memb
     abraConfigured: Boolean(c.abraApiUrl && c.abraApiUser && c.abraApiPasswordEnc),
     accountingFillMode: c.accountingFillMode,
     attachOriginalEmail: c.attachOriginalEmail,
+    advanceInvoiceType: c.advanceInvoiceType,
+    taxPaymentType: c.taxPaymentType,
     trialEndsAt: c.trialEndsAt,
     createdAt: c.createdAt,
     /** The requesting user's role in this company. */
@@ -251,6 +257,30 @@ router.post('/:companyId/abraflexi/test', requireCompanyAdmin, async (req, res, 
 
     const result = await testAbraConnection({ apiUrl, apiUser, apiPassword, companyId: c.id });
     res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** List the company's received-invoice document types (for the zálohová / DDPP pickers). */
+router.get('/:companyId/abraflexi/invoice-types', requireCompany, async (req, res, next) => {
+  try {
+    const c = req.company!;
+    if (!c.abraApiUrl || !c.abraApiUser || !c.abraApiPasswordEnc) {
+      res.json({ types: [] });
+      return;
+    }
+    const cfg = {
+      apiUrl: c.abraApiUrl,
+      apiUser: c.abraApiUser,
+      apiPassword: decryptSecret(c.abraApiPasswordEnc),
+      companyId: c.id,
+    };
+    const rows = await abraGetList(cfg, '/typ-faktury-prijate.json?detail=custom:kod,nazev&limit=200', 'typ-faktury-prijate');
+    const types = rows
+      .map((r) => ({ kod: String((r as { kod?: unknown }).kod ?? ''), nazev: String((r as { nazev?: unknown }).nazev ?? '') }))
+      .filter((t) => t.kod);
+    res.json({ types });
   } catch (err) {
     next(err);
   }

@@ -31,6 +31,8 @@ export function updateCompany(
     billingEmail?: string | null;
     accountingFillMode?: Company['accountingFillMode'];
     attachOriginalEmail?: boolean;
+    advanceInvoiceType?: string | null;
+    taxPaymentType?: string | null;
   }
 ) {
   return api<{ company: Company }>(`/api/companies/${id}`, { method: 'PATCH', body: input });
@@ -38,4 +40,16 @@ export function updateCompany(
 
 export function deleteCompany(id: string) {
   return api<{ ok: boolean }>(`/api/companies/${id}`, { method: 'DELETE' });
+}
+
+export interface AbraInvoiceType {
+  kod: string;
+  nazev: string;
+}
+export function useInvoiceTypes(companyId: string | null, enabled: boolean) {
+  const { data, isLoading } = useSWR<{ types: AbraInvoiceType[] }>(
+    companyId && enabled ? `/api/companies/${companyId}/abraflexi/invoice-types` : null,
+    { revalidateOnFocus: false }
+  );
+  return { types: data?.types, isLoading };
 }

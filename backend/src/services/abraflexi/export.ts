@@ -31,12 +31,16 @@ import { abraInvoiceRowSchema } from './types.js';
  * The POST result reliably contains only the id — the human-readable code
  * needs one extra GET. Non-critical: falls back to the id.
  */
-async function fetchInvoiceCode(cfg: AbraFlexiConfig, invoiceId: string): Promise<string | null> {
+async function fetchInvoiceCode(
+  cfg: AbraFlexiConfig,
+  invoiceId: string,
+  entity: string = ENTITY_FAKTURA_PRIJATA,
+): Promise<string | null> {
   try {
     const rows = await abraGetList(
       cfg,
-      `/${ENTITY_FAKTURA_PRIJATA}/${encodeURIComponent(invoiceId)}.json?detail=custom:id,kod`,
-      ENTITY_FAKTURA_PRIJATA,
+      `/${entity}/${encodeURIComponent(invoiceId)}.json?detail=custom:id,kod`,
+      entity,
     );
     const first = rows[0];
     if (first === undefined) return null;
@@ -66,9 +70,13 @@ export async function exportPurchaseInvoice(
   cfg: AbraFlexiConfig,
   invoice: ExtractedInvoice,
   defaults: AbraSupplierDefaults,
+  options: { entity?: string; typDokl?: string } = {},
 ): Promise<AbraExportResult> {
+  const entity = options.entity ?? ENTITY_FAKTURA_PRIJATA;
   const isCreditNote = invoice.documentType === 'credit_note';
-  if (!invoice.isInvoice && !isCreditNote) {
+  const isAdvanceLike =
+    invoice.documentType === 'advance_invoice' || invoice.documentType === 'tax_payment';
+  if (!invoice.isInvoice && !isCreditNote && !isAdvanceLike) {
     throw new AppError(ErrorCodes.BAD_REQUEST, 'Dokument není faktura — export do ABRA Flexi přeskočen', 400);
   }
 
@@ -111,32 +119,35 @@ export async function exportPurchaseInvoice(
   // received-invoice type so the export still gets a number series.
   // Credit notes always go to the dobropis document type; regular invoices use
   // the supplier-history type, falling back to the configured default.
-  const documentType = isCreditNote
-    ? env.ABRA_DEFAULT_TYP_DOBROPIS
-    : (defaults.documentType ?? env.ABRA_DEFAULT_TYP_FAKTURY_PRIJATE);
+  // An explicit typDokl from the caller (advance invoice / DDPP) wins; otherwise
+  // credit notes use the dobropis type and regular invoices the supplier-history
+  // type, falling back to the configured default.
+  const documentType =
+    options.typDokl ??
+    (isCreditNote
+      ? env.ABRA_DEFAULT_TYP_DOBROPIS
+      : (defaults.documentType ?? env.ABRA_DEFAULT_TYP_FAKTURY_PRIJATE));
   const effectiveDefaults: AbraSupplierDefaults = { ...defaults, documentType };
-  if (isCreditNote || defaults.documentType == null) {
-    logger.info(
-      { companyId: cfg.companyId, defaultTyp: documentType, isCreditNote },
-      '[AbraFlexi] Resolved document type (typDokl)',
-    );
-  }
-  const payload = buildInvoicePayload(invoice, effectiveDefaults, supplierCode);
+  logger.info(
+    { companyId: cfg.companyId, entity, defaultTyp: documentType, documentClass: invoice.documentType },
+    '[AbraFlexi] Resolved document type (typDokl)',
+  );
+  const payload = buildInvoicePayload(invoice, effectiveDefaults, supplierCode, entity);
 
   // --- 4. POST to ABRA Flexi ---
   const res = await abraRequest(cfg, {
-    path: `/${ENTITY_FAKTURA_PRIJATA}.json`,
+    path: `/${entity}.json`,
     method: 'POST',
     body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
-    throw abraRejectionError(res, 'export faktury');
+    throw abraRejectionError(res, 'export dokladu');
   }
 
-  const { id, kod } = parseWriteResponse(res.text, 'faktury');
-  const code = kod ?? (await fetchInvoiceCode(cfg, id)) ?? id;
-  const webUrl = buildAbraWebUrl(cfg, id);
+  const { id, kod } = parseWriteResponse(res.text, 'dokladu');
+  const code = kod ?? (await fetchInvoiceCode(cfg, id, entity)) ?? id;
+  const webUrl = buildAbraWebUrl(cfg, id, entity);
 
   logger.info(
     { companyId: cfg.companyId, abraInvoiceId: id, code, supplierCreated },

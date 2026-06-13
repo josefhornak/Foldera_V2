@@ -35,9 +35,13 @@ export function normalizeBaseUrl(apiUrl: string): string {
  * API URL pattern:  `https://host/c/company`
  * UI URL pattern:   `https://host/flexi/company/faktura-prijata/{id}/edit`
  */
-export function buildAbraWebUrl(cfg: AbraFlexiConfig, abraInvoiceId: string): string {
+export function buildAbraWebUrl(
+  cfg: AbraFlexiConfig,
+  abraInvoiceId: string,
+  entity: string = ENTITY_FAKTURA_PRIJATA,
+): string {
   const base = normalizeBaseUrl(cfg.apiUrl);
-  return `${base.replace('/c/', '/flexi/')}/${ENTITY_FAKTURA_PRIJATA}/${encodeURIComponent(abraInvoiceId)}/edit`;
+  return `${base.replace('/c/', '/flexi/')}/${entity}/${encodeURIComponent(abraInvoiceId)}/edit`;
 }
 
 /** Format a number as a two-decimal string suitable for ABRA Flexi. Returns `'0'` for invalid input. */

@@ -26,6 +26,9 @@ export interface Company {
   accountingFillMode: AccountingFillMode;
   /** Attach the original e-mail (.eml) to the ABRA document for e-mail sources. */
   attachOriginalEmail: boolean;
+  /** ABRA document-type codes for advance invoices / DDPP (null = use default). */
+  advanceInvoiceType: string | null;
+  taxPaymentType: string | null;
   trialEndsAt: string | null;
   createdAt: string;
   /** The signed-in user's role in this company: 'admin' = správce, 'member' = jen nahlíží. */

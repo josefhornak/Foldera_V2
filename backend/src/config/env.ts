@@ -57,6 +57,13 @@ const envSchema = z.object({
   // daňový doklad") is the standard one; override per deployment if needed.
   ABRA_DEFAULT_TYP_DOBROPIS: z.string().default('ODD'),
 
+  // Default document type (typDokl in faktura-prijata) for received advance/
+  // proforma invoices (zálohové faktury) and for the tax document on a received
+  // payment (DDPP). Per-company overrides (companies.advance_invoice_type /
+  // tax_payment_type) win — the CF_* types ship with ABRA's "Čtení faktur".
+  ABRA_DEFAULT_TYP_ZALOHA: z.string().default('CF_ZALOHA_PRIJATA'),
+  ABRA_DEFAULT_TYP_DDPP: z.string().default('CF_DDPP_PRIJATY'),
+
   // Receipts (účtenky) are exported as a cash-register movement (pokladni-pohyb)
   // into this cash register. Must be an existing pokladna code.
   ABRA_DEFAULT_POKLADNA: z.string().default('CASH-CZK'),

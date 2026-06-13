@@ -19,7 +19,7 @@
  */
 
 import type { ExtractedInvoice, AbraSupplierDefaults, VatBucket } from '../../types/contracts.js';
-import type { AbraFlexiFakturaPrijata, AbraFlexiLineItem, FakturaPrijataEnvelope } from './types.js';
+import type { AbraFlexiFakturaPrijata, AbraFlexiLineItem } from './types.js';
 import {
   ENTITY_FAKTURA_PRIJATA,
   formatNumber,
@@ -232,7 +232,8 @@ export function buildInvoicePayload(
   invoice: ExtractedInvoice,
   defaults: AbraSupplierDefaults,
   supplierCode: string | null,
-): FakturaPrijataEnvelope {
+  entity: string = ENTITY_FAKTURA_PRIJATA,
+): { winstrom: Record<string, AbraFlexiFakturaPrijata> } {
   const faktura: AbraFlexiFakturaPrijata = {};
 
   // --- Document identification ---
@@ -326,7 +327,7 @@ export function buildInvoicePayload(
 
   return {
     winstrom: {
-      [ENTITY_FAKTURA_PRIJATA]: faktura,
+      [entity]: faktura,
     },
   };
 }
