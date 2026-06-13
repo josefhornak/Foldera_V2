@@ -254,7 +254,7 @@ function Block({ id, index, kicker, title, intro, children }: {
 
 function HowItWorks() {
   return (
-    <Block id="jak" index="01" kicker="Jak to funguje" title="Jednou nastavíte, dál to běží samo" intro="Zdroj dokladů připojíte jednou. Od té chvíle Foldera pracuje sama a vy se k dokladům vrátíte už jen na kontrolu v ABRA Flexi.">
+    <Block id="jak" index="01" kicker="Jak to funguje" title="Jen jednou nastavíte" intro="Zdroj dokladů připojíte jednou. Od té chvíle Foldera pracuje sama a vy se k dokladům vrátíte už jen na kontrolu v ABRA Flexi.">
       <div>
         {STEPS.map((s, i) => (
           <div key={s.title} className="flex gap-6 border-t border-[var(--border-subtle)] py-7 first:border-t-0">
