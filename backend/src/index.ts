@@ -11,6 +11,7 @@ import env from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import authRouter from './routes/auth.js';
 import companiesRouter from './routes/companies.js';
+import contactRouter from './routes/contact.js';
 import documentsRouter from './routes/documents.js';
 import oauthRouter from './routes/oauth.js';
 import sourcesRouter from './routes/sources.js';
@@ -46,6 +47,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.use('/api/auth', authRouter);
+app.use('/api/contact', contactRouter);
 app.use('/api/companies', companiesRouter);
 app.use('/api/companies/:companyId/documents', documentsRouter);
 app.use('/api/companies/:companyId/sources', sourcesRouter);

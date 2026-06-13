@@ -1,9 +1,12 @@
 import { type RouteConfig, index, layout, route } from '@react-router/dev/routes';
 
 export default [
+  // Public marketing landing
+  index('routes/landing.tsx'),
   route('login', 'routes/login.tsx'),
+  // Authenticated app
   layout('routes/app-layout.tsx', [
-    index('routes/dashboard.tsx'),
+    route('dashboard', 'routes/dashboard.tsx'),
     route('documents', 'routes/documents.tsx'),
     route('settings/:section?', 'routes/settings.tsx'),
   ]),

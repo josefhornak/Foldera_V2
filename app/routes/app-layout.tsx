@@ -59,7 +59,7 @@ function AuthedShell() {
 }
 
 const NAV_ITEMS = [
-  { to: '/', end: true, icon: LayoutDashboard, key: 'nav.dashboard' },
+  { to: '/dashboard', end: true, icon: LayoutDashboard, key: 'nav.dashboard' },
   { to: '/documents', end: false, icon: FileText, key: 'nav.documents' },
   { to: '/settings', end: false, icon: Settings, key: 'nav.settings' },
 ] as const;

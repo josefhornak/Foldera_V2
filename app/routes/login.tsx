@@ -25,7 +25,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
 
   if (token) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -37,7 +37,7 @@ export default function LoginPage() {
       const path = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
       const res = await api<AuthResponse>(path, { method: 'POST', body });
       setAuth(res.token, res.user);
-      navigate('/', { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('common.error'));
     } finally {

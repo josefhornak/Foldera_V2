@@ -7,6 +7,7 @@ export const ID_PREFIX = {
   company: 'cmp',
   source: 'src',
   document: 'doc',
+  contact: 'ctc',
 } as const;
 
 export type IdPrefix = (typeof ID_PREFIX)[keyof typeof ID_PREFIX];
