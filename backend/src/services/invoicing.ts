@@ -98,7 +98,24 @@ export async function buildPdf(data: InvoiceData, isdocXml?: string): Promise<Bu
     doc.moveTo(left, yy).lineTo(right, yy).lineWidth(w).strokeColor(color).stroke();
 
   // ── Masthead ──────────────────────────────────────────────────────────────
-  doc.font('bold').fontSize(27).fillColor(TXT).text('Foldera', left, 56, { continued: true });
+  // Brand mark: violet tile + stacked "F" bars (matches the app/favicon logo).
+  const mS = 30;
+  const mX = left;
+  const mY = 50;
+  const markGrad = doc.linearGradient(mX, mY, mX + mS, mY + mS);
+  markGrad.stop(0, ACCENT_LIGHT).stop(1, ACCENT);
+  doc.roundedRect(mX, mY, mS, mS, mS * 0.26).fill(markGrad);
+  doc.save();
+  doc.translate(mX, mY).scale(mS / 100);
+  doc.translate(7, -5).transform(1, 0, Math.tan((-9 * Math.PI) / 180), 1, 0, 0);
+  doc.fillColor('#ffffff');
+  doc.roundedRect(28, 22, 48, 12.5, 6.25).fill();
+  doc.roundedRect(28, 40, 37, 12.5, 6.25).fill();
+  doc.roundedRect(28, 58, 27, 12.5, 6.25).fill();
+  doc.roundedRect(28, 76, 17, 12.5, 6.25).fill();
+  doc.restore();
+
+  doc.font('bold').fontSize(27).fillColor(TXT).text('Foldera', mX + mS + 11, 56, { continued: true });
   doc.fillColor(ACCENT).text('.');
 
   // Neplátce DPH vystavuje "fakturu", nikoli "daňový doklad" (ten je pojmem

@@ -122,6 +122,11 @@ export async function exportReceiptToPokladna(
 
   const pohyb: Record<string, unknown> = {
     typDokl: `code:${typDokl}`,
+    // Force the movement DIRECTION to expense. In ABRA Flexi the direction is a
+    // field ON the cash movement (typPohybuK) that otherwise defaults to příjem
+    // — so even with a neutrally-configured typDokl, a purchase receipt is booked
+    // as a cash výdej, never an income.
+    typPohybuK: 'typPohybu.vydej',
     pokladna: `code:${env.ABRA_DEFAULT_POKLADNA}`,
     stat: 'code:CZ',
     statDph: 'code:CZ',
