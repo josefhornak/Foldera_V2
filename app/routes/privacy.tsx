@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
+import { LogoMark } from '~/components/ui/Logo';
 import { cn } from '~/lib/utils';
 
 const SITE_URL = 'https://foldera.cz';
@@ -31,13 +32,7 @@ export default function Privacy() {
       <header className="sticky top-0 z-40 border-b border-[var(--border-subtle)] bg-[var(--surface-ground)]/70 backdrop-blur-xl">
         <nav className="mx-auto flex h-16 max-w-3xl items-center justify-between px-5">
           <Link to="/" className="flex items-center gap-2.5">
-            <span
-              className="flex h-9 w-9 items-center justify-center rounded-[11px] text-[17px] font-bold text-white [background:var(--accent-gradient)]"
-              style={{ boxShadow: 'var(--accent-glow)' }}
-              aria-hidden="true"
-            >
-              F
-            </span>
+            <LogoMark className="h-9 w-9" />
             <span className="font-heading text-lg font-bold tracking-tight">Foldera</span>
           </Link>
           <Link to="/" className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]">

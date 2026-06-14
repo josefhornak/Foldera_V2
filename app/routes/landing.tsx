@@ -13,6 +13,7 @@ import {
   Users,
 } from 'lucide-react';
 import { Button } from '~/components/ui/Button';
+import { LogoMark } from '~/components/ui/Logo';
 import { api, ApiError } from '~/lib/api';
 import { cn } from '~/lib/utils';
 import { useAuthStore } from '~/stores/auth';
@@ -107,18 +108,7 @@ export default function Landing() {
 }
 
 function BrandMark({ className }: { className?: string }) {
-  return (
-    <span
-      className={cn(
-        'flex h-8 w-8 items-center justify-center rounded-[9px] text-[15px] font-bold text-white [background:var(--accent-gradient)]',
-        className
-      )}
-      style={{ boxShadow: 'var(--accent-glow)' }}
-      aria-hidden="true"
-    >
-      F
-    </span>
-  );
+  return <LogoMark className={cn('h-8 w-8', className)} />;
 }
 
 function Nav({ appHref, loggedIn }: { appHref: string; loggedIn: boolean }) {

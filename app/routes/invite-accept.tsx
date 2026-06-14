@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { Loader2, ShieldCheck, UserRound } from 'lucide-react';
 import { Button } from '~/components/ui/Button';
 import { Card } from '~/components/ui/Card';
+import { LogoMark } from '~/components/ui/Logo';
 import { api, ApiError } from '~/lib/api';
 import { useAuthStore } from '~/stores/auth';
 import { useCompanyStore } from '~/stores/company';
@@ -57,12 +58,7 @@ export default function InviteAccept() {
   return (
     <div className="grain relative flex min-h-screen items-center justify-center bg-[var(--surface-ground)] px-4 text-[var(--text-primary)]">
       <Card className="relative z-[1] w-full max-w-md p-8 text-center">
-        <span
-          className="mx-auto flex h-11 w-11 items-center justify-center rounded-[12px] text-[19px] font-bold text-white [background:var(--accent-gradient)]"
-          style={{ boxShadow: 'var(--accent-glow)' }}
-        >
-          F
-        </span>
+        <LogoMark className="mx-auto h-11 w-11" />
 
         {loading ? (
           <Loader2 className="mx-auto mt-6 h-6 w-6 animate-spin text-[var(--text-tertiary)]" />

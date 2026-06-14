@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router';
 import { Check, Loader2 } from 'lucide-react';
 import { Button } from '~/components/ui/Button';
 import { Card } from '~/components/ui/Card';
+import { LogoMark } from '~/components/ui/Logo';
 import { Field, Input } from '~/components/ui/Input';
 import { api, ApiError } from '~/lib/api';
 import { cn } from '~/lib/utils';
@@ -50,12 +51,7 @@ export default function RegisterPage() {
     <div className="flex min-h-screen items-center justify-center bg-[var(--surface-ground)] px-4 py-10">
       <Card className="w-full max-w-md p-8">
         <Link to="/" className="mb-6 flex items-center justify-center gap-2">
-          <span
-            className="flex h-9 w-9 items-center justify-center rounded-[11px] text-[17px] font-bold text-white [background:var(--accent-gradient)]"
-            style={{ boxShadow: 'var(--accent-glow)' }}
-          >
-            F
-          </span>
+          <LogoMark className="h-9 w-9" />
           <span className="font-heading text-lg font-bold tracking-tight text-[var(--text-primary)]">Foldera</span>
         </Link>
 

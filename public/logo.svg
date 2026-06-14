@@ -1,18 +1,15 @@
-<svg width="209" height="209" viewBox="0 0 209 209" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <!-- Brand violet, matches the landing header accent gradient -->
-    <linearGradient id="bg" x1="20" y1="0" x2="189" y2="209" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#8b5cf6"/>
-      <stop offset="100%" stop-color="#7c4ef0"/>
+    <linearGradient id="bg" x1="8" y1="0" x2="92" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8b5cf6"/>
+      <stop offset="1" stop-color="#7c4ef0"/>
     </linearGradient>
   </defs>
-
-  <rect width="208.5" height="208.5" rx="56" fill="url(#bg)"/>
-
-  <!-- Bold "F" -->
-  <g fill="#ffffff">
-    <rect x="74" y="58" width="22" height="93" rx="7"/>
-    <rect x="74" y="58" width="61" height="22" rx="7"/>
-    <rect x="74" y="102" width="52" height="20" rx="7"/>
+  <rect width="100" height="100" rx="24" fill="url(#bg)"/>
+  <g transform="translate(7 -5) skewX(-9)" fill="#ffffff">
+    <rect x="28" y="22" width="48" height="12.5" rx="6.25"/>
+    <rect x="28" y="40" width="37" height="12.5" rx="6.25"/>
+    <rect x="28" y="58" width="27" height="12.5" rx="6.25"/>
+    <rect x="28" y="76" width="17" height="12.5" rx="6.25"/>
   </g>
 </svg>

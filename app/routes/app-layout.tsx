@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '~/components/ui/Button';
 import { Card } from '~/components/ui/Card';
 import { Field, Input } from '~/components/ui/Input';
+import { LogoMark } from '~/components/ui/Logo';
 import { StateWrapper } from '~/components/ui/StateWrapper';
 import { useMe } from '~/hooks/useAdmin';
 import { useBilling } from '~/hooks/useBilling';
@@ -107,13 +108,7 @@ function Sidebar() {
       )}
     >
       {/* Brand mark */}
-      <div
-        className="flex h-[38px] w-[38px] items-center justify-center rounded-[12px] text-[19px] font-bold text-white [background:var(--accent-gradient)]"
-        style={{ boxShadow: 'var(--accent-glow)' }}
-        aria-label="Foldera"
-      >
-        F
-      </div>
+      <LogoMark className="h-[38px] w-[38px]" />
 
       <nav className="mt-4 flex flex-1 flex-col items-center gap-1.5" aria-label={t('nav.main')}>
         {navItems.map(({ to, end, icon: Icon, key, label }) => (
