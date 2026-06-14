@@ -271,6 +271,8 @@ function TuningStep({ company, onBack, onNext }: { company: Company; onBack: () 
   const [lineItemMode, setLineItemMode] = useState(company.lineItemMode);
   const [accMode, setAccMode] = useState(company.accountingFillMode);
   const [eml, setEml] = useState(company.attachOriginalEmail);
+  const [newSupplier, setNewSupplier] = useState(company.newSupplierMode);
+  const [bank, setBank] = useState(company.bankAccountMode);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -278,7 +280,13 @@ function TuningStep({ company, onBack, onNext }: { company: Company; onBack: () 
     setSaving(true);
     setError(null);
     try {
-      await updateCompany(company.id, { lineItemMode, accountingFillMode: accMode, attachOriginalEmail: eml });
+      await updateCompany(company.id, {
+        lineItemMode,
+        accountingFillMode: accMode,
+        attachOriginalEmail: eml,
+        newSupplierMode: newSupplier,
+        bankAccountMode: bank,
+      });
       onNext();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Uložení se nezdařilo.');
@@ -309,6 +317,26 @@ function TuningStep({ company, onBack, onNext }: { company: Company; onBack: () 
         </div>
         <Switch checked={eml} onChange={setEml} label="Ukládat originální e-mail" />
       </div>
+
+      <div className="border-t border-[var(--border-subtle)] pt-4">
+        <p className="text-sm font-semibold text-[var(--text-primary)]">Kontrola před založením</p>
+        <p className="mb-3 mt-0.5 text-xs text-[var(--text-tertiary)]">Ochrana proti přesměrování platby — Foldera ověřuje v ABRA Flexi.</p>
+        <div className="space-y-4">
+          <Field label="Neznámý dodavatel (není v ABRA Flexi)" htmlFor="o-sup">
+            <Select id="o-sup" value={newSupplier} onChange={(e) => setNewSupplier(e.target.value as Company['newSupplierMode'])}>
+              <option value="auto">Založit automaticky</option>
+              <option value="review">Schválit správcem</option>
+            </Select>
+          </Field>
+          <Field label="Nový nebo změněný bankovní účet dodavatele" htmlFor="o-bank">
+            <Select id="o-bank" value={bank} onChange={(e) => setBank(e.target.value as Company['bankAccountMode'])}>
+              <option value="auto">Založit automaticky</option>
+              <option value="review">Schválit správcem (ochrana plateb)</option>
+            </Select>
+          </Field>
+        </div>
+      </div>
+
       {error && <p role="alert" className="text-xs text-[var(--status-error-text)]">{error}</p>}
       <div className="flex items-center justify-between pt-1">
         <Button type="button" variant="ghost" onClick={onBack}>Zpět</Button>
