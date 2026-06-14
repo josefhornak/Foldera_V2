@@ -44,6 +44,12 @@ function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** Display an ISO date (YYYY-MM-DD) in Czech format "13. 6. 2026". Pass-through otherwise. */
+function czDate(s: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  return m ? `${Number(m[3])}. ${Number(m[2])}. ${m[1]}` : s;
+}
+
 /** Next sequential 'YYYYNNNN' invoice number for the current year. */
 async function nextInvoiceNumber(): Promise<string> {
   const year = String(new Date().getUTCFullYear());
@@ -156,8 +162,8 @@ export async function buildPdf(data: InvoiceData, isdocXml?: string): Promise<Bu
   const my = py + 96;
   doc.roundedRect(left, my, W, 46, 8).fill('#f6f6f9');
   const cells: [string, string][] = [
-    ['Vystaveno', data.issueDate],
-    ['Splatnost', data.dueDate],
+    ['Vystaveno', czDate(data.issueDate)],
+    ['Splatnost', czDate(data.dueDate)],
     ['Var. symbol', data.variableSymbol],
     ['Účet', env.BILLING_SUPPLIER_BANK],
   ];
