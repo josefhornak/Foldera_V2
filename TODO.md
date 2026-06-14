@@ -48,20 +48,11 @@ v 03:30, retence 14 dní), ale leží na stejném disku jako DB.
 
 ## 🟠 Funkce
 
-### 6. OneDrive zdroj 🔧 Azure
-**Kde:** portal.azure.com → Azure Active Directory → App registrations → New
-registration. Nastavit redirect URI (callback aplikace), v „API permissions"
-přidat `Files.Read` + `offline_access`, vygenerovat client secret.
-**Pak v aplikaci:** doplnit `MICROSOFT_CLIENT_ID` a `MICROSOFT_CLIENT_SECRET` do
-`backend/.env` a restartovat. Kód OAuth flow ve V2 už je připravený.
-
-### 7. Google Drive zdroj 🔧 Google Cloud
-**Kde:** console.cloud.google.com → nový projekt → „APIs & Services" → povolit
-Google Drive API → „OAuth consent screen" (External, přidat scope
-`drive.readonly`) → „Credentials" → Create OAuth client ID (Web), nastavit
-redirect URI.
-**Pak v aplikaci:** doplnit `GOOGLE_CLIENT_ID` a `GOOGLE_CLIENT_SECRET` do
-`backend/.env` a restartovat.
+### 6. OneDrive + Google Drive — HOTOVO (self-service)
+Uživatel si zadá **vlastní OAuth aplikaci** přímo v aplikaci (Nastavení → Zdroje)
+podle návodu na stránce — žádná centrální OAuth aplikace ani env proměnné.
+Zbývá jen jednou **otestovat živé připojení** s reálnou Google/Azure aplikací
+(zadat creds → Připojit účet → vybrat složku → ověřit, že se doklady stáhnou).
 
 ### 8. Návštěvnostní analytika
 **Doporučeno: cookieless EU** (Plausible / Simple Analytics) — bez souhlasu, bez
@@ -106,6 +97,9 @@ viz topologie serveru). Teď `www` nemá DNS, takže certbot ho neověří.
   ISDOC vložený v PDF; světlý moderní layout; „Faktura" (neplátce DPH).
 - Vytěžování položek: volba **kompletní položky vs souhrnně po sazbách DPH**
   (nastavení firmy).
+- OneDrive + Google Drive: **vlastní OAuth aplikace zákazníka** s návodem na
+  stránce (Nastavení → Zdroje), client secret šifrovaný v DB.
+- Průvodce nastavením po registraci (`/vitejte`) + připomínka na dashboardu.
 - Týmy/role, více firem, pozvánky e-mailem.
 - Fakturace: 199 Kč / 100 dokladů, anniversary billing.
 - Trial: viditelný odpočet v aplikaci + e-mail při konci s potvrzením aktivace.
