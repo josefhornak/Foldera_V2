@@ -12,7 +12,7 @@
  */
 import fs from 'node:fs/promises';
 
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 
 import env from '../config/env.js';
 import { db } from '../db/client.js';
@@ -36,7 +36,7 @@ import {
 } from '../services/abraflexi/index.js';
 import { isKnownCzBankCode } from '../services/abraflexi/helpers.js';
 import { blockMessage, decideBilling, recordDocumentUsage } from '../services/billing.js';
-import { notifyDocumentFailure } from '../services/notifications.js';
+import { notifyBankReview, notifyDocumentFailure } from '../services/notifications.js';
 import { extractInvoice } from '../services/extraction/index.js';
 import { summarizeLineItems } from '../services/extraction/summarize.js';
 import type {
@@ -276,6 +276,57 @@ async function runAbraExport(
 }
 
 /** Main pipeline entry — one incoming file from a source. */
+/** Normalize a bank identifier for comparison (strip punctuation, uppercase). */
+function normBank(s: string | null | undefined): string {
+  return (s ?? '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+}
+
+/**
+ * Anti-fraud control against invoice-payment redirection. Returns a Czech reason
+ * string when the payee bank account should be HELD for admin approval — a new
+ * supplier carrying a bank account, or a known supplier whose IBAN/account
+ * differs from their last approved (exported) document — else null. Receipts
+ * (cash) and documents with no bank details are exempt.
+ */
+async function reviewBankAccount(companyId: string, invoice: ExtractedInvoice): Promise<string | null> {
+  if (invoice.documentType === 'receipt') return null;
+  const curIban = invoice.iban ? normBank(invoice.iban) : '';
+  const curAcct = invoice.bankAccount ? normBank(`${invoice.bankAccount}${invoice.bankCode ?? ''}`) : '';
+  const shown = invoice.iban || (invoice.bankAccount ? `${invoice.bankAccount}${invoice.bankCode ? '/' + invoice.bankCode : ''}` : '');
+  if (!curIban && !curAcct) return null; // no payee bank → nothing to redirect
+
+  if (!invoice.supplierIco) {
+    return `Doklad bez IČO dodavatele s bankovním účtem ${shown}. Ověřte příjemce platby.`;
+  }
+
+  const [prev] = await db
+    .select({ extracted: documents.extracted })
+    .from(documents)
+    .where(
+      and(
+        eq(documents.companyId, companyId),
+        eq(documents.status, DOCUMENT_STATUS.EXPORTED),
+        sql`${documents.extracted}->>'supplierIco' = ${invoice.supplierIco}`,
+      ),
+    )
+    .orderBy(desc(documents.createdAt))
+    .limit(1);
+
+  if (!prev?.extracted) {
+    return `První doklad od dodavatele (IČO ${invoice.supplierIco}); bankovní účet ${shown} zatím nebyl ověřen.`;
+  }
+
+  const p = prev.extracted as ExtractedInvoice;
+  // Compare like-for-like; flag only a definite mismatch (avoids cross-format noise).
+  if (curIban && p.iban && curIban !== normBank(p.iban)) {
+    return `IBAN dodavatele se změnil: dříve ${p.iban}, nyní ${invoice.iban}. Ověřte před platbou.`;
+  }
+  if (curAcct && p.bankAccount && curAcct !== normBank(`${p.bankAccount}${p.bankCode ?? ''}`)) {
+    return `Bankovní účet dodavatele se změnil: dříve ${p.bankAccount}${p.bankCode ? '/' + p.bankCode : ''}, nyní ${shown}. Ověřte před platbou.`;
+  }
+  return null;
+}
+
 export async function processIncomingFile(data: ProcessDocumentJobData): Promise<void> {
   const { companyId, sourceId, file } = data;
   const log = logger.child({ companyId, sourceId, fileName: file.fileName });
@@ -399,6 +450,19 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
       company.attachOriginalEmail && file.originalEmailPath
         ? { filePath: file.originalEmailPath, fileName: `puvodni-email-${invoice.variableSymbol ?? invoice.invoiceNumber ?? 'doklad'}.eml` }
         : null;
+
+    // Anti-fraud: hold for admin approval when the payee bank account is new or
+    // changed for this supplier (invoice-redirection protection).
+    const reviewReason = await reviewBankAccount(companyId, invoice);
+    if (reviewReason) {
+      await db
+        .update(documents)
+        .set({ ...baseFields, status: DOCUMENT_STATUS.NEEDS_REVIEW, errorMessage: reviewReason, processedAt: new Date() })
+        .where(and(eq(documents.id, documentId), eq(documents.companyId, companyId)));
+      log.warn({ documentId, supplierIco: invoice.supplierIco }, '[Pipeline] Held for bank-account review');
+      await notifyBankReview(company, { fileName: file.fileName, supplierName: invoice.supplierName, reason: reviewReason });
+      return;
+    }
 
     let outcome: ExportOutcome;
     try {

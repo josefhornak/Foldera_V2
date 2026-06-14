@@ -39,6 +39,7 @@ export const DOCUMENT_STATUSES = [
   'exported',
   'export_failed',
   'extraction_failed',
+  'needs_review',
   'skipped_duplicate',
   'skipped_not_invoice',
   'skipped_limit',

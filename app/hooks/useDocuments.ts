@@ -53,6 +53,13 @@ export function retryDocument(companyId: string, docId: string) {
   });
 }
 
+/** Approve a document held for bank-account review → export it. */
+export function approveDocument(companyId: string, docId: string) {
+  return api<{ ok: boolean }>(`/api/companies/${companyId}/documents/${docId}/approve`, {
+    method: 'POST',
+  });
+}
+
 export function deleteDocument(companyId: string, docId: string) {
   return api<void>(`/api/companies/${companyId}/documents/${docId}`, {
     method: 'DELETE',

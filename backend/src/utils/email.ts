@@ -133,6 +133,30 @@ export async function sendDocumentFailureAlert(
   });
 }
 
+/** Alert a company admin that a doc is held because its bank account is new/changed. */
+export async function sendBankReviewAlert(
+  to: string,
+  opts: { companyName: string; fileName: string; supplierName?: string | null; reason: string; link: string }
+): Promise<void> {
+  const inner = `
+    <p style="font-size:15px;margin:0 0 8px">Dobrý den,</p>
+    <p style="font-size:15px;color:#9c9cac;margin:0 0 16px">jeden doklad jsme <b style="color:#efeff4">pozdrželi ke kontrole</b>, protože obsahuje <b style="color:#efeff4">nový nebo změněný bankovní účet</b>. Do ABRA Flexi se založí až po vašem schválení — ochrana proti přesměrování platby.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;margin:0 0 4px">
+      <tr><td style="color:#9c9cac;padding:4px 0">Firma</td><td style="color:#efeff4;text-align:right">${escapeHtml(opts.companyName)}</td></tr>
+      <tr><td style="color:#9c9cac;padding:4px 0">Soubor</td><td style="color:#efeff4;text-align:right">${escapeHtml(opts.fileName)}</td></tr>
+      ${opts.supplierName ? `<tr><td style="color:#9c9cac;padding:4px 0">Dodavatel</td><td style="color:#efeff4;text-align:right">${escapeHtml(opts.supplierName)}</td></tr>` : ''}
+    </table>
+    <div style="background:#0e0e13;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px 14px;margin:16px 0;color:#f0b254;font-size:13px;line-height:1.5">${escapeHtml(opts.reason)}</div>
+    <a href="${opts.link}" style="display:inline-block;background:#8b5cf6;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 22px;border-radius:10px">Zkontrolovat doklad</a>
+    <p style="font-size:13px;color:#666674;margin:18px 0 0">Ověřte bankovní účet u dodavatele. Pokud je správný, doklad v aplikaci schválíte a založí se do ABRA Flexi.</p>`;
+  await sendMail({
+    to,
+    subject: `Foldera – doklad ke kontrole: bankovní účet (${opts.companyName})`,
+    html: SHELL(inner),
+    text: `Doklad "${opts.fileName}" (${opts.companyName}) byl pozdržen ke kontrole — nový/změněný bankovní účet. ${opts.reason} Ověřte a schvalte v aplikaci: ${opts.link}`,
+  });
+}
+
 /** Tell a company admin the free trial ended — ask them to confirm going paid. */
 export async function sendTrialEndedAlert(
   to: string,

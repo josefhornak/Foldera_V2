@@ -7,6 +7,7 @@ const DOCUMENT_STATUS_VARIANT: Record<DocumentStatus, BadgeVariant> = {
   exported: 'success',
   export_failed: 'error',
   extraction_failed: 'error',
+  needs_review: 'warning',
   skipped_duplicate: 'default',
   skipped_not_invoice: 'default',
   skipped_limit: 'warning',

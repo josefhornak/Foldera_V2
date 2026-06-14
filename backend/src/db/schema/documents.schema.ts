@@ -22,6 +22,8 @@ export const DOCUMENT_STATUS = {
   EXPORT_FAILED: 'export_failed',
   /** Extraction itself failed — retry re-runs nothing (no file kept), shown as error */
   EXTRACTION_FAILED: 'extraction_failed',
+  /** Held: a new/changed supplier bank account needs admin approval before export */
+  NEEDS_REVIEW: 'needs_review',
   /** Same content already processed (hash) or already exists in ABRA Flexi */
   SKIPPED_DUPLICATE: 'skipped_duplicate',
   /** Document classified as something other than a purchase invoice */

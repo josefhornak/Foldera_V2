@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, ExternalLink, RefreshCw, Search } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, ExternalLink, RefreshCw, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { DocumentDetailPanel } from '~/components/documents/DocumentDetailPanel';
 import { UploadDropzone } from '~/components/documents/UploadDropzone';
@@ -10,7 +10,7 @@ import { StateWrapper } from '~/components/ui/StateWrapper';
 import { Table, TBody, Td, Th, THead, Tr } from '~/components/ui/Table';
 import { useDebouncedValue } from '~/hooks/useDebouncedValue';
 import { useCompanies } from '~/hooks/useCompanies';
-import { retryDocument, useDocuments } from '~/hooks/useDocuments';
+import { approveDocument, retryDocument, useDocuments } from '~/hooks/useDocuments';
 import { useStats } from '~/hooks/useStats';
 import { confidenceLevel, normalizeConfidence } from '~/lib/confidence';
 import { formatCurrency, formatDate } from '~/lib/format';
@@ -83,6 +83,7 @@ export default function DocumentsPage() {
   const debouncedSearch = useDebouncedValue(search, 300);
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
 
   // Poll while the page is open so processing → exported transitions and the
   // tab counts stay live without a manual refresh.
@@ -118,6 +119,16 @@ export default function DocumentsPage() {
       refresh();
     } finally {
       setRetryingId(null);
+    }
+  }
+
+  async function handleApprove(docId: string) {
+    setApprovingId(docId);
+    try {
+      await approveDocument(companyId as string, docId);
+      refresh();
+    } finally {
+      setApprovingId(null);
     }
   }
 
@@ -297,6 +308,18 @@ export default function DocumentsPage() {
                           title={t('documents.retry')}
                           aria-label={t('documents.retry')}
                         />
+                      )}
+                      {doc.status === 'needs_review' && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          loading={approvingId === doc.id}
+                          onClick={() => handleApprove(doc.id)}
+                          icon={<Check />}
+                          title="Schválit a založit do ABRA"
+                        >
+                          Schválit
+                        </Button>
                       )}
                     </div>
                   </Td>

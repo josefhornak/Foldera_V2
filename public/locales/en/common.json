@@ -125,6 +125,7 @@
     "exported": "Exported",
     "export_failed": "Export failed",
     "extraction_failed": "Extraction failed",
+    "needs_review": "Needs review",
     "skipped_duplicate": "Duplicate",
     "skipped_not_invoice": "Not an invoice",
     "skipped_limit": "Limit reached"

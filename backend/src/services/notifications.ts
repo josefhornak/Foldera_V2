@@ -10,7 +10,7 @@ import env from '../config/env.js';
 import { db } from '../db/client.js';
 import { companies, companyMembers, users, type Company } from '../db/schema/index.js';
 import { TRIAL_DOC_LIMIT, decideBilling } from './billing.js';
-import { sendDocumentFailureAlert, sendTrialEndedAlert } from '../utils/email.js';
+import { sendBankReviewAlert, sendDocumentFailureAlert, sendTrialEndedAlert } from '../utils/email.js';
 import { logger } from '../utils/logger.js';
 import { toError } from '../utils/errors.js';
 
@@ -69,6 +69,36 @@ export async function notifyDocumentFailure(company: Company, failure: DocumentF
       { companyId: company.id, error: toError(error).message },
       '[Notifications] notifyDocumentFailure threw'
     );
+  }
+}
+
+/** E-mail every admin that a document is held for bank-account review. Never throws. */
+export async function notifyBankReview(
+  company: Company,
+  info: { fileName: string; supplierName?: string | null; reason: string },
+): Promise<void> {
+  try {
+    const admins = await adminEmails(company.id);
+    if (!admins.length) return;
+    const link = `${env.APP_BASE_URL.replace(/\/$/, '')}/documents`;
+    await Promise.all(
+      admins.map((email) =>
+        sendBankReviewAlert(email, {
+          companyName: company.name,
+          fileName: info.fileName,
+          supplierName: info.supplierName,
+          reason: info.reason,
+          link,
+        }).catch((error) =>
+          logger.error(
+            { companyId: company.id, to: email, error: toError(error).message },
+            '[Notifications] Failed to send bank-review alert',
+          ),
+        ),
+      ),
+    );
+  } catch (error) {
+    logger.error({ companyId: company.id, error: toError(error).message }, '[Notifications] notifyBankReview threw');
   }
 }
 

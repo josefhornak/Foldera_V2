@@ -463,6 +463,32 @@ router.post('/:documentId/retry', requireAdminRole, async (req, res, next) => {
   }
 });
 
+/** Approve a doc held for bank-account review → export it (admin-confirmed payee). */
+router.post('/:documentId/approve', requireAdminRole, async (req, res, next) => {
+  try {
+    const [row] = await db
+      .select({ id: documents.id, status: documents.status, extracted: documents.extracted })
+      .from(documents)
+      .where(and(eq(documents.id, String(req.params.documentId)), eq(documents.companyId, req.company!.id)))
+      .limit(1);
+    if (!row) throw new AppError(ErrorCodes.NOT_FOUND, 'Document not found', 404);
+    if (row.status !== DOCUMENT_STATUS.NEEDS_REVIEW) {
+      throw new AppError(ErrorCodes.CONFLICT, 'Only documents held for review can be approved', 409);
+    }
+    if (!row.extracted) {
+      throw new AppError(ErrorCodes.CONFLICT, 'No extracted data available', 409);
+    }
+    await db
+      .update(documents)
+      .set({ status: DOCUMENT_STATUS.PROCESSING, errorMessage: null })
+      .where(and(eq(documents.id, row.id), eq(documents.companyId, req.company!.id)));
+    await enqueueExportRetry({ documentId: row.id, companyId: req.company!.id });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 /** Delete a document record (metadata only — files are never stored anyway). */
 router.delete('/:documentId', requireAdminRole, async (req, res, next) => {
   try {
