@@ -215,12 +215,21 @@ const REVERSE_CHARGE_INDICATORS = [
   '§ 92a',
 ] as const;
 
-function parseVatBuckets(scope: XmlValue | undefined): VatBucket[] {
+function parseVatBuckets(scope: XmlValue | undefined, foreign: boolean): VatBucket[] {
   const buckets: VatBucket[] = [];
   for (const sub of findAll(scope, ['TaxSubTotal', 'TaxSubtotal'])) {
     const rate = numIn(sub, ['Percent', 'TaxRate']);
-    const base = numIn(sub, ['TaxableAmount']);
-    let vat = numIn(sub, ['TaxAmount']);
+    // In a foreign-currency ISDOC each subtotal carries both the local (CZK)
+    // amount and the foreign `*Curr` amount. The payload books the foreign
+    // figures via the *Men fields and lets ABRA derive CZK from the kurz, so the
+    // bucket base/VAT must be in the FOREIGN currency. Fall back to the local
+    // amount only when the *Curr value is missing (malformed document).
+    const base = foreign
+      ? (numIn(sub, ['TaxableAmountCurr']) ?? numIn(sub, ['TaxableAmount']))
+      : numIn(sub, ['TaxableAmount']);
+    let vat = foreign
+      ? (numIn(sub, ['TaxAmountCurr']) ?? numIn(sub, ['TaxAmount']))
+      : numIn(sub, ['TaxAmount']);
     if (vat == null && rate === 0) vat = 0;
     if (rate == null || base == null || vat == null) continue;
     buckets.push({ rate, base: round2(base), vat: round2(vat) });
@@ -228,7 +237,7 @@ function parseVatBuckets(scope: XmlValue | undefined): VatBucket[] {
   return buckets;
 }
 
-function parseLineItems(scope: XmlValue | undefined): ExtractedLineItem[] {
+function parseLineItems(scope: XmlValue | undefined, foreign: boolean): ExtractedLineItem[] {
   const items: ExtractedLineItem[] = [];
   for (const line of findAll(scope, ['InvoiceLine', 'CreditNoteLine'])) {
     const item = findFirst(line, ['Item']);
@@ -237,10 +246,21 @@ function parseLineItems(scope: XmlValue | undefined): ExtractedLineItem[] {
     if (description == null) continue;
 
     const quantityNode = findFirst(line, ['InvoicedQuantity', 'CreditedQuantity', 'Quantity']);
-    const unitPrice =
-      numIn(line, ['UnitPrice']) ?? numIn(findFirst(line, ['Price']), ['PriceAmount']);
-    const total =
-      numIn(line, ['LineExtensionAmountTaxInclusive']) ?? numIn(line, ['LineExtensionAmount']);
+    // For a foreign-currency invoice the payload books items in the foreign
+    // currency (cenaMj × kurz → CZK), so prefer the `*Curr` amounts; fall back
+    // to the local (CZK) figure only when a foreign amount is missing.
+    const unitPrice = foreign
+      ? (numIn(line, ['UnitPriceCurr']) ??
+          numIn(findFirst(line, ['Price']), ['PriceAmountCurr']) ??
+          numIn(line, ['UnitPrice']) ??
+          numIn(findFirst(line, ['Price']), ['PriceAmount']))
+      : (numIn(line, ['UnitPrice']) ?? numIn(findFirst(line, ['Price']), ['PriceAmount']));
+    const total = foreign
+      ? (numIn(line, ['LineExtensionAmountTaxInclusiveCurr']) ??
+          numIn(line, ['LineExtensionAmountCurr']) ??
+          numIn(line, ['LineExtensionAmountTaxInclusive']) ??
+          numIn(line, ['LineExtensionAmount']))
+      : (numIn(line, ['LineExtensionAmountTaxInclusive']) ?? numIn(line, ['LineExtensionAmount']));
 
     items.push({
       description,
@@ -329,16 +349,47 @@ export function parseStructuredInvoiceXml(
   const paymentMethod =
     paymentMeansCode != null ? (PAYMENT_MEANS_CODES[paymentMeansCode] ?? null) : null;
 
+  // --- Currency ----------------------------------------------------------
+  // Czech ISDOC always books in CZK locally; a genuine foreign-currency invoice
+  // declares ForeignCurrencyCode + CurrRate/RefCurrRate alongside the CZK total.
+  const currencyRaw =
+    textIn(inv, ['ForeignCurrencyCode']) ??
+    textIn(inv, ['DocumentCurrencyCode', 'LocalCurrencyCode', 'CurrencyCode']);
+  const currency =
+    currencyRaw != null && /^[A-Za-z]{3}$/.test(currencyRaw) ? currencyRaw.toUpperCase() : null;
+  const isForeign = currency != null && currency !== 'CZK';
+
+  // CurrRate is the CZK value of RefCurrRate units of the foreign currency
+  // (RefCurrRate is usually 1, but 100 for low-value currencies like JPY/HUF).
+  // Normalize to CZK per 1 unit so it matches the OCR contract / payload.
+  const currRate = numIn(inv, ['CurrRate']);
+  const refCurrRate = numIn(inv, ['RefCurrRate']);
+  const exchangeRate =
+    isForeign && currRate != null && currRate > 0
+      ? currRate / (refCurrRate != null && refCurrRate > 0 ? refCurrRate : 1)
+      : null;
+
   // --- Amounts -----------------------------------------------------------
+  // For a foreign invoice the payload books the foreign (*Men) amounts and lets
+  // ABRA derive CZK via the kurz, so totalAmount/vatBreakdown must be FOREIGN;
+  // the CZK total is kept only to derive the rate when CurrRate is absent.
   const monetary = findFirst(inv, ['LegalMonetaryTotal', 'MonetaryTotal']);
-  const totalAmount =
-    numIn(monetary, ['TaxInclusiveAmount', 'PayableAmount']) ??
-    numIn(inv, ['TaxInclusiveAmount', 'PayableAmount']);
-  const totalWithoutVat =
-    numIn(monetary, ['TaxExclusiveAmount']) ?? numIn(inv, ['TaxExclusiveAmount']);
+  const totalAmount = isForeign
+    ? (numIn(monetary, ['TaxInclusiveAmountCurr', 'PayableAmountCurr']) ??
+        numIn(inv, ['TaxInclusiveAmountCurr', 'PayableAmountCurr']) ??
+        numIn(monetary, ['TaxInclusiveAmount', 'PayableAmount']))
+    : (numIn(monetary, ['TaxInclusiveAmount', 'PayableAmount']) ??
+        numIn(inv, ['TaxInclusiveAmount', 'PayableAmount']));
+  const totalWithoutVat = isForeign
+    ? (numIn(monetary, ['TaxExclusiveAmountCurr']) ?? numIn(monetary, ['TaxExclusiveAmount']))
+    : (numIn(monetary, ['TaxExclusiveAmount']) ?? numIn(inv, ['TaxExclusiveAmount']));
+  const totalAmountCzk = isForeign
+    ? (numIn(monetary, ['TaxInclusiveAmount', 'PayableAmount']) ??
+        numIn(inv, ['TaxInclusiveAmount', 'PayableAmount']))
+    : null;
 
   const taxTotal = findFirst(inv, ['TaxTotal']);
-  const vatBreakdown = parseVatBuckets(taxTotal ?? inv);
+  const vatBreakdown = parseVatBuckets(taxTotal ?? inv, isForeign);
 
   // --- Reverse charge ----------------------------------------------------
   const vatApplicable = textIn(inv, ['VATApplicable']);
@@ -348,13 +399,6 @@ export function parseStructuredInvoiceXml(
     taxExemptionCode === 'AE' ||
     taxExemptionCode === 'K' ||
     REVERSE_CHARGE_INDICATORS.some(indicator => content.includes(indicator));
-
-  // --- Currency ----------------------------------------------------------
-  const currencyRaw =
-    textIn(inv, ['ForeignCurrencyCode']) ??
-    textIn(inv, ['DocumentCurrencyCode', 'LocalCurrencyCode', 'CurrencyCode']);
-  const currency =
-    currencyRaw != null && /^[A-Za-z]{3}$/.test(currencyRaw) ? currencyRaw.toUpperCase() : null;
 
   // --- Invoice number & symbols -------------------------------------------
   const invoiceNumber =
@@ -383,6 +427,8 @@ export function parseStructuredInvoiceXml(
     totalAmount: totalAmount == null ? null : round2(totalAmount),
     totalWithoutVat: totalWithoutVat == null ? null : round2(totalWithoutVat),
     currency,
+    exchangeRate,
+    totalAmountCzk: totalAmountCzk == null ? null : round2(totalAmountCzk),
     vatBreakdown,
     reverseCharge,
     bankAccount,
@@ -390,7 +436,7 @@ export function parseStructuredInvoiceXml(
     iban: iban?.replace(/\s/g, '') ?? null,
     swift,
     paymentMethod,
-    lineItems: parseLineItems(findFirst(inv, ['InvoiceLines']) ?? inv),
+    lineItems: parseLineItems(findFirst(inv, ['InvoiceLines']) ?? inv, isForeign),
     description: textOf(child(inv, 'Note')) ?? textIn(inv, ['Note']),
     rawText: null,
   };
