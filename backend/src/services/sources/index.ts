@@ -9,6 +9,7 @@ import type { PollResult, PollSourceFn } from '../../types/contracts.js';
 import { AppError, ErrorCodes } from '../../utils/errors.js';
 import { pollCollectionEmailSource } from './collectionEmail.js';
 import { getValidAccessToken, type DriveFolder } from './common.js';
+import { loadOAuthCredentials } from './credentials.js';
 import { pollGoogleDriveSource, listGoogleDriveFolders, refreshGoogleToken } from './googleDrive.js';
 import { pollImapSource } from './imap.js';
 import { pollOneDriveSource, listOneDriveFolders, refreshOneDriveToken } from './oneDrive.js';
@@ -37,15 +38,25 @@ export const pollSource: PollSourceFn = async (source: Source, tmpDir: string): 
  */
 export async function listDriveFolders(source: Source, parentId?: string): Promise<DriveFolder[]> {
   if (source.type === SOURCE_TYPE.ONEDRIVE) {
-    const accessToken = await getValidAccessToken(source, refreshOneDriveToken);
+    const creds = (await loadOAuthCredentials(source.companyId, 'onedrive')) ?? undefined;
+    const accessToken = await getValidAccessToken(source, (rt) => refreshOneDriveToken(rt, creds));
     return listOneDriveFolders(accessToken, parentId);
   }
   if (source.type === SOURCE_TYPE.GOOGLE_DRIVE) {
-    const accessToken = await getValidAccessToken(source, refreshGoogleToken);
+    const creds = (await loadOAuthCredentials(source.companyId, 'google_drive')) ?? undefined;
+    const accessToken = await getValidAccessToken(source, (rt) => refreshGoogleToken(rt, creds));
     return listGoogleDriveFolders(accessToken, parentId);
   }
   throw new AppError(ErrorCodes.BAD_REQUEST, 'Folder listing is only available for drive sources', 400);
 }
+
+// Per-company OAuth app credentials
+export {
+  loadOAuthCredentials,
+  requireOAuthCredentials,
+  type OAuthCredentials,
+  type DriveProvider,
+} from './credentials.js';
 
 // Collection email (app-provisioned mailbox)
 export {

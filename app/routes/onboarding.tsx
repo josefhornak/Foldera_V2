@@ -256,9 +256,9 @@ function SourceStep({ company, onBack, onNext }: { company: Company; onBack: () 
         </button>
       )}
 
-      <div className="flex items-center gap-3 rounded-[var(--radius-token-lg)] border border-[var(--border-subtle)] px-4 py-3 opacity-60">
+      <div className="flex items-center gap-3 rounded-[var(--radius-token-lg)] border border-[var(--border-subtle)] px-4 py-3">
         <Cloud className="h-5 w-5 text-[var(--text-tertiary)]" />
-        <span className="text-sm text-[var(--text-secondary)]">OneDrive a Google Drive — <span className="text-[var(--text-tertiary)]">připravujeme</span></span>
+        <span className="text-sm text-[var(--text-secondary)]">OneDrive a Google Drive připojíte v <span className="text-[var(--text-primary)]">Nastavení → Zdroje</span> (zadáte vlastní OAuth aplikaci).</span>
       </div>
 
       {error && <p role="alert" className="text-xs text-[var(--status-error-text)]">{error}</p>}

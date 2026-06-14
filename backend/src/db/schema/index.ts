@@ -5,3 +5,4 @@ export * from './documents.schema.js';
 export * from './contact.schema.js';
 export * from './billing.schema.js';
 export * from './membership.schema.js';
+export * from './oauth-credentials.schema.js';

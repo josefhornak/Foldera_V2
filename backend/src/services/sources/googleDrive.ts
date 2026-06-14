@@ -13,6 +13,7 @@ import type { IncomingFile, PollResult } from '../../types/contracts.js';
 import { AppError, ErrorCodes } from '../../utils/errors.js';
 import { logger } from '../../utils/logger.js';
 import { mimeTypeForFileName, resolveMimeType } from './attachmentFilter.js';
+import { loadOAuthCredentials, type OAuthCredentials } from './credentials.js';
 import {
   fetchWithTimeout,
   getDriveConfig,
@@ -64,11 +65,13 @@ export function isGoogleDriveConfigured(): boolean {
   return Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 }
 
-function getCredentials(): { clientId: string; clientSecret: string } {
+/** Per-company credentials when provided, else the (optional) global env app. */
+function getCredentials(creds?: OAuthCredentials): { clientId: string; clientSecret: string } {
+  if (creds) return creds;
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
     throw new AppError(
       ErrorCodes.BAD_REQUEST,
-      'Google OAuth credentials are not configured (set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)',
+      'Google OAuth credentials are not configured',
       400
     );
   }
@@ -76,8 +79,8 @@ function getCredentials(): { clientId: string; clientSecret: string } {
 }
 
 /** Build the Google authorization URL with a CSRF state parameter */
-export function buildGoogleAuthUrl(redirectUri: string, state: string): string {
-  const { clientId } = getCredentials();
+export function buildGoogleAuthUrl(redirectUri: string, state: string, creds?: OAuthCredentials): string {
+  const { clientId } = getCredentials(creds);
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
@@ -115,8 +118,8 @@ async function requestTokens(body: URLSearchParams, logLabel: string): Promise<O
 }
 
 /** Exchange an authorization code for tokens */
-export async function exchangeGoogleCode(code: string, redirectUri: string): Promise<OAuthTokens> {
-  const { clientId, clientSecret } = getCredentials();
+export async function exchangeGoogleCode(code: string, redirectUri: string, creds?: OAuthCredentials): Promise<OAuthTokens> {
+  const { clientId, clientSecret } = getCredentials(creds);
   return requestTokens(
     new URLSearchParams({
       client_id: clientId,
@@ -130,8 +133,8 @@ export async function exchangeGoogleCode(code: string, redirectUri: string): Pro
 }
 
 /** Refresh an access token (Google keeps the original refresh token) */
-export async function refreshGoogleToken(refreshToken: string): Promise<OAuthTokens> {
-  const { clientId, clientSecret } = getCredentials();
+export async function refreshGoogleToken(refreshToken: string, creds?: OAuthCredentials): Promise<OAuthTokens> {
+  const { clientId, clientSecret } = getCredentials(creds);
   return requestTokens(
     new URLSearchParams({
       client_id: clientId,
@@ -250,7 +253,8 @@ export async function pollGoogleDriveSource(source: Source, tmpDir: string): Pro
     throw new AppError(ErrorCodes.BAD_REQUEST, 'No watched folder selected for this source', 400);
   }
 
-  const accessToken = await getValidAccessToken(source, refreshGoogleToken);
+  const creds = (await loadOAuthCredentials(source.companyId, 'google_drive')) ?? undefined;
+  const accessToken = await getValidAccessToken(source, (rt) => refreshGoogleToken(rt, creds));
   const seenIds = new Set(source.cursor.seenFileIds ?? []);
   const cursorTime = source.cursor.lastModifiedTime ? Date.parse(source.cursor.lastModifiedTime) : 0;
 

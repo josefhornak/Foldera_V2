@@ -39,6 +39,7 @@ import {
   exchangeOneDriveCode,
   getGoogleAccountEmail,
   getMicrosoftAccountEmail,
+  requireOAuthCredentials,
 } from '../services/sources/index.js';
 import { encryptSecret } from '../utils/crypto.js';
 import { AppError, ErrorCodes } from '../utils/errors.js';
@@ -91,11 +92,12 @@ router.get('/:provider/start', requireAuth, async (req, res, next) => {
     );
 
     const redirectUri = redirectUriFor(provider);
-    // Throws AppError 400 when the provider env credentials are missing
+    // Per-company OAuth app — throws AppError 400 when not yet configured.
+    const creds = await requireOAuthCredentials(companyId, provider);
     const url =
       provider === 'onedrive'
-        ? buildOneDriveAuthUrl(redirectUri, state)
-        : buildGoogleAuthUrl(redirectUri, state);
+        ? buildOneDriveAuthUrl(redirectUri, state, creds)
+        : buildGoogleAuthUrl(redirectUri, state, creds);
 
     res.json({ url });
   } catch (err) {
@@ -119,10 +121,11 @@ router.get('/:provider/callback', async (req, res, next) => {
     }
 
     const redirectUri = redirectUriFor(provider);
+    const creds = await requireOAuthCredentials(stateData.companyId, provider);
     const tokens =
       provider === 'onedrive'
-        ? await exchangeOneDriveCode(code, redirectUri)
-        : await exchangeGoogleCode(code, redirectUri);
+        ? await exchangeOneDriveCode(code, redirectUri, creds)
+        : await exchangeGoogleCode(code, redirectUri, creds);
 
     const accountEmail =
       provider === 'onedrive'

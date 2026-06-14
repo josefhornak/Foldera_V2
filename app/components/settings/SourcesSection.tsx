@@ -21,6 +21,7 @@ import { Button } from '~/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/Card';
 import { StateWrapper } from '~/components/ui/StateWrapper';
 import { Switch } from '~/components/ui/Switch';
+import { CloudCredentials } from '~/components/settings/CloudCredentials';
 import {
   createCollectionEmailSource,
   deleteSource,
@@ -38,9 +39,6 @@ import type { Folder, Source } from '~/types';
 interface SourcesSectionProps {
   companyId: string;
 }
-
-// Cloud-drive sources are temporarily hidden — flip to re-enable the buttons.
-const SHOW_DRIVE_SOURCES = false;
 
 export function SourcesSection({ companyId }: SourcesSectionProps) {
   const { t } = useTranslation();
@@ -108,29 +106,9 @@ export function SourcesSection({ companyId }: SourcesSectionProps) {
               {t('settings.sources.createCollectionEmail')}
             </Button>
           )}
-          {SHOW_DRIVE_SOURCES && (
-            <>
-              <Button
-                variant="secondary"
-                size="sm"
-                icon={<Cloud />}
-                loading={oauthLoading === 'onedrive'}
-                onClick={() => handleConnect('onedrive')}
-              >
-                {t('settings.sources.connectOneDrive')}
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                icon={<HardDrive />}
-                loading={oauthLoading === 'google_drive'}
-                onClick={() => handleConnect('google_drive')}
-              >
-                {t('settings.sources.connectGoogleDrive')}
-              </Button>
-            </>
-          )}
         </div>
+
+        <CloudCredentials companyId={companyId} oauthLoading={oauthLoading} onConnect={handleConnect} />
 
         {actionError && (
           <p role="alert" className="text-xs text-[var(--status-error-text)]">

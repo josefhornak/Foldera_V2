@@ -80,3 +80,35 @@ export function setSourceFolder(companyId: string, sourceId: string, input: { fo
 export function startOAuth(provider: 'onedrive' | 'google_drive', companyId: string) {
   return api<{ url: string }>(`/api/oauth/${provider}/start?companyId=${encodeURIComponent(companyId)}`);
 }
+
+// --- Per-company OAuth app credentials (user-provided client id/secret) ---
+
+export interface OAuthProviderInfo {
+  provider: 'google_drive' | 'onedrive';
+  configured: boolean;
+  clientId: string | null;
+  redirectUri: string;
+}
+
+export function useOAuthCredentials(companyId: string | null) {
+  const key = companyId ? `/api/companies/${companyId}/sources/oauth-credentials` : null;
+  const { data, error, isLoading, mutate } = useSWR<{ providers: OAuthProviderInfo[] }>(key);
+  return { providers: data?.providers, error, isLoading, mutate };
+}
+
+export function saveOAuthCredentials(
+  companyId: string,
+  provider: 'google_drive' | 'onedrive',
+  input: { clientId: string; clientSecret?: string },
+) {
+  return api<{ ok: boolean }>(`/api/companies/${companyId}/sources/oauth-credentials/${provider}`, {
+    method: 'PUT',
+    body: input,
+  });
+}
+
+export function deleteOAuthCredentials(companyId: string, provider: 'google_drive' | 'onedrive') {
+  return api<{ ok: boolean }>(`/api/companies/${companyId}/sources/oauth-credentials/${provider}`, {
+    method: 'DELETE',
+  });
+}

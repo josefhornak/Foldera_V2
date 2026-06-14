@@ -12,6 +12,7 @@ export const ID_PREFIX = {
   invoice: 'inv',
   member: 'mem',
   invitation: 'invt',
+  oauthCredential: 'oac',
 } as const;
 
 export type IdPrefix = (typeof ID_PREFIX)[keyof typeof ID_PREFIX];

@@ -20,6 +20,8 @@ import {
   type ImapSourceConfig,
   type Source,
 } from '../db/schema/sources.schema.js';
+import env from '../config/env.js';
+import { oauthCredentials } from '../db/schema/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireCompany, requireAdminRole } from '../middleware/companyScope.js';
 import { pollLimiter, sourceWriteLimiter } from '../middleware/rateLimit.js';
@@ -367,6 +369,96 @@ router.patch('/:sourceId/folder', requireAdminRole, async (req, res, next) => {
 
     const [row] = await db.select().from(sources).where(eq(sources.id, source.id)).limit(1);
     res.json({ source: toPublicSource(row!) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Per-company OAuth app credentials (user-provided client id/secret for drives)
+// ---------------------------------------------------------------------------
+
+const DRIVE_PROVIDERS = ['google_drive', 'onedrive'] as const;
+const oauthProviderSchema = z.enum(DRIVE_PROVIDERS);
+const oauthCredsSchema = z.object({
+  clientId: z.string().trim().min(1, 'Zadejte Client ID'),
+  // Optional on edit: empty keeps the stored secret.
+  clientSecret: z.string().trim().optional(),
+});
+
+function redirectUriFor(provider: string): string {
+  return `${env.APP_BASE_URL.replace(/\/$/, '')}/api/oauth/${provider}/callback`;
+}
+
+/** GET /oauth-credentials → per-provider config (never returns the secret). */
+router.get('/oauth-credentials', async (req, res, next) => {
+  try {
+    const rows = await db
+      .select({ provider: oauthCredentials.provider, clientId: oauthCredentials.clientId })
+      .from(oauthCredentials)
+      .where(eq(oauthCredentials.companyId, req.company!.id));
+    const byProvider = new Map(rows.map((r) => [r.provider, r]));
+    res.json({
+      providers: DRIVE_PROVIDERS.map((provider) => ({
+        provider,
+        configured: byProvider.has(provider),
+        clientId: byProvider.get(provider)?.clientId ?? null,
+        redirectUri: redirectUriFor(provider),
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** PUT /oauth-credentials/:provider → save client id + secret (admin only). */
+router.put('/oauth-credentials/:provider', requireAdminRole, sourceWriteLimiter, async (req, res, next) => {
+  try {
+    const provider = oauthProviderSchema.parse(String(req.params.provider));
+    const body = oauthCredsSchema.parse(req.body);
+
+    const [existing] = await db
+      .select({ id: oauthCredentials.id })
+      .from(oauthCredentials)
+      .where(and(eq(oauthCredentials.companyId, req.company!.id), eq(oauthCredentials.provider, provider)))
+      .limit(1);
+
+    if (!existing && !body.clientSecret) {
+      throw new AppError(ErrorCodes.BAD_REQUEST, 'Zadejte Client Secret', 400);
+    }
+
+    if (existing) {
+      await db
+        .update(oauthCredentials)
+        .set({
+          clientId: body.clientId,
+          ...(body.clientSecret ? { clientSecretEnc: encryptSecret(body.clientSecret) } : {}),
+          updatedAt: new Date(),
+        })
+        .where(eq(oauthCredentials.id, existing.id));
+    } else {
+      await db.insert(oauthCredentials).values({
+        id: generateId('oac'),
+        companyId: req.company!.id,
+        provider,
+        clientId: body.clientId,
+        clientSecretEnc: encryptSecret(body.clientSecret!),
+      });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** DELETE /oauth-credentials/:provider (admin only). */
+router.delete('/oauth-credentials/:provider', requireAdminRole, async (req, res, next) => {
+  try {
+    const provider = oauthProviderSchema.parse(String(req.params.provider));
+    await db
+      .delete(oauthCredentials)
+      .where(and(eq(oauthCredentials.companyId, req.company!.id), eq(oauthCredentials.provider, provider)));
+    res.json({ ok: true });
   } catch (err) {
     next(err);
   }
