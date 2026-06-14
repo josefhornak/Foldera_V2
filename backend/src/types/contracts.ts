@@ -52,6 +52,10 @@ export interface ExtractedInvoice {
   totalAmount: number | null;
   totalWithoutVat: number | null;
   currency: string | null;
+  /** Exchange rate stated on the document (CZK per 1 unit of foreign currency). */
+  exchangeRate: number | null;
+  /** Total in CZK (from the foreign-currency document's CZK recapitulation). */
+  totalAmountCzk: number | null;
   vatBreakdown: VatBucket[];
   /** True when the document is reverse-charge (přenesená daňová povinnost) */
   reverseCharge: boolean;

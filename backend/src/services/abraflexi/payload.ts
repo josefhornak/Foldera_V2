@@ -130,6 +130,10 @@ function buildLineItemsFromExtraction(
  */
 function buildRecapLineItems(invoice: ExtractedInvoice, isCreditNote: boolean): AbraFlexiLineItem[] {
   const items: AbraFlexiLineItem[] = [];
+  // In foreign currency cenaMj is in the foreign currency; ABRA derives the CZK
+  // VAT via the exchange rate, so we must NOT pin sumDph (a CZK value) here —
+  // otherwise it conflicts with ABRA's kurz-computed VAT.
+  const isForeign = (invoice.currency?.trim().toUpperCase() || 'CZK') !== 'CZK';
 
   for (const bucket of invoice.vatBreakdown) {
     if (bucket.base === 0 && bucket.vat === 0) continue;
@@ -166,7 +170,9 @@ function buildRecapLineItems(invoice: ExtractedInvoice, isCreditNote: boolean): 
       mnozMj: 1,
       cenaMj: formatNumber(bucket.base),
       szbDph: bucket.rate,
-      sumDph: formatNumber(calculatedVat),
+      // Domestic: pin CZK VAT to match ABRA's arithmetic. Foreign: let ABRA
+      // compute it from cenaMj × kurz, so the booked CZK matches the document.
+      ...(isForeign ? {} : { sumDph: formatNumber(calculatedVat) }),
     });
   }
 
@@ -217,6 +223,28 @@ function setForeignAmounts(
     );
   if (totalMen !== 0) faktura.sumCelkemMen = formatNumber(totalMen);
   faktura.mena = `code:${currency}`;
+}
+
+/**
+ * Exchange rate (CZK per 1 unit of foreign currency) for a domestic invoice in
+ * foreign currency: prefer the rate stated on the document, else derive it from
+ * the CZK total vs the foreign total. Null when neither is available — ABRA then
+ * applies its own daily rate.
+ */
+function resolveExchangeRate(invoice: ExtractedInvoice, vat: VatTotals): number | null {
+  if (invoice.exchangeRate && invoice.exchangeRate > 0) return invoice.exchangeRate;
+  const foreignTotal =
+    invoice.totalAmount ??
+    (vat.baseZero + vat.baseStandard + vat.vatStandard + vat.baseReduced + vat.vatReduced || null);
+  if (invoice.totalAmountCzk && invoice.totalAmountCzk > 0 && foreignTotal && foreignTotal > 0) {
+    return invoice.totalAmountCzk / foreignTotal;
+  }
+  return null;
+}
+
+/** Format an exchange rate with up to 6 decimals (ABRA accepts a decimal kurz). */
+function formatRate(rate: number): string {
+  return String(Math.round(rate * 1e6) / 1e6);
 }
 
 /**
@@ -277,11 +305,18 @@ export function buildInvoicePayload(
     if (totalBase !== 0) faktura.sumCelkem = formatNumber(totalBase);
     faktura.typObchodu = 'TUZEMSKO';
   } else if (isForeign) {
-    // Same rule as the domestic path: with real line items ABRA derives the
-    // foreign-currency (*Men) sums from them, so only send header sums in the
-    // no-items recap path. `mena` must always be set.
+    // Tuzemský doklad v cizí měně (domestic taxable supply invoiced in EUR/…).
+    // The CZK VAT recapitulation on the document is binding for the recipient,
+    // so we must pin the exchange rate to the document (or derive it from the
+    // available CZK figures) — otherwise ABRA would recompute CZK with its own
+    // ČNB rate and the booked CZK DPH wouldn't match the invoice.
     faktura.mena = `code:${currency}`;
     if (!hasRealItems && !isCreditNote) setForeignAmounts(faktura, invoice, vat, currency);
+    const kurz = resolveExchangeRate(invoice, vat);
+    if (kurz != null) {
+      faktura.kurz = formatRate(kurz);
+      faktura.mnozMen = '1';
+    }
   } else {
     // With real line items ABRA derives every base/VAT sum from them. Sending
     // header sums computed from the OCR vatBreakdown — which can disagree with

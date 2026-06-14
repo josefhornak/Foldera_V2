@@ -65,6 +65,7 @@ AMOUNTS (DO NOT COMPUTE):
   Never use subtotal or line totals as total_amount.
 - subtotal: "Základ daně" / "Subtotal" / "Netto" (total without VAT)
 - Currency: Extract ISO code (CZK, EUR, USD, GBP, PLN). Symbol mapping: Kč→CZK, €→EUR, $→USD, £→GBP.
+- FOREIGN CURRENCY (doklad v cizí měně): if the document states an exchange rate ("kurz", "směnný kurz", e.g. "kurz 25,30 CZK/EUR"), put it in exchange_rate as CZK per ONE unit of the foreign currency. If it states a CZK recapitulation / total in Kč (the VAT recap is by law in CZK on a domestic supply), put the total CZK amount in total_amount_czk. vat_breakdown stays in the document's primary (foreign) currency.
 
 REVERSE CHARGE / PDP DETECTION:
 Set is_reverse_charge = true ONLY if textual evidence clearly indicates VAT liability is transferred to the customer.
@@ -265,6 +266,8 @@ Return ONLY valid JSON with these fields (use null for missing values, numbers w
   "total_amount": "number|null (Celkem k úhradě)",
   "subtotal": "number|null (Základ daně)",
   "currency": "string|null (ISO 4217)",
+  "exchange_rate": "number|null (kurz: CZK za 1 jednotku cizí měny, pokud uveden)",
+  "total_amount_czk": "number|null (celková částka v CZK z rekapitulace, je-li doklad v cizí měně)",
   "vat_breakdown": [{ "rate": "number", "base": "number", "vat": "number" }],
   "is_reverse_charge": "boolean|null",
   "payment_method": "string|null",

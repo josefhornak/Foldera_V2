@@ -56,6 +56,10 @@ export interface AbraFlexiFakturaPrijata {
   sumCelkemMen?: string;
   // Currency
   mena?: string;
+  /** Exchange rate (CZK per `mnozMen` units of the foreign currency). */
+  kurz?: string;
+  /** Foreign-currency quantity the rate applies to (usually '1'). */
+  mnozMen?: string;
   // Trade type
   typObchodu?: string;
   // Country
