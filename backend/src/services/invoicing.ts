@@ -99,9 +99,10 @@ export async function buildPdf(data: InvoiceData, isdocXml?: string): Promise<Bu
 
   // ── Masthead ──────────────────────────────────────────────────────────────
   // Brand mark: violet tile + stacked "F" bars (matches the app/favicon logo).
+  // Vertically centred on the "Foldera" wordmark (drawn at y=56, 27pt).
   const mS = 30;
   const mX = left;
-  const mY = 50;
+  const mY = 56 + 27 * 0.52 - mS / 2;
   const markGrad = doc.linearGradient(mX, mY, mX + mS, mY + mS);
   markGrad.stop(0, ACCENT_LIGHT).stop(1, ACCENT);
   doc.roundedRect(mX, mY, mS, mS, mS * 0.26).fill(markGrad);
