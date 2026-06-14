@@ -1,6 +1,25 @@
 import useSWR from 'swr';
 import { api } from '~/lib/api';
+import { useAuthStore } from '~/stores/auth';
 import type { User } from '~/types';
+
+/** Download an issued invoice PDF (rebuilt server-side from the stored data). */
+export async function downloadInvoicePdf(id: string, number: string) {
+  const token = useAuthStore.getState().token;
+  const res = await fetch(`/api/admin/invoices/${id}/pdf`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error('Stažení faktury se nezdařilo');
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `faktura-${number}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 
 export interface AdminInvoice {
   id: string;

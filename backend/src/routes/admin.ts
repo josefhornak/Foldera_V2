@@ -6,11 +6,15 @@
 import { count, desc, eq, sql } from 'drizzle-orm';
 import { Router } from 'express';
 
+import env from '../config/env.js';
 import { db } from '../db/client.js';
 import { companies, companyMembers, documents, invoices, sources, users } from '../db/schema/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/admin.js';
 import { PLAN_PRICE_CZK } from '../services/billing.js';
+import { buildPdf } from '../services/invoicing.js';
+import { buildIsdocXml } from '../services/isdoc.js';
+import { toCzechIban } from '../services/payment-qr.js';
 import { AppError, ErrorCodes } from '../utils/errors.js';
 
 const num = (v: unknown): number => Number(v ?? 0);
@@ -82,6 +86,57 @@ router.post('/invoices/:id/unpaid', async (req, res, next) => {
       .returning({ id: invoices.id });
     if (!row) throw new AppError(ErrorCodes.NOT_FOUND, 'Invoice not found', 404);
     res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** GET /invoices/:id/pdf — rebuild the issued invoice PDF (same as e-mailed) for download. */
+router.get('/invoices/:id/pdf', async (req, res, next) => {
+  try {
+    const [inv] = await db.select().from(invoices).where(eq(invoices.id, String(req.params.id))).limit(1);
+    if (!inv) throw new AppError(ErrorCodes.NOT_FOUND, 'Invoice not found', 404);
+    const lines = inv.lineItems;
+    const isdocXml = buildIsdocXml({
+      number: inv.number,
+      issueDate: inv.issueDate,
+      dueDate: inv.dueDate,
+      variableSymbol: inv.variableSymbol,
+      supplier: {
+        name: env.BILLING_SUPPLIER_NAME,
+        ico: env.BILLING_SUPPLIER_ICO,
+        address: env.BILLING_SUPPLIER_ADDRESS,
+        email: env.BILLING_SUPPLIER_EMAIL,
+        iban: toCzechIban(env.BILLING_SUPPLIER_BANK),
+        account: env.BILLING_SUPPLIER_BANK,
+      },
+      customer: { name: inv.customerName, ico: inv.customerIco, address: inv.customerAddress },
+      lines: lines.map((l, i) => ({
+        id: i + 1,
+        description: l.description,
+        quantity: l.quantity,
+        unitPriceCzk: l.unitPriceCzk,
+        amountCzk: l.amountCzk,
+      })),
+      totalCzk: inv.totalCzk,
+    });
+    const pdf = await buildPdf(
+      {
+        number: inv.number,
+        issueDate: inv.issueDate,
+        dueDate: inv.dueDate,
+        variableSymbol: inv.variableSymbol,
+        customerName: inv.customerName,
+        customerIco: inv.customerIco,
+        customerAddress: inv.customerAddress,
+        lines,
+        totalCzk: inv.totalCzk,
+      },
+      isdocXml,
+    );
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="faktura-${inv.number}.pdf"`);
+    res.send(pdf);
   } catch (err) {
     next(err);
   }

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router';
-import { Check, RotateCcw } from 'lucide-react';
+import { Check, Download, RotateCcw } from 'lucide-react';
 import { Button } from '~/components/ui/Button';
 import { StateWrapper } from '~/components/ui/StateWrapper';
 import { cn } from '~/lib/utils';
 import {
+  downloadInvoicePdf,
   markInvoicePaid,
   markInvoiceUnpaid,
   useAdminInvoices,
@@ -41,6 +42,16 @@ export function InvoicesPanel() {
   const { isAdmin } = useMe();
   const { invoices, summary, error, isLoading, mutate } = useAdminInvoices(isAdmin);
   const [busy, setBusy] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  async function download(inv: AdminInvoice) {
+    setDownloadingId(inv.id);
+    try {
+      await downloadInvoicePdf(inv.id, inv.number);
+    } finally {
+      setDownloadingId(null);
+    }
+  }
 
   async function toggle(inv: AdminInvoice) {
     setBusy(inv.id);
@@ -99,7 +110,16 @@ export function InvoicesPanel() {
                       <span className="status-dot" style={{ color: meta.color }} />
                       {meta.label}
                     </span>
-                    <div className="md:justify-self-end">
+                    <div className="flex items-center gap-2 md:justify-self-end">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        loading={downloadingId === inv.id}
+                        onClick={() => download(inv)}
+                        icon={<Download />}
+                        title="Stáhnout PDF"
+                        aria-label="Stáhnout PDF"
+                      />
                       {inv.state !== 'failed' && (
                         <Button
                           size="sm"
