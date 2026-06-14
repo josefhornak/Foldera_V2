@@ -23,7 +23,7 @@ import { z } from 'zod';
 
 import env from '../config/env.js';
 import { db } from '../db/client.js';
-import { companies } from '../db/schema/index.js';
+import { companyMembers } from '../db/schema/index.js';
 import {
   SOURCE_STATUS,
   sources,
@@ -73,13 +73,17 @@ router.get('/:provider/start', requireAuth, async (req, res, next) => {
     const provider = providerSchema.parse(req.params.provider);
     const { companyId } = startQuerySchema.parse(req.query);
 
-    // Verify the authenticated user owns the company
-    const [company] = await db
-      .select({ id: companies.id })
-      .from(companies)
-      .where(and(eq(companies.id, companyId), eq(companies.userId, req.auth!.userId)))
+    // Authorize via company_members (multi-tenant) — only a company admin
+    // (správce) may connect a drive source, consistent with the sources routes.
+    const [membership] = await db
+      .select({ role: companyMembers.role })
+      .from(companyMembers)
+      .where(and(eq(companyMembers.companyId, companyId), eq(companyMembers.userId, req.auth!.userId)))
       .limit(1);
-    if (!company) throw new AppError(ErrorCodes.NOT_FOUND, 'Company not found', 404);
+    if (!membership) throw new AppError(ErrorCodes.NOT_FOUND, 'Company not found', 404);
+    if (membership.role !== 'admin') {
+      throw new AppError(ErrorCodes.FORBIDDEN, 'Only a company admin can connect a source', 403);
+    }
 
     // One-time state token (CSRF protection), TTL 10 minutes
     const state = crypto.randomBytes(32).toString('hex');
