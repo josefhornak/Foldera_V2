@@ -12,7 +12,7 @@
  */
 import fs from 'node:fs/promises';
 
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import env from '../config/env.js';
 import { db } from '../db/client.js';
@@ -29,6 +29,7 @@ import {
   findDuplicateInvoice,
   findSupplierByIco,
   getSupplierDefaults,
+  getSupplierKnownBankAccounts,
   suggestClenDph,
   suggestTypUcOp,
   suggestClenKonVykDph,
@@ -280,51 +281,62 @@ async function runAbraExport(
 function normBank(s: string | null | undefined): string {
   return (s ?? '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 }
+function shownBank(inv: ExtractedInvoice): string {
+  return inv.iban || (inv.bankAccount ? `${inv.bankAccount}${inv.bankCode ? '/' + inv.bankCode : ''}` : '');
+}
 
 /**
- * Anti-fraud control against invoice-payment redirection. Returns a Czech reason
- * string when the payee bank account should be HELD for admin approval — a new
- * supplier carrying a bank account, or a known supplier whose IBAN/account
- * differs from their last approved (exported) document — else null. Receipts
- * (cash) and documents with no bank details are exempt.
+ * Anti-fraud pre-export review (invoice-payment-redirection protection), checked
+ * against ABRA Flexi over the API per the company's settings. Returns a Czech
+ * reason to HOLD the document for admin approval, else null. Two independent,
+ * per-company gates:
+ *  - newSupplierMode='review': the supplier (IČO) is not yet in ABRA Flexi.
+ *  - bankAccountMode='review': the payee account/IBAN is not among the accounts
+ *    ABRA already knows for that supplier (new or changed payee).
+ * Receipts (cash) are exempt. Fails OPEN on a transient ABRA error (the export
+ * itself would then fail and surface the problem).
  */
-async function reviewBankAccount(companyId: string, invoice: ExtractedInvoice): Promise<string | null> {
+async function reviewBeforeExport(
+  cfg: AbraFlexiConfig,
+  invoice: ExtractedInvoice,
+  modes: { newSupplier: string; bank: string },
+): Promise<string | null> {
   if (invoice.documentType === 'receipt') return null;
-  const curIban = invoice.iban ? normBank(invoice.iban) : '';
-  const curAcct = invoice.bankAccount ? normBank(`${invoice.bankAccount}${invoice.bankCode ?? ''}`) : '';
-  const shown = invoice.iban || (invoice.bankAccount ? `${invoice.bankAccount}${invoice.bankCode ? '/' + invoice.bankCode : ''}` : '');
-  if (!curIban && !curAcct) return null; // no payee bank → nothing to redirect
+  const wantSupplier = modes.newSupplier === 'review';
+  const wantBank = modes.bank === 'review';
+  if (!wantSupplier && !wantBank) return null;
+
+  const hasBank = Boolean(invoice.iban || invoice.bankAccount);
 
   if (!invoice.supplierIco) {
-    return `Doklad bez IČO dodavatele s bankovním účtem ${shown}. Ověřte příjemce platby.`;
+    if (wantBank && hasBank) return `Doklad bez IČO dodavatele s bankovním účtem ${shownBank(invoice)}. Ověřte příjemce platby.`;
+    return null;
   }
 
-  const [prev] = await db
-    .select({ extracted: documents.extracted })
-    .from(documents)
-    .where(
-      and(
-        eq(documents.companyId, companyId),
-        eq(documents.status, DOCUMENT_STATUS.EXPORTED),
-        sql`${documents.extracted}->>'supplierIco' = ${invoice.supplierIco}`,
-      ),
-    )
-    .orderBy(desc(documents.createdAt))
-    .limit(1);
-
-  if (!prev?.extracted) {
-    return `První doklad od dodavatele (IČO ${invoice.supplierIco}); bankovní účet ${shown} zatím nebyl ověřen.`;
+  try {
+    const supplier = await findSupplierByIco(cfg, invoice.supplierIco);
+    if (!supplier) {
+      if (wantSupplier) return `Dodavatel (IČO ${invoice.supplierIco}) není v ABRA Flexi — po schválení se založí nový.`;
+      if (wantBank && hasBank) return `Nový dodavatel (IČO ${invoice.supplierIco}) s bankovním účtem ${shownBank(invoice)} — ověřte příjemce platby.`;
+      return null;
+    }
+    if (wantBank && hasBank) {
+      const known = await getSupplierKnownBankAccounts(cfg, supplier.code);
+      const curIban = normBank(invoice.iban);
+      const curAcct = normBank(invoice.bankAccount);
+      const matches = (curIban !== '' && known.has(curIban)) || (curAcct !== '' && known.has(curAcct));
+      if (!matches) {
+        return `Bankovní účet ${shownBank(invoice)} není u dodavatele v ABRA Flexi (nový nebo změněný). Ověřte před platbou.`;
+      }
+    }
+    return null;
+  } catch (error) {
+    logger.warn(
+      { companyId: cfg.companyId, error: toError(error).message },
+      '[Pipeline] Pre-export review check failed — proceeding to export',
+    );
+    return null;
   }
-
-  const p = prev.extracted as ExtractedInvoice;
-  // Compare like-for-like; flag only a definite mismatch (avoids cross-format noise).
-  if (curIban && p.iban && curIban !== normBank(p.iban)) {
-    return `IBAN dodavatele se změnil: dříve ${p.iban}, nyní ${invoice.iban}. Ověřte před platbou.`;
-  }
-  if (curAcct && p.bankAccount && curAcct !== normBank(`${p.bankAccount}${p.bankCode ?? ''}`)) {
-    return `Bankovní účet dodavatele se změnil: dříve ${p.bankAccount}${p.bankCode ? '/' + p.bankCode : ''}, nyní ${shown}. Ověřte před platbou.`;
-  }
-  return null;
 }
 
 export async function processIncomingFile(data: ProcessDocumentJobData): Promise<void> {
@@ -451,9 +463,15 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
         ? { filePath: file.originalEmailPath, fileName: `puvodni-email-${invoice.variableSymbol ?? invoice.invoiceNumber ?? 'doklad'}.eml` }
         : null;
 
-    // Anti-fraud: hold for admin approval when the payee bank account is new or
-    // changed for this supplier (invoice-redirection protection).
-    const reviewReason = await reviewBankAccount(companyId, invoice);
+    // Anti-fraud: hold for admin approval when the supplier or its payee bank
+    // account is new/unknown in ABRA Flexi (invoice-redirection protection).
+    const cfgForReview = getAbraConfig(company);
+    const reviewReason = cfgForReview
+      ? await reviewBeforeExport(cfgForReview, invoice, {
+          newSupplier: company.newSupplierMode,
+          bank: company.bankAccountMode,
+        })
+      : null;
     if (reviewReason) {
       await db
         .update(documents)

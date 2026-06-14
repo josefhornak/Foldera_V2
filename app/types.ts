@@ -28,6 +28,10 @@ export interface Company {
   attachOriginalEmail: boolean;
   /** 'detail' = keep every line item, 'summary' = collapse per VAT rate. */
   lineItemMode: 'detail' | 'summary';
+  /** 'auto' = export; 'review' = hold for approval when supplier not in ABRA Flexi. */
+  newSupplierMode: 'auto' | 'review';
+  /** 'auto' = export; 'review' = hold when payee bank account is new/changed. */
+  bankAccountMode: 'auto' | 'review';
   trialEndsAt: string | null;
   createdAt: string;
   /** The signed-in user's role in this company: 'admin' = správce, 'member' = jen nahlíží. */

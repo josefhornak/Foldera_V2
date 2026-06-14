@@ -219,6 +219,69 @@ function LineItemsCard({ company, onChanged }: { company: Company; onChanged: ()
   );
 }
 
+/** Anti-fraud pre-export review gates (checked against ABRA Flexi). */
+function ReviewCard({ company, onChanged }: { company: Company; onChanged: () => void }) {
+  const [supplier, setSupplier] = useState(company.newSupplierMode);
+  const [bank, setBank] = useState(company.bankAccountMode);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setSupplier(company.newSupplierMode);
+    setBank(company.bankAccountMode);
+  }, [company.newSupplierMode, company.bankAccountMode]);
+
+  async function change(patch: { newSupplierMode?: Company['newSupplierMode']; bankAccountMode?: Company['bankAccountMode'] }) {
+    if (patch.newSupplierMode) setSupplier(patch.newSupplierMode);
+    if (patch.bankAccountMode) setBank(patch.bankAccountMode);
+    setSaving(true);
+    try {
+      await updateCompany(company.id, patch);
+      onChanged();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Kontrola před založením</CardTitle>
+        <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+          Ochrana proti přesměrování platby. Foldera ověřuje přímo v ABRA Flexi.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <Field label="Neznámý dodavatel (není v ABRA Flexi)" htmlFor="rev-supplier" className="max-w-md">
+          <Select
+            id="rev-supplier"
+            value={supplier}
+            disabled={saving}
+            onChange={(e) => change({ newSupplierMode: e.target.value as Company['newSupplierMode'] })}
+          >
+            <option value="auto">Založit automaticky</option>
+            <option value="review">Schválit správcem (založí se po schválení)</option>
+          </Select>
+        </Field>
+        <Field label="Nový nebo změněný bankovní účet dodavatele" htmlFor="rev-bank" className="max-w-md">
+          <Select
+            id="rev-bank"
+            value={bank}
+            disabled={saving}
+            onChange={(e) => change({ bankAccountMode: e.target.value as Company['bankAccountMode'] })}
+          >
+            <option value="auto">Založit automaticky</option>
+            <option value="review">Schválit správcem (ochrana plateb)</option>
+          </Select>
+        </Field>
+        <p className="text-xs text-[var(--text-tertiary)]">
+          Když je nastaveno „Schválit správcem", pozdržený doklad počká v sekci Doklady a správci přijde e-mail.
+          Po schválení se založí do ABRA Flexi.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 /** Toggle: attach the original e-mail (.eml) to the ABRA document. */
 function EmailOptionsCard({ company, onChanged }: { company: Company; onChanged: () => void }) {
   const [on, setOn] = useState(company.attachOriginalEmail);
@@ -464,6 +527,8 @@ function CompanySection({ company, onChanged }: { company: Company; onChanged: (
       <AccountingCard company={company} onChanged={onChanged} />
 
       <LineItemsCard company={company} onChanged={onChanged} />
+
+      <ReviewCard company={company} onChanged={onChanged} />
 
       <EmailOptionsCard company={company} onChanged={onChanged} />
 

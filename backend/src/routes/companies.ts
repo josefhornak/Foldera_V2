@@ -39,6 +39,10 @@ const companySchema = z.object({
   attachOriginalEmail: z.boolean().optional(),
   /** 'detail' = keep every line item, 'summary' = collapse per VAT rate. */
   lineItemMode: z.enum(['detail', 'summary']).optional(),
+  /** Hold for approval when the supplier isn't in ABRA Flexi yet. */
+  newSupplierMode: z.enum(['auto', 'review']).optional(),
+  /** Hold for approval when the payee bank account is new/changed in ABRA Flexi. */
+  bankAccountMode: z.enum(['auto', 'review']).optional(),
 });
 
 const abraConfigSchema = z.object({
@@ -67,6 +71,8 @@ function toPublicCompany(c: typeof companies.$inferSelect, role: 'admin' | 'memb
     accountingFillMode: c.accountingFillMode,
     attachOriginalEmail: c.attachOriginalEmail,
     lineItemMode: c.lineItemMode,
+    newSupplierMode: c.newSupplierMode,
+    bankAccountMode: c.bankAccountMode,
     trialEndsAt: c.trialEndsAt,
     createdAt: c.createdAt,
     /** The requesting user's role in this company. */

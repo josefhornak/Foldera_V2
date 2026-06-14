@@ -199,6 +199,49 @@ export async function addBankAccountToSupplier(
   }
 }
 
+/** Normalize a bank identifier (account number or IBAN) for comparison. */
+function normalizeBank(s: unknown): string {
+  return String(s ?? '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+}
+
+/**
+ * Normalized set of bank accounts/IBANs ABRA Flexi already knows for a supplier:
+ * its address-book accounts (adresar-bankovni-ucet) plus accounts seen on its
+ * recent received invoices. Used to detect a NEW or CHANGED payee account (fraud
+ * control). Self-learning: an approved invoice's account becomes "known" via its
+ * faktura-prijata. Best-effort — returns an empty set on error.
+ */
+export async function getSupplierKnownBankAccounts(
+  cfg: AbraFlexiConfig,
+  supplierCode: string,
+): Promise<Set<string>> {
+  const out = new Set<string>();
+  if (!supplierCode) return out;
+  const filter = encodeURIComponent(`firma eq 'code:${escapeWql(supplierCode)}'`);
+  const collect = (rows: unknown[]) => {
+    for (const r of rows) {
+      const row = r as { buc?: unknown; iban?: unknown };
+      if (row.buc) out.add(normalizeBank(row.buc));
+      if (row.iban) out.add(normalizeBank(row.iban));
+    }
+  };
+  try {
+    collect(await abraGetList(cfg, `/adresar-bankovni-ucet/(${filter}).json?detail=custom:buc,iban&limit=50`, 'adresar-bankovni-ucet'));
+  } catch (error) {
+    logger.warn(
+      { companyId: cfg.companyId, supplierCode, error: error instanceof Error ? error.message : String(error) },
+      '[AbraFlexi] Failed to read supplier bank accounts',
+    );
+  }
+  try {
+    collect(await abraGetList(cfg, `/${ENTITY_FAKTURA_PRIJATA}/(${filter}).json?detail=custom:buc,iban&limit=30`, ENTITY_FAKTURA_PRIJATA));
+  } catch {
+    /* invoices are secondary — ignore */
+  }
+  out.delete('');
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Supplier defaults harvesting ("koukání na předchozí doklady")
 // ---------------------------------------------------------------------------

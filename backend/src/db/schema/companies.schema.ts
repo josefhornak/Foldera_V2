@@ -42,6 +42,19 @@ export const companies = pgTable(
       .notNull()
       .default('detail'),
 
+    // Pre-export review gates (anti-fraud) checked against ABRA Flexi.
+    // 'auto' = export immediately, 'review' = hold for admin approval when…
+    /** …the supplier (IČO) is not yet in ABRA Flexi (then auto-created on approval). */
+    newSupplierMode: text('new_supplier_mode')
+      .$type<'auto' | 'review'>()
+      .notNull()
+      .default('auto'),
+    /** …the payee bank account/IBAN is new or changed for the supplier in ABRA Flexi. */
+    bankAccountMode: text('bank_account_mode')
+      .$type<'auto' | 'review'>()
+      .notNull()
+      .default('review'),
+
     // Billing. trial → free 7 days / 10 docs, then blocked until active.
     billingStatus: text('billing_status')
       .$type<'trial' | 'active' | 'cancelled'>()
