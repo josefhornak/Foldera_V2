@@ -59,12 +59,34 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
+/** Hosted brand mark (e-mail clients don't render inline SVG). */
+const LOGO_URL = 'https://foldera.cz/icons/icon-128x128.png';
+
+/**
+ * Shared brand shell for every transactional e-mail: dark card with a logo
+ * header and a footer. Table-based header for bullet-proof alignment in Outlook.
+ */
 const SHELL = (inner: string): string =>
-  `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#0b0b10;color:#efeff4;padding:32px">
-     <div style="max-width:480px;margin:0 auto;background:#14141c;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:32px">
-       <div style="font-weight:700;font-size:20px;color:#8b5cf6;margin-bottom:20px">Foldera</div>
-       ${inner}
-       <p style="color:#666674;font-size:12px;margin-top:28px">Faktury automaticky do ABRA Flexi.</p>
+  `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#0b0b10;color:#efeff4;padding:32px 16px;margin:0">
+     <div style="max-width:480px;margin:0 auto;background:#14141c;border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow:hidden">
+       <div style="padding:22px 32px;border-bottom:1px solid rgba(255,255,255,.06)">
+         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse">
+           <tr>
+             <td style="padding-right:11px;vertical-align:middle">
+               <img src="${LOGO_URL}" width="34" height="34" alt="Foldera" style="display:block;border-radius:9px" />
+             </td>
+             <td style="vertical-align:middle;font-weight:800;font-size:20px;letter-spacing:-0.02em;color:#efeff4">Foldera</td>
+           </tr>
+         </table>
+       </div>
+       <div style="padding:30px 32px">
+         ${inner}
+       </div>
+       <div style="padding:18px 32px;border-top:1px solid rgba(255,255,255,.06)">
+         <p style="color:#666674;font-size:12px;line-height:1.5;margin:0">
+           Doklady automaticky do ABRA Flexi · <a href="https://foldera.cz" style="color:#8b5cf6;text-decoration:none">foldera.cz</a>
+         </p>
+       </div>
      </div>
    </div>`;
 
