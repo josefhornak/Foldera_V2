@@ -1,6 +1,6 @@
 import { useEffect, useState, type ComponentType, type FormEvent } from 'react';
 import { Link, Navigate, NavLink, Outlet } from 'react-router';
-import { AlertTriangle, Building2, Check, ChevronsUpDown, Clock, FileText, LayoutDashboard, Plus, Receipt, Settings } from 'lucide-react';
+import { AlertTriangle, Building2, Check, ChevronsUpDown, Clock, FileText, LayoutDashboard, Plus, Settings, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '~/components/ui/Button';
 import { Card } from '~/components/ui/Card';
@@ -79,7 +79,7 @@ const BASE_NAV: NavItem[] = [
   { to: '/settings', end: false, icon: Settings, key: 'nav.settings' },
 ];
 
-const ADMIN_NAV: NavItem = { to: '/faktury', end: false, icon: Receipt, key: 'nav.invoices', label: 'Fakturace' };
+const ADMIN_NAV: NavItem = { to: '/admin', end: false, icon: ShieldCheck, key: 'nav.admin', label: 'Admin' };
 
 function useNavItems(): NavItem[] {
   const { isAdmin } = useMe();

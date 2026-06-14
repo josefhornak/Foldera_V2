@@ -23,12 +23,24 @@ const czk = (n: number) => `${n.toLocaleString('cs-CZ')} Kč`;
 
 export default function AdminInvoices() {
   const { isAdmin } = useMe();
-  const { invoices, summary, error, isLoading, mutate } = useAdminInvoices(isAdmin);
-  const [busy, setBusy] = useState<string | null>(null);
-
-  // useMe is undefined while loading; only redirect once we know it's false.
   const { user } = useMe();
   if (user && !isAdmin) return <Navigate to="/dashboard" replace />;
+  return (
+    <div className="mx-auto max-w-[1100px]">
+      <header className="mb-6">
+        <h1 className="font-heading text-2xl font-bold tracking-tight">Fakturace</h1>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">Přehled vystavených faktur a jejich úhrad.</p>
+      </header>
+      <InvoicesPanel />
+    </div>
+  );
+}
+
+/** The invoices summary + table, reusable inside the admin console tabs. */
+export function InvoicesPanel() {
+  const { isAdmin } = useMe();
+  const { invoices, summary, error, isLoading, mutate } = useAdminInvoices(isAdmin);
+  const [busy, setBusy] = useState<string | null>(null);
 
   async function toggle(inv: AdminInvoice) {
     setBusy(inv.id);
@@ -42,12 +54,7 @@ export default function AdminInvoices() {
   }
 
   return (
-    <div className="mx-auto max-w-[1100px]">
-      <header className="mb-6">
-        <h1 className="font-heading text-2xl font-bold tracking-tight">Fakturace</h1>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">Přehled vystavených faktur a jejich úhrad.</p>
-      </header>
-
+    <div>
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <SummaryCard label="Vystaveno faktur" value={String(summary?.total ?? 0)} />
         <SummaryCard label="Nezaplaceno" value={czk(summary?.outstandingCzk ?? 0)} accent />
