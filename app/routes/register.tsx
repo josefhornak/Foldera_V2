@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router';
 import { Check, Loader2 } from 'lucide-react';
 import { Button } from '~/components/ui/Button';
 import { Card } from '~/components/ui/Card';
@@ -8,6 +8,7 @@ import { Field, Input } from '~/components/ui/Input';
 import { api, ApiError } from '~/lib/api';
 import { cn } from '~/lib/utils';
 import { useAuthStore } from '~/stores/auth';
+import { useCompanyStore } from '~/stores/company';
 import type { AuthResponse, Company } from '~/types';
 
 export function meta() {
@@ -33,8 +34,12 @@ const STRENGTH_COLOR = ['', 'var(--status-error)', 'var(--status-error)', 'var(-
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const invite = searchParams.get('invite');
+  const isInvite = Boolean(invite);
   const token = useAuthStore((s) => s.token);
   const setAuth = useAuthStore((s) => s.setAuth);
+  const setCompanyId = useCompanyStore((s) => s.setCompanyId);
   const [step, setStep] = useState<Step>('account');
 
   // shared
@@ -43,7 +48,39 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  if (token && step !== 'company') {
+  // Invited user: lock the e-mail to the invited address (the accept check
+  // requires a match) and remember the company name for the header copy.
+  const [inviteCompany, setInviteCompany] = useState<string | null>(null);
+  useEffect(() => {
+    if (!invite) return;
+    let alive = true;
+    api<{ invitation: { companyName: string; email: string } }>(`/api/invitations/${invite}`)
+      .then((r) => {
+        if (!alive) return;
+        setEmail(r.invitation.email);
+        setInviteCompany(r.invitation.companyName);
+      })
+      .catch(() => alive && setError('Pozvánka je neplatná nebo už vypršela.'));
+    return () => {
+      alive = false;
+    };
+  }, [invite]);
+
+  // Accept the invitation once the freshly created account is authenticated,
+  // then drop the user straight into the invited company.
+  async function acceptInvite() {
+    try {
+      const r = await api<{ companyId: string }>(`/api/invitations/${invite}/accept`, { method: 'POST' });
+      setCompanyId(r.companyId);
+      navigate('/dashboard', { replace: true });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Přijetí pozvánky se nezdařilo.');
+    }
+  }
+
+  // Normal signups land on the company step after verifying; invited users
+  // never create a company, so the auth guard must not bounce them mid-accept.
+  if (token && !isInvite && step !== 'company') {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -55,7 +92,13 @@ export default function RegisterPage() {
           <span className="font-heading text-lg font-bold tracking-tight text-[var(--text-primary)]">Foldera</span>
         </Link>
 
-        <Steps current={step} />
+        <Steps current={step} invite={isInvite} />
+
+        {isInvite && inviteCompany && step !== 'company' && (
+          <p className="mb-5 rounded-[var(--radius-token-md)] bg-[var(--brand-primary-subtle)] px-3 py-2 text-center text-xs text-[var(--brand-primary-light)]">
+            Vstupujete do firmy <b>{inviteCompany}</b>. Stačí vytvořit účet - vlastní firmu nezakládáte.
+          </p>
+        )}
 
         {step === 'account' && (
           <AccountStep
@@ -63,6 +106,7 @@ export default function RegisterPage() {
             setName={setName}
             email={email}
             setEmail={setEmail}
+            lockEmail={isInvite}
             error={error}
             setError={setError}
             submitting={submitting}
@@ -82,7 +126,11 @@ export default function RegisterPage() {
             onVerified={(res) => {
               setAuth(res.token, res.user);
               setError(null);
-              setStep('company');
+              if (isInvite) {
+                void acceptInvite();
+              } else {
+                setStep('company');
+              }
             }}
             onBack={() => {
               setError(null);
@@ -91,7 +139,7 @@ export default function RegisterPage() {
           />
         )}
 
-        {step === 'company' && (
+        {step === 'company' && !isInvite && (
           <CompanyStep
             defaultName=""
             error={error}
@@ -121,8 +169,8 @@ export default function RegisterPage() {
   );
 }
 
-function Steps({ current }: { current: Step }) {
-  const order: Step[] = ['account', 'verify', 'company'];
+function Steps({ current, invite }: { current: Step; invite?: boolean }) {
+  const order: Step[] = invite ? ['account', 'verify'] : ['account', 'verify', 'company'];
   const labels: Record<Step, string> = { account: 'Účet', verify: 'Ověření', company: 'Firma' };
   const idx = order.indexOf(current);
   return (
@@ -152,11 +200,12 @@ function Steps({ current }: { current: Step }) {
 function AccountStep(props: {
   name: string; setName: (v: string) => void;
   email: string; setEmail: (v: string) => void;
+  lockEmail?: boolean;
   error: string | null; setError: (v: string | null) => void;
   submitting: boolean; setSubmitting: (v: boolean) => void;
   onDone: () => void;
 }) {
-  const { name, setName, email, setEmail, error, setError, submitting, setSubmitting, onDone } = props;
+  const { name, setName, email, setEmail, lockEmail, error, setError, submitting, setSubmitting, onDone } = props;
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const { rules, score, ok } = passwordRules(password);
@@ -182,8 +231,16 @@ function AccountStep(props: {
       <Field label="Jméno" htmlFor="r-name">
         <Input id="r-name" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
       </Field>
-      <Field label="E-mail" htmlFor="r-email">
-        <Input id="r-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+      <Field label="E-mail" htmlFor="r-email" hint={lockEmail ? 'E-mail z pozvánky - nelze změnit.' : undefined}>
+        <Input
+          id="r-email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          readOnly={lockEmail}
+          className={lockEmail ? 'cursor-not-allowed opacity-70' : undefined}
+        />
       </Field>
       <Field label="Heslo" htmlFor="r-pw">
         <Input id="r-pw" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
@@ -217,7 +274,9 @@ function AccountStep(props: {
       </Field>
       {error && <p role="alert" className="text-xs text-[var(--status-error-text)]">{error}</p>}
       <Button type="submit" loading={submitting} className="w-full">Pokračovat</Button>
-      <p className="text-center text-[11px] text-[var(--text-tertiary)]">7 dní zdarma · bez platební karty</p>
+      {!lockEmail && (
+        <p className="text-center text-[11px] text-[var(--text-tertiary)]">7 dní zdarma · bez platební karty</p>
+      )}
     </form>
   );
 }

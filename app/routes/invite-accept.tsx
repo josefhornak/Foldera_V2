@@ -91,15 +91,15 @@ export default function InviteAccept() {
             ) : (
               <div className="mt-7 space-y-3">
                 <p className="text-xs text-[var(--text-tertiary)]">
-                  Pro přijetí se přihlaste e-mailem <b className="text-[var(--text-secondary)]">{preview.email}</b>. Účet
-                  ještě nemáte? Zaregistrujte se stejným e-mailem.
+                  Pozvánka je pro e-mail <b className="text-[var(--text-secondary)]">{preview.email}</b>. Účet ještě
+                  nemáte? Vytvořte si ho - rovnou vás přidáme do firmy, žádnou vlastní firmu nezakládáte.
                 </p>
-                <Link to="/login" className="block">
-                  <Button className="w-full">Přihlásit se</Button>
+                <Link to={`/register?invite=${token}`} className="block">
+                  <Button className="w-full">Vytvořit účet a vstoupit</Button>
                 </Link>
-                <Link to="/register" className="block">
+                <Link to={`/login?invite=${token}`} className="block">
                   <Button variant="secondary" className="w-full">
-                    Zaregistrovat se
+                    Už mám účet - přihlásit se
                   </Button>
                 </Link>
               </div>

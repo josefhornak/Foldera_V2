@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button } from '~/components/ui/Button';
 import { Card } from '~/components/ui/Card';
@@ -7,21 +7,26 @@ import { Field, Input } from '~/components/ui/Input';
 import { Logo } from '~/components/ui/Logo';
 import { api, ApiError } from '~/lib/api';
 import { useAuthStore } from '~/stores/auth';
+import { useCompanyStore } from '~/stores/company';
 import type { AuthResponse } from '~/types';
 
 export default function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const invite = searchParams.get('invite');
   const token = useAuthStore((s) => s.token);
   const setAuth = useAuthStore((s) => s.setAuth);
+  const setCompanyId = useCompanyStore((s) => s.setCompanyId);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // A logged-in user opening an invite link should still land on the invite.
   if (token) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={invite ? `/pozvanka/${invite}` : '/dashboard'} replace />;
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -34,6 +39,10 @@ export default function LoginPage() {
         body: { email, password },
       });
       setAuth(res.token, res.user);
+      if (invite) {
+        const r = await api<{ companyId: string }>(`/api/invitations/${invite}/accept`, { method: 'POST' });
+        setCompanyId(r.companyId);
+      }
       navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('common.error'));
@@ -87,7 +96,7 @@ export default function LoginPage() {
 
         <p className="mt-5 text-center text-xs text-[var(--text-tertiary)]">
           {t('auth.toggleToRegister')}{' '}
-          <Link to="/register" className="text-[var(--text-link)] underline-offset-4 hover:underline">
+          <Link to={invite ? `/register?invite=${invite}` : '/register'} className="text-[var(--text-link)] underline-offset-4 hover:underline">
             {t('auth.registerTitle')}
           </Link>
         </p>
