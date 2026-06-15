@@ -60,8 +60,20 @@ export function approveDocument(companyId: string, docId: string) {
   });
 }
 
-export function deleteDocument(companyId: string, docId: string) {
-  return api<void>(`/api/companies/${companyId}/documents/${docId}`, {
+export interface DeleteDocumentResult {
+  ok: boolean;
+  /** Present when fromAbra was requested for an exported document. */
+  abra: { deleted: boolean; alreadyGone: boolean } | null;
+}
+
+/**
+ * Delete a document from Foldera. When `fromAbra` is true and the document was
+ * exported, it is also removed from ABRA Flexi (no-op if it's already gone
+ * there). A hard ABRA failure rejects and leaves the Foldera record intact.
+ */
+export function deleteDocument(companyId: string, docId: string, fromAbra = false) {
+  const qs = fromAbra ? '?fromAbra=true' : '';
+  return api<DeleteDocumentResult>(`/api/companies/${companyId}/documents/${docId}${qs}`, {
     method: 'DELETE',
   });
 }

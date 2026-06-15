@@ -21,7 +21,9 @@ import {
   type SupportedMimeType,
 } from '../services/sources/attachmentFilter.js';
 import { logger } from '../utils/logger.js';
-import { sha256Hex } from '../utils/crypto.js';
+import { sha256Hex, decryptSecret } from '../utils/crypto.js';
+import { deleteExportedDocument } from '../services/abraflexi/export.js';
+import { ENTITY_FAKTURA_PRIJATA } from '../services/abraflexi/helpers.js';
 import { AppError, ErrorCodes } from '../utils/errors.js';
 import { escapeLikePattern } from '../utils/sqlUtils.js';
 import { ensureTmpDir } from '../utils/tmpDir.js';
@@ -489,15 +491,51 @@ router.post('/:documentId/approve', requireAdminRole, async (req, res, next) => 
   }
 });
 
-/** Delete a document record (metadata only — files are never stored anyway). */
+/**
+ * Delete a document record (metadata only — files are never stored anyway).
+ * `?fromAbra=true` also deletes the document from ABRA Flexi when it was
+ * exported there. The ABRA record may have been removed manually already, in
+ * which case we proceed (alreadyGone). A hard ABRA failure (e.g. the doc is in
+ * a closed/accounted period) aborts the whole delete so Foldera and ABRA don't
+ * silently diverge — the caller is told why.
+ */
 router.delete('/:documentId', requireAdminRole, async (req, res, next) => {
   try {
+    const fromAbra = req.query.fromAbra === 'true' || req.query.fromAbra === '1';
     const [row] = await db
-      .delete(documents)
+      .select()
+      .from(documents)
       .where(and(eq(documents.id, String(req.params.documentId)), eq(documents.companyId, req.company!.id)))
-      .returning({ id: documents.id });
+      .limit(1);
     if (!row) throw new AppError(ErrorCodes.NOT_FOUND, 'Document not found', 404);
-    res.status(204).end();
+
+    let abra: { deleted: boolean; alreadyGone: boolean } | null = null;
+    if (fromAbra && row.abraId) {
+      const c = req.company!;
+      if (!c.abraApiUrl || !c.abraApiUser || !c.abraApiPasswordEnc) {
+        throw new AppError(
+          ErrorCodes.BAD_REQUEST,
+          'ABRA Flexi není připojená — doklad z ní nelze smazat.',
+          400,
+        );
+      }
+      const cfg = {
+        apiUrl: c.abraApiUrl,
+        apiUser: c.abraApiUser,
+        apiPassword: decryptSecret(c.abraApiPasswordEnc),
+        companyId: c.id,
+      };
+      const isReceipt = row.extracted?.documentType === 'receipt';
+      const entity = isReceipt ? 'pokladni-pohyb' : ENTITY_FAKTURA_PRIJATA;
+      // Throws on a hard failure → the Foldera record below is NOT deleted.
+      abra = await deleteExportedDocument(cfg, entity, row.abraId);
+    }
+
+    await db
+      .delete(documents)
+      .where(and(eq(documents.id, row.id), eq(documents.companyId, req.company!.id)));
+
+    res.json({ ok: true, abra });
   } catch (err) {
     next(err);
   }

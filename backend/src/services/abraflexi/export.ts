@@ -20,11 +20,48 @@ import type {
   AbraSupplierDefaults,
   ExtractedInvoice,
 } from '../../types/contracts.js';
-import { abraRequest, abraRejectionError, parseWriteResponse, abraGetList } from './client.js';
+import { abraRequest, abraRejectionError, parseAbraErrorMessages, parseWriteResponse, abraGetList } from './client.js';
 import { buildAbraWebUrl, ENTITY_FAKTURA_PRIJATA } from './helpers.js';
 import { buildInvoicePayload } from './payload.js';
 import { findSupplierByIco, createSupplierInAbra, addBankAccountToSupplier } from './suppliers.js';
 import { abraInvoiceRowSchema } from './types.js';
+
+/** Outcome of deleting an already-exported document from ABRA Flexi. */
+export interface AbraDeleteResult {
+  /** The record was deleted just now. */
+  deleted: boolean;
+  /** The record was no longer in ABRA (already removed there) — treated as OK. */
+  alreadyGone: boolean;
+}
+
+/**
+ * Delete an exported document from ABRA Flexi by its internal id.
+ *
+ * The record may have been deleted manually in ABRA already, so a 404 (or a
+ * "not found" rejection) is not an error — we report `alreadyGone`. Any other
+ * rejection (e.g. the document is in a closed period or already accounted and
+ * cannot be removed) throws, so the caller can keep the Foldera record and
+ * surface the reason instead of silently diverging.
+ *
+ * @param entity - `faktura-prijata` for invoices, `pokladni-pohyb` for receipts
+ */
+export async function deleteExportedDocument(
+  cfg: AbraFlexiConfig,
+  entity: string,
+  abraId: string,
+): Promise<AbraDeleteResult> {
+  const res = await abraRequest(cfg, {
+    method: 'DELETE',
+    path: `/${entity}/${encodeURIComponent(abraId)}.json`,
+  });
+  if (res.ok) return { deleted: true, alreadyGone: false };
+
+  const detail = `${parseAbraErrorMessages(res.text)} ${res.text}`;
+  if (res.status === 404 || /nenalez|neexist|nebyl nalezen|not found|does not exist/i.test(detail)) {
+    return { deleted: false, alreadyGone: true };
+  }
+  throw abraRejectionError(res, 'smazání dokladu');
+}
 
 /**
  * Read back the document `kod` (e.g. "FAP-2026/0123") after creation.

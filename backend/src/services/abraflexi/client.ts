@@ -28,7 +28,7 @@ const MAX_RETRY_DELAY_MS = 8_000;
 export interface AbraRequestOptions {
   /** Path appended to the normalized base URL (usually starts with '/'; '.json' probes the company resource itself) */
   path: string;
-  method?: 'GET' | 'POST' | 'PUT';
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   /** Request body — JSON string or raw bytes (attachments) */
   body?: string | Uint8Array;
   /** Content-Type header when a body is sent (default application/json) */

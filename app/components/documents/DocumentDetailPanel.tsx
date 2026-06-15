@@ -5,6 +5,7 @@ import { ConfidenceBadge, DocumentStatusBadge } from '~/components/ui/Badge';
 import { Button } from '~/components/ui/Button';
 import { StateWrapper } from '~/components/ui/StateWrapper';
 import { deleteDocument, retryDocument, useDocumentDetail } from '~/hooks/useDocuments';
+import { ApiError } from '~/lib/api';
 import { formatCurrency, formatDate, formatDateTime } from '~/lib/format';
 import { cn } from '~/lib/utils';
 
@@ -22,6 +23,8 @@ export function DocumentDetailPanel({ companyId, docId, onClose, onRetried, onDe
   const [retrying, setRetrying] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteDone, setDeleteDone] = useState<string | null>(null);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -42,20 +45,34 @@ export function DocumentDetailPanel({ companyId, docId, onClose, onRetried, onDe
     }
   }
 
-  async function handleDelete() {
+  async function handleDelete(fromAbra: boolean) {
     setDeleting(true);
+    setDeleteError(null);
     try {
-      await deleteDocument(companyId, docId);
+      const res = await deleteDocument(companyId, docId, fromAbra);
       onDeleted?.();
-      onClose();
-    } finally {
+      if (fromAbra && res.abra) {
+        // Keep the panel briefly to report the ABRA outcome, then close.
+        setDeleteDone(
+          res.abra.alreadyGone
+            ? 'Smazáno z Foldery. V ABRA Flexi už doklad nebyl.'
+            : 'Smazáno z Foldery i z ABRA Flexi.'
+        );
+        setTimeout(onClose, 1800);
+      } else {
+        onClose();
+      }
+    } catch (e) {
       setDeleting(false);
+      setDeleteError(e instanceof ApiError ? e.message : 'Smazání se nezdařilo.');
     }
   }
 
   const extractedEntries = Object.entries(doc?.extractedFields ?? {});
   const docKind = doc?.extracted?.documentType ?? 'invoice';
   const isReceipt = docKind === 'receipt';
+  // The document is in ABRA when it carries an ABRA reference (exported or matched).
+  const inAbra = Boolean(doc?.abraCode || doc?.abraUrl);
 
   return (
     <>
@@ -205,15 +222,40 @@ export function DocumentDetailPanel({ companyId, docId, onClose, onRetried, onDe
                       {t('documents.retry')}
                     </Button>
                   )}
-                  {confirmingDelete ? (
-                    <>
-                      <Button variant="danger" loading={deleting} onClick={handleDelete} icon={<Trash2 />}>
-                        {t('common.confirmDelete')}
-                      </Button>
-                      <Button variant="ghost" onClick={() => setConfirmingDelete(false)}>
-                        {t('common.cancel')}
-                      </Button>
-                    </>
+                  {deleteDone ? (
+                    <p className="w-full text-sm text-[var(--status-success-text)]">{deleteDone}</p>
+                  ) : confirmingDelete ? (
+                    inAbra ? (
+                      <div className="w-full space-y-3 rounded-[var(--radius-token-md)] border border-[var(--border-default)] bg-[var(--surface-raised)] p-3">
+                        <p className="text-sm font-medium text-[var(--text-primary)]">Smazat doklad</p>
+                        <p className="text-xs text-[var(--text-secondary)]">
+                          Tento doklad je založený v ABRA Flexi. Smazat ho i odtud? Pokud už v ABRA neexistuje,
+                          nevadí - jen ho odstraníme z Foldery.
+                        </p>
+                        {deleteError && <p className="text-xs text-[var(--status-error-text)]">{deleteError}</p>}
+                        <div className="flex flex-wrap gap-2">
+                          <Button variant="danger" loading={deleting} onClick={() => handleDelete(true)} icon={<Trash2 />}>
+                            Smazat z Foldery i ABRA
+                          </Button>
+                          <Button variant="secondary" loading={deleting} onClick={() => handleDelete(false)}>
+                            Jen z Foldery
+                          </Button>
+                          <Button variant="ghost" onClick={() => { setConfirmingDelete(false); setDeleteError(null); }}>
+                            {t('common.cancel')}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <Button variant="danger" loading={deleting} onClick={() => handleDelete(false)} icon={<Trash2 />}>
+                          {t('common.confirmDelete')}
+                        </Button>
+                        <Button variant="ghost" onClick={() => setConfirmingDelete(false)}>
+                          {t('common.cancel')}
+                        </Button>
+                        {deleteError && <p className="w-full text-xs text-[var(--status-error-text)]">{deleteError}</p>}
+                      </>
+                    )
                   ) : (
                     <Button variant="ghost" onClick={() => setConfirmingDelete(true)} icon={<Trash2 />}>
                       {t('documents.delete')}
