@@ -142,14 +142,18 @@ export async function abraRequest(
 export function parseAbraErrorMessages(responseText: string): string {
   try {
     const parsed = abraWriteResponseSchema.safeParse(JSON.parse(responseText));
-    const results = parsed.success ? parsed.data.winstrom?.results : undefined;
-    if (Array.isArray(results)) {
-      const messages = results
-        .flatMap((r) => r.errors ?? [])
-        .map((e) => e.message)
-        .filter((m): m is string => !!m);
-      if (messages.length > 0) return ` - ${messages.join('; ')}`;
+    const win = parsed.success ? parsed.data.winstrom : undefined;
+    const messages = (win?.results ?? [])
+      .flatMap((r) => r.errors ?? [])
+      .map((e) => e.message)
+      .filter((m): m is string => !!m);
+    // Some rejections (e.g. permission / validation on DELETE) carry the reason
+    // at the winstrom level, not under results[].errors[] — e.g.
+    // {"winstrom":{"success":"false","message":"K této akci nemáte přístup."}}.
+    if (messages.length === 0 && typeof win?.message === 'string' && win.message) {
+      messages.push(win.message);
     }
+    if (messages.length > 0) return ` - ${messages.join('; ')}`;
   } catch {
     // Not JSON — return empty
   }

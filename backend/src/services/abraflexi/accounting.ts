@@ -20,24 +20,42 @@ interface CodeOption {
   nazev: string;
 }
 
-/** Fetch a `kod`/`nazev` číselník, de-duplicated by kod, capped for the prompt. */
-async function fetchCodeList(cfg: AbraFlexiConfig, evidence: string): Promise<CodeOption[]> {
-  const rows = await abraGetList(
-    cfg,
-    `/${evidence}.json?detail=custom:kod,nazev&limit=200`,
-    evidence,
-  );
+/**
+ * Fetch a `kod`/`nazev` číselník, de-duplicated by kod, capped for the prompt.
+ *
+ * `czOnly` keeps only Czech-country entries. ABRA's DPH/KH číselníky key codes
+ * by `stat` — the SAME kod can exist for CZ and SK (or only for SK). Foldera
+ * books Czech documents (stat=CZ), so a foreign code would fail to resolve
+ * ("Nebyl nalezen záznam dle parametrů: stat=CZ"). We build for CZ only, so we
+ * hard-filter those číselníky to CZ (and country-agnostic) entries.
+ */
+async function fetchCodeList(
+  cfg: AbraFlexiConfig,
+  evidence: string,
+  czOnly = false,
+): Promise<CodeOption[]> {
+  const detail = czOnly ? 'detail=custom:kod,nazev,stat' : 'detail=custom:kod,nazev';
+  const rows = await abraGetList(cfg, `/${evidence}.json?${detail}&limit=200`, evidence);
   const seen = new Set<string>();
   const options: CodeOption[] = [];
   for (const raw of rows) {
-    const kod = (raw as { kod?: unknown }).kod;
-    const nazev = (raw as { nazev?: unknown }).nazev;
-    if (typeof kod !== 'string' || kod === '' || seen.has(kod)) continue;
+    const r = raw as { kod?: unknown; nazev?: unknown; stat?: unknown };
+    const kod = r.kod;
+    if (typeof kod !== 'string' || kod === '') continue;
+    // Drop foreign (e.g. Slovak) variants before de-dup so the CZ one wins.
+    if (czOnly) {
+      const stat = typeof r.stat === 'string' ? r.stat : '';
+      if (stat !== '' && !/(?:^|:)CZ$/i.test(stat)) continue;
+    }
+    if (seen.has(kod)) continue;
     seen.add(kod);
-    options.push({ kod, nazev: typeof nazev === 'string' ? nazev : '' });
+    options.push({ kod, nazev: typeof r.nazev === 'string' ? r.nazev : '' });
   }
   return options;
 }
+
+/** Country-specific číselníky we must restrict to CZ (we build for CZ only). */
+const CZ_ONLY_EVIDENCE = new Set(['cleneni-dph', 'cleneni-kontrolni-hlaseni']);
 
 /** Compact summary of the invoice's VAT nature for the classification prompt. */
 function invoiceFacts(invoice: ExtractedInvoice): Record<string, unknown> {
@@ -71,7 +89,7 @@ async function suggestCode(
 
   let options: CodeOption[];
   try {
-    options = await fetchCodeList(cfg, evidence);
+    options = await fetchCodeList(cfg, evidence, CZ_ONLY_EVIDENCE.has(evidence));
   } catch (error) {
     logger.warn(
       { companyId: cfg.companyId, evidence, error: toError(error).message },
