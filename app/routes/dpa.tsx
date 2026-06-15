@@ -7,7 +7,7 @@ const SITE_URL = 'https://foldera.cz';
 
 export function meta() {
   return [
-    { title: 'Zpracování osobních údajů — Foldera' },
+    { title: 'Zpracování osobních údajů - Foldera' },
     { name: 'description', content: 'Podmínky zpracování osobních údajů (zpracovatelská smlouva dle čl. 28 GDPR) pro službu Foldera, včetně seznamu subdodavatelů.' },
     { name: 'robots', content: 'index, follow' },
     { tagName: 'link', rel: 'canonical', href: `${SITE_URL}/zpracovani-udaju` },

@@ -7,8 +7,8 @@ const SITE_URL = 'https://foldera.cz';
 
 export function meta() {
   return [
-    { title: 'Obchodní podmínky — Foldera' },
-    { name: 'description', content: 'Obchodní podmínky služby Foldera — automatické zpracování přijatých faktur do ABRA Flexi.' },
+    { title: 'Obchodní podmínky - Foldera' },
+    { name: 'description', content: 'Obchodní podmínky služby Foldera - automatické zpracování přijatých faktur do ABRA Flexi.' },
     { name: 'robots', content: 'index, follow' },
     { tagName: 'link', rel: 'canonical', href: `${SITE_URL}/podminky` },
   ];
@@ -85,13 +85,13 @@ export default function Terms() {
         <P>
           Zákazník se zavazuje službu užívat v souladu s právními předpisy a nezneužívat ji k jednání, které by ji mohlo
           poškodit nebo přetížit. Zákazník odpovídá za obsah dokladů, které do služby vkládá, a za to, že je oprávněn je
-          zpracovávat. Za správnost výsledného zaúčtování v ABRA Flexi odpovídá zákazník — doporučujeme vytěžené doklady
+          zpracovávat. Za správnost výsledného zaúčtování v ABRA Flexi odpovídá zákazník - doporučujeme vytěžené doklady
           kontrolovat.
         </P>
 
         <H2>7. Zpracování souborů a ochrana údajů</H2>
         <P>
-          Originální soubory faktur se zpracují, nahrají jako příloha do ABRA Flexi zákazníka a poté smažou — poskytovatel
+          Originální soubory faktur se zpracují, nahrají jako příloha do ABRA Flexi zákazníka a poté smažou - poskytovatel
           je trvale neukládá. V aplikaci zůstávají pouze vytěžená metadata nezbytná pro provoz služby a případné
           zopakování exportu. Přístupové údaje k ABRA Flexi a e-mailovým schránkám jsou v databázi uloženy šifrovaně.
         </P>

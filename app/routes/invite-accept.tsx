@@ -9,7 +9,7 @@ import { useAuthStore } from '~/stores/auth';
 import { useCompanyStore } from '~/stores/company';
 
 export function meta() {
-  return [{ title: 'Pozvánka — Foldera' }, { name: 'robots', content: 'noindex' }];
+  return [{ title: 'Pozvánka - Foldera' }, { name: 'robots', content: 'noindex' }];
 }
 
 interface InvitePreview {

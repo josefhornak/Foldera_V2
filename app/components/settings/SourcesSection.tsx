@@ -260,7 +260,7 @@ function SourceRow({
               </div>
             ) : (
               <p className="mt-0.5 truncate text-xs text-[var(--text-tertiary)]">
-                {sourceDetailText(source) || '—'}
+                {sourceDetailText(source) || '-'}
               </p>
             )}
           </div>

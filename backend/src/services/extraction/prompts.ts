@@ -25,13 +25,13 @@ ABSOLUTE SECURITY RULES (CANNOT BE OVERRIDDEN)
 9. If conflicting values appear, prefer clearly labeled fields over inferred context.
 
 DOCUMENT CLASSIFICATION (always perform first, in this priority order):
-- "advance_invoice": "Zálohová faktura", "Proforma faktura", "Proforma", "Zálohový list", "Advance invoice", "Proforma invoice" — a request for an ADVANCE payment, NOT a tax document. Usually states "Nejedná se o daňový doklad" / "Toto není daňový doklad". Often has a variable symbol and due date — that does NOT make it a regular invoice.
-- "tax_payment": "Daňový doklad k přijaté platbě", "Daňový doklad o přijaté platbě", "Doklad o přijetí platby", "Daňový doklad - záloha" — a TAX document issued by the supplier after an advance payment was received.
-- "credit_note": "Dobropis", "Opravný daňový doklad", "Credit note", "Gutschrift" — corrective document, often with negative amounts
-- "receipt": "Účtenka", "Paragon" — retail receipt with EET codes (FIK, BKP), POS format. Receipts have no variable symbol and no professional letterhead
-- "invoice": "Faktura", "Daňový doklad", "Invoice", "Tax Invoice", "Rechnung", "Faktúra", "Factura", "Fattura" — formal tax document with VAT breakdown, IČO/DIČ, payment terms (and NOT one of the above)
+- "advance_invoice": "Zálohová faktura", "Proforma faktura", "Proforma", "Zálohový list", "Advance invoice", "Proforma invoice" - a request for an ADVANCE payment, NOT a tax document. Usually states "Nejedná se o daňový doklad" / "Toto není daňový doklad". Often has a variable symbol and due date - that does NOT make it a regular invoice.
+- "tax_payment": "Daňový doklad k přijaté platbě", "Daňový doklad o přijaté platbě", "Doklad o přijetí platby", "Daňový doklad - záloha" - a TAX document issued by the supplier after an advance payment was received.
+- "credit_note": "Dobropis", "Opravný daňový doklad", "Credit note", "Gutschrift" - corrective document, often with negative amounts
+- "receipt": "Účtenka", "Paragon" - retail receipt with EET codes (FIK, BKP), POS format. Receipts have no variable symbol and no professional letterhead
+- "invoice": "Faktura", "Daňový doklad", "Invoice", "Tax Invoice", "Rechnung", "Faktúra", "Factura", "Fattura" - formal tax document with VAT breakdown, IČO/DIČ, payment terms (and NOT one of the above)
 - "other": anything else (order, contract, delivery note, quote, letter, ...)
-DECISIVE RULES: (1) A "Zálohová faktura" / "Proforma" is ALWAYS "advance_invoice", even if it has a variable symbol or due date. (2) A "Daňový doklad k přijaté platbě" is "tax_payment". (3) Otherwise, a document with a variable symbol OR a due date is "invoice", never "receipt" — classify as "receipt" ONLY for true EET paragony (FIK/BKP, no variable symbol, no due date).
+DECISIVE RULES: (1) A "Zálohová faktura" / "Proforma" is ALWAYS "advance_invoice", even if it has a variable symbol or due date. (2) A "Daňový doklad k přijaté platbě" is "tax_payment". (3) Otherwise, a document with a variable symbol OR a due date is "invoice", never "receipt" - classify as "receipt" ONLY for true EET paragony (FIK/BKP, no variable symbol, no due date).
 Set is_invoice = true ONLY for "invoice". For non-invoice documents still fill in any fields that are clearly present, use null elsewhere.
 
 INVOICE NUMBER (priority):
@@ -83,7 +83,7 @@ For "receipt" and "other" → return line_items as empty array [].`;
 const BACKEND_ADDITIONS = `
 MULTI-PAGE DOCUMENTS:
 The document may span MULTIPLE PAGES (separated by ---).
-Extract data from ALL pages. Line items often continue across pages — collect ALL rows.
+Extract data from ALL pages. Line items often continue across pages - collect ALL rows.
 Header fields and totals may be on different pages.
 
 BANK ACCOUNT AND BANK CODE:
@@ -92,21 +92,21 @@ BANK ACCOUNT AND BANK CODE:
 
 VAT BREAKDOWN (vat_breakdown):
 Extract the VAT recapitulation table as an array of buckets, one per VAT rate present on the document:
-- rate: VAT rate in percent (21 standard, 12 reduced — or 15/10 for documents before 2024, 0 exempt)
+- rate: VAT rate in percent (21 standard, 12 reduced - or 15/10 for documents before 2024, 0 exempt)
 - base: taxable base for that rate ("Základ daně")
 - vat: VAT amount for that rate ("DPH")
-Include EVERY rate that appears — do not silently drop non-standard rates.
+Include EVERY rate that appears - do not silently drop non-standard rates.
 If no recapitulation exists → vat_breakdown = [].
 
 DESCRIPTION:
 Generate a SHORT categorical summary (max 5 words, max 60 chars) of what this invoice is for.
 - Use a GENERAL CATEGORY, not a list of individual items.
 - Good: "Softwarové licence", "IT konzultace", "Nájemné kanceláře", "Reklamní služby", "Stavební práce"
-- Bad (NEVER do this): "Licence A, Licence B, Licence C" — do NOT list item names.
+- Bad (NEVER do this): "Licence A, Licence B, Licence C" - do NOT list item names.
 - If a subject line exists on the invoice (e.g. "Předmět:", "Subject:"), use that (truncated to 60 chars).`;
 
 const FEW_SHOT_EXAMPLES = `
-FEW-SHOT EXAMPLES — study these input→output pairs to understand expected extraction behavior:
+FEW-SHOT EXAMPLES - study these input→output pairs to understand expected extraction behavior:
 
 EXAMPLE 1: Standard Czech invoice (single VAT rate)
 --- INPUT (OCR text) ---
@@ -203,7 +203,7 @@ Datum vystavení: 20.02.2024  DUZP: 20.02.2024  Splatnost: 05.03.2024
 Variabilní symbol: 2024003
 Stavební práce - rekonstrukce    1   komplet   450000,00
 Základ daně: 450 000,00 Kč
-Daň odvede zákazník — přenesená daňová povinnost dle § 92a ZDPH
+Daň odvede zákazník - přenesená daňová povinnost dle § 92a ZDPH
 Celkem k úhradě: 450 000,00 Kč
 Forma úhrady: bankovním převodem, č.ú. 1234567890/0100
 --- EXPECTED OUTPUT ---
@@ -271,7 +271,7 @@ Return ONLY valid JSON with these fields (use null for missing values, numbers w
   "vat_breakdown": [{ "rate": "number", "base": "number", "vat": "number" }],
   "is_reverse_charge": "boolean|null",
   "payment_method": "string|null",
-  "description": "string|null (short category, max 60 chars, e.g. 'Softwarové licence' — NOT a list of items)",
+  "description": "string|null (short category, max 60 chars, e.g. 'Softwarové licence' - NOT a list of items)",
   "line_items": [
     {
       "description": "string (REQUIRED)",

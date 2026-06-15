@@ -392,7 +392,7 @@ function BillingCard({ companyId }: { companyId: string }) {
               <Pill tone={billing.blocked ? 'warning' : 'info'} label="Zkušební období" />
               <span className="text-sm text-[var(--text-secondary)]">
                 {billing.blocked
-                  ? 'Vyčerpáno — aktivujte předplatné'
+                  ? 'Vyčerpáno - aktivujte předplatné'
                   : `zbývá ${daysLeft} ${daysLeft === 1 ? 'den' : daysLeft < 5 ? 'dny' : 'dní'}`}
               </span>
             </div>
@@ -648,14 +648,14 @@ function TeamSection({ company }: { company: Company }) {
             <p className="flex items-start gap-2">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-primary-light)]" />
               <span>
-                <b className="text-[var(--text-primary)]">Správce</b> — plný přístup: připojení k ABRA Flexi, zdroje
+                <b className="text-[var(--text-primary)]">Správce</b> - plný přístup: připojení k ABRA Flexi, zdroje
                 faktur, nahrávání a mazání dokladů, předplatné a správa týmu (zve a odebírá lidi).
               </span>
             </p>
             <p className="flex items-start gap-2">
               <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
               <span>
-                <b className="text-[var(--text-primary)]">Běžný uživatel</b> — jen nahlíží: vidí přehled a doklady, ale
+                <b className="text-[var(--text-primary)]">Běžný uživatel</b> - jen nahlíží: vidí přehled a doklady, ale
                 nemůže nic měnit, nahrávat ani spravovat nastavení.
               </span>
             </p>
@@ -703,7 +703,7 @@ function TeamSection({ company }: { company: Company }) {
       <Card>
         <CardHeader>
           <CardTitle>Členové{members ? ` (${members.length})` : ''}</CardTitle>
-          {!isAdmin && <p className="mt-1 text-xs text-[var(--text-tertiary)]">Jste běžný uživatel — jen nahlížíte.</p>}
+          {!isAdmin && <p className="mt-1 text-xs text-[var(--text-tertiary)]">Jste běžný uživatel - jen nahlížíte.</p>}
         </CardHeader>
         <CardContent>
           <ul className="divide-y divide-[var(--border-subtle)]">

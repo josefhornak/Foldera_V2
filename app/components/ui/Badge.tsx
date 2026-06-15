@@ -74,7 +74,7 @@ const CONFIDENCE_VARIANT = {
 /** Extraction accuracy badge: ≥90 green, 70–89 amber, <70 red. */
 export function ConfidenceBadge({ confidence }: { confidence: number | null | undefined }) {
   if (confidence === null || confidence === undefined) {
-    return <span className="text-[var(--text-tertiary)]">—</span>;
+    return <span className="text-[var(--text-tertiary)]">-</span>;
   }
   return (
     <Badge variant={CONFIDENCE_VARIANT[confidenceLevel(confidence)]} className="tabular-nums">

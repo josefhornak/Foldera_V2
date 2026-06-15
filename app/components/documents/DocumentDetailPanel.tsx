@@ -239,7 +239,7 @@ function DetailRow({ label, value, mono }: { label: string; value: string | null
           mono && 'font-mono'
         )}
       >
-        {value || '—'}
+        {value || '-'}
       </dd>
     </div>
   );

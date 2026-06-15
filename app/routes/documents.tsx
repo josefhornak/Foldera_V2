@@ -51,7 +51,7 @@ function StatusCell({ status }: { status: DocumentStatus }) {
 /** Accuracy percentage + mini progress bar (or em-dash when unknown). */
 function AccuracyCell({ confidence }: { confidence: number | null }) {
   if (confidence === null || confidence === undefined) {
-    return <span className="text-[var(--text-tertiary)]">—</span>;
+    return <span className="text-[var(--text-tertiary)]">-</span>;
   }
   const pct = normalizeConfidence(confidence);
   const color = CONFIDENCE_COLOR[confidenceLevel(confidence)];
@@ -274,7 +274,7 @@ export default function DocumentsPage() {
                     )}
                   </Td>
                   <Td className="hidden whitespace-nowrap text-[var(--text-secondary)] md:table-cell">
-                    {doc.invoiceNumber || '—'}
+                    {doc.invoiceNumber || '-'}
                   </Td>
                   <Td className="whitespace-nowrap text-right font-semibold tabular-nums">
                     {formatCurrency(doc.totalAmount, doc.currency)}

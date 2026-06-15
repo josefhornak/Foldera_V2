@@ -40,7 +40,7 @@
   <text x="100" y="392" font-family="system-ui, -apple-system, sans-serif" font-size="58" font-weight="800" fill="#b9a3ff">Vy už jen kontrolujete v ABRA Flexi.</text>
 
   <!-- Subtitle -->
-  <text x="100" y="452" font-family="system-ui, -apple-system, sans-serif" font-size="25" fill="#9c9cac">Faktury · zálohové faktury · dobropisy · účtenky — automaticky vytěženo a založeno.</text>
+  <text x="100" y="452" font-family="system-ui, -apple-system, sans-serif" font-size="25" fill="#9c9cac">Faktury · zálohové faktury · dobropisy · účtenky - automaticky vytěženo a založeno.</text>
 
   <!-- URL -->
   <text x="100" y="560" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="600" fill="#6f6f80">foldera.cz</text>

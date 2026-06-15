@@ -63,7 +63,7 @@
   },
   "documents": {
     "title": "Dokumenty",
-    "subtitle": "Doklady zpracované do ABRA Flexi — soubory se v aplikaci neukládají",
+    "subtitle": "Doklady zpracované do ABRA Flexi - soubory se v aplikaci neukládají",
     "searchPlaceholder": "Hledat dodavatele, číslo faktury…",
     "statusFilter": "Stav",
     "allStatuses": "Všechny stavy",
@@ -158,7 +158,7 @@
       "passwordKeepHint": "Ponechte prázdné pro zachování stávajícího hesla",
       "testConnection": "Otestovat připojení",
       "testOk": "Připojení funguje",
-      "testOkWithName": "Připojení funguje — firma {{name}}",
+      "testOkWithName": "Připojení funguje - firma {{name}}",
       "testFailed": "Připojení se nezdařilo"
     },
     "sources": {
@@ -166,7 +166,7 @@
       "hint": "Nakonfigurované zdroje se automaticky kontrolují každých 5 minut. Nové dokumenty se vytěží a rovnou odešlou do ABRA Flexi.",
       "empty": "Zatím žádné zdroje. Vytvořte sběrný e-mail nebo připojte cloudové úložiště.",
       "createCollectionEmail": "Vytvořit sběrný e-mail",
-      "collectionEmailHint": "Přeposílejte faktury na tuto adresu — schránka se kontroluje každých 5 minut, přílohy se automaticky vytěží a odešlou do ABRA Flexi.",
+      "collectionEmailHint": "Přeposílejte faktury na tuto adresu - schránka se kontroluje každých 5 minut, přílohy se automaticky vytěží a odešlou do ABRA Flexi.",
       "addImap": "Přidat sběrný e-mail (IMAP)",
       "connectOneDrive": "Připojit OneDrive",
       "connectGoogleDrive": "Připojit Google Drive",

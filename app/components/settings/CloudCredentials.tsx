@@ -237,7 +237,7 @@ const B = ({ children }: { children: React.ReactNode }) => <strong className="te
 function GoogleGuide({ redirectUri }: { redirectUri: string }) {
   return (
     <div>
-      <p className="text-xs font-semibold text-[var(--text-primary)]">Návod — Google Drive</p>
+      <p className="text-xs font-semibold text-[var(--text-primary)]">Návod - Google Drive</p>
       <ol className={olClass}>
         <li className={liClass}>Přejděte na <GuideLink href="https://console.cloud.google.com/apis/credentials">Google Cloud Console</GuideLink>.</li>
         <li className={liClass}>Vytvořte nebo vyberte <B>Google Cloud projekt</B> (nahoře <B>Create Project</B>, např. „Foldera").</li>
@@ -262,7 +262,7 @@ function GoogleGuide({ redirectUri }: { redirectUri: string }) {
 function MicrosoftGuide({ redirectUri }: { redirectUri: string }) {
   return (
     <div>
-      <p className="text-xs font-semibold text-[var(--text-primary)]">Návod — OneDrive (Microsoft Azure)</p>
+      <p className="text-xs font-semibold text-[var(--text-primary)]">Návod - OneDrive (Microsoft Azure)</p>
       <ol className={olClass}>
         <li className={liClass}>Přejděte na <GuideLink href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade">Microsoft Azure Portal</GuideLink>.</li>
         <li className={liClass}>
@@ -270,17 +270,17 @@ function MicrosoftGuide({ redirectUri }: { redirectUri: string }) {
           URI přesměrování: platforma <B>Web</B> a zadejte:
           <RedirectUri value={redirectUri} />
         </li>
-        <li className={liClass}><B>Registrovat</B>. Z přehledu zkopírujte <B>Application (client) ID</B> — to je vaše Client ID.</li>
+        <li className={liClass}><B>Registrovat</B>. Z přehledu zkopírujte <B>Application (client) ID</B> - to je vaše Client ID.</li>
         <li className={liClass}>
           <B>Oprávnění rozhraní API</B> → <B>Přidat oprávnění</B> → <B>Microsoft Graph</B> → <B>Delegovaná oprávnění</B>: přidejte
           {' '}<B>Files.Read.All</B>, <B>User.Read</B>, <B>offline_access</B>.
           <span className="mt-1 block rounded-[var(--radius-token-md)] bg-[var(--status-warning-subtle)] px-2 py-1 text-[var(--status-warning-text)]">
-            Poté <B>Udělit souhlas správce</B> (Grant admin consent). Vyžaduje roli správce tenanta — pokud ho nevidíte, požádejte administrátora.
+            Poté <B>Udělit souhlas správce</B> (Grant admin consent). Vyžaduje roli správce tenanta - pokud ho nevidíte, požádejte administrátora.
           </span>
         </li>
         <li className={liClass}>
           <B>Certifikáty a tajné klíče</B> → <B>Nový tajný klíč klienta</B>: doba platnosti např. 24 měsíců.
-          {' '}<B>ihned zkopírujte hodnotu (Value)</B> — to je váš Client Secret (po opuštění stránky ji už neuvidíte).
+          {' '}<B>ihned zkopírujte hodnotu (Value)</B> - to je váš Client Secret (po opuštění stránky ji už neuvidíte).
         </li>
         <li className={liClass}>Vložte <B>Client ID</B> a <B>Client Secret</B> do polí níže a uložte.</li>
       </ol>

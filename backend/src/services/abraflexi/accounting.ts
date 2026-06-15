@@ -107,7 +107,7 @@ async function suggestCode(
   }
 }
 
-const CLEN_DPH_PROMPT = `Jsi zkušený účetní. Jde o fakturu PŘIJATOU (nákup) — tedy DPH na VSTUPU s nárokem na odpočet, NE o vydané/dodané plnění.
+const CLEN_DPH_PROMPT = `Jsi zkušený účetní. Jde o fakturu PŘIJATOU (nákup) - tedy DPH na VSTUPU s nárokem na odpočet, NE o vydané/dodané plnění.
 Vyber JEDEN nejvhodnější kód členění DPH ("řádek DPH") ze seznamu, který používá daná účetní jednotka v ABRA Flexi.
 Preferuj řádky pro PŘIJATÁ plnění / nárok na odpočet / pořízení (nadobudnutie), NE pro dodání/vývoz.
 Rozhoduj podle: sazeb DPH, zda jde o přenesenou daňovou povinnost (§ 92 / reverse charge), tuzemské / pořízení z EU / dovoz, a popisu.
@@ -119,7 +119,7 @@ Rozhoduj podle povahy plnění (popis, sazby DPH, přenesená daňová povinnost
 Vrať POUZE JSON: {"kod": "<kod ze seznamu nebo null>", "confidence": <0-1>, "reason": "<krátké zdůvodnění>"}.
 Kód MUSÍ být přesně jeden z "kod" ze seznamu. Pokud nic jednoznačně nesedí, vrať {"kod": null}.`;
 
-const KON_VYK_DPH_PROMPT = `Jsi zkušený účetní. Jde o fakturu PŘIJATOU (nákup) — řádek kontrolního hlášení DPH proto patří do oddílu B, NIKDY ne A.
+const KON_VYK_DPH_PROMPT = `Jsi zkušený účetní. Jde o fakturu PŘIJATOU (nákup) - řádek kontrolního hlášení DPH proto patří do oddílu B, NIKDY ne A.
 Vyber JEDEN nejvhodnější řádek kontrolního hlášení ze seznamu firmy:
 - B.1 = přijatá plnění v režimu přenesené daňové povinnosti (§ 92),
 - B.2 = přijatá zdanitelná plnění s nárokem na odpočet, kde základ + DPH je NAD 10 000 Kč (dodavatel je plátce, má DIČ),

@@ -14,7 +14,7 @@ import {
 import { InvoicesPanel } from './admin-invoices';
 
 const czk = (n: number) => `${n.toLocaleString('cs-CZ')} Kč`;
-const date = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('cs-CZ') : '—');
+const date = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('cs-CZ') : '-');
 
 const STATUS_LABEL: Record<AdminCompany['billingStatus'], { label: string; color: string }> = {
   trial: { label: 'Trial', color: 'var(--status-info)' },
@@ -31,7 +31,7 @@ const TABS: { key: Tab; label: string; icon: typeof Users }[] = [
 ];
 
 export function meta() {
-  return [{ title: 'Admin — Foldera' }, { name: 'robots', content: 'noindex' }];
+  return [{ title: 'Admin - Foldera' }, { name: 'robots', content: 'noindex' }];
 }
 
 export default function AdminConsole() {
@@ -142,7 +142,7 @@ function CompaniesTab() {
                   <p className="font-medium text-[var(--text-primary)]">{c.name}</p>
                   {c.ico && <p className="text-xs text-[var(--text-tertiary)]">IČO {c.ico}</p>}
                 </td>
-                <td className="px-4 py-3 text-xs text-[var(--text-secondary)]">{c.ownerEmail ?? '—'}</td>
+                <td className="px-4 py-3 text-xs text-[var(--text-secondary)]">{c.ownerEmail ?? '-'}</td>
                 <td className="px-4 py-3"><StatusPill status={c.billingStatus} /></td>
                 <td className="px-4 py-3 text-right tabular-nums">
                   <span className="font-semibold">{c.docsExported}</span>
@@ -150,7 +150,7 @@ function CompaniesTab() {
                 </td>
                 <td className="px-4 py-3 text-center tabular-nums">{c.members}</td>
                 <td className="px-4 py-3 text-center tabular-nums">{c.sources}</td>
-                <td className="px-4 py-3 text-center">{c.abraConfigured ? '✓' : '—'}</td>
+                <td className="px-4 py-3 text-center">{c.abraConfigured ? '✓' : '-'}</td>
                 <td className="px-4 py-3 text-xs text-[var(--text-secondary)]">{date(c.createdAt)}</td>
               </tr>
             ))}
@@ -183,7 +183,7 @@ function UsersTab() {
                 <td className="px-4 py-3 font-medium text-[var(--text-primary)]">{u.email}</td>
                 <td className="px-4 py-3 text-[var(--text-secondary)]">{u.name}</td>
                 <td className="px-4 py-3 text-center">
-                  {u.emailVerified ? <span className="text-[var(--status-success-text)]">✓</span> : '—'}
+                  {u.emailVerified ? <span className="text-[var(--status-success-text)]">✓</span> : '-'}
                 </td>
                 <td className="px-4 py-3 text-center tabular-nums">{u.companies}</td>
                 <td className="px-4 py-3 text-xs text-[var(--text-secondary)]">{date(u.createdAt)}</td>

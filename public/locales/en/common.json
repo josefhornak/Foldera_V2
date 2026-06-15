@@ -63,7 +63,7 @@
   },
   "documents": {
     "title": "Documents",
-    "subtitle": "Documents processed into ABRA Flexi — files are never stored in the app",
+    "subtitle": "Documents processed into ABRA Flexi - files are never stored in the app",
     "searchPlaceholder": "Search supplier, invoice number…",
     "statusFilter": "Status",
     "allStatuses": "All statuses",
@@ -158,7 +158,7 @@
       "passwordKeepHint": "Leave empty to keep the current password",
       "testConnection": "Test connection",
       "testOk": "Connection works",
-      "testOkWithName": "Connection works — company {{name}}",
+      "testOkWithName": "Connection works - company {{name}}",
       "testFailed": "Connection failed"
     },
     "sources": {
@@ -166,7 +166,7 @@
       "hint": "Configured sources are checked automatically every 5 minutes. New documents are extracted and sent straight to ABRA Flexi.",
       "empty": "No sources yet. Create a collection email or connect a cloud drive.",
       "createCollectionEmail": "Create collection email",
-      "collectionEmailHint": "Forward invoices to this address — the mailbox is checked every 5 minutes and attachments are extracted and sent to ABRA Flexi automatically.",
+      "collectionEmailHint": "Forward invoices to this address - the mailbox is checked every 5 minutes and attachments are extracted and sent to ABRA Flexi automatically.",
       "addImap": "Add collection email (IMAP)",
       "connectOneDrive": "Connect OneDrive",
       "connectGoogleDrive": "Connect Google Drive",

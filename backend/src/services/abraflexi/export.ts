@@ -77,7 +77,7 @@ export async function exportPurchaseInvoice(
   const isAdvanceLike =
     invoice.documentType === 'advance_invoice' || invoice.documentType === 'tax_payment';
   if (!invoice.isInvoice && !isCreditNote && !isAdvanceLike) {
-    throw new AppError(ErrorCodes.BAD_REQUEST, 'Dokument není faktura — export do ABRA Flexi přeskočen', 400);
+    throw new AppError(ErrorCodes.BAD_REQUEST, 'Dokument není faktura - export do ABRA Flexi přeskočen', 400);
   }
 
   logger.info(

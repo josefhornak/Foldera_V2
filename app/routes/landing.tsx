@@ -19,9 +19,9 @@ import { cn } from '~/lib/utils';
 import { useAuthStore } from '~/stores/auth';
 
 const SITE_URL = 'https://foldera.cz';
-const OG_TITLE = 'Foldera — doklady do ABRA Flexi bez přepisování';
+const OG_TITLE = 'Foldera - doklady do ABRA Flexi bez přepisování';
 const OG_DESC =
-  'Foldera běží bezobslužně: příchozí doklady — faktury, zálohové faktury, dobropisy, účtenky i daňové doklady — sama vytěží a založí do ABRA Flexi i s přílohou. Vy už jen kontrolujete ve svém účetnictví. 7 dní zdarma.';
+  'Foldera běží bezobslužně: příchozí doklady - faktury, zálohové faktury, dobropisy, účtenky i daňové doklady - sama vytěží a založí do ABRA Flexi i s přílohou. Vy už jen kontrolujete ve svém účetnictví. 7 dní zdarma.';
 
 export function meta() {
   return [
@@ -69,17 +69,17 @@ const STEPS = [
 ];
 
 const FEATURES = [
-  { icon: Receipt, title: 'Všechny typy dokladů', text: 'Faktury, zálohové faktury, dobropisy a daňové doklady k přijaté platbě do faktur přijatých, účtenky rovnou do pokladny — vše se správným typem dokladu.' },
+  { icon: Receipt, title: 'Všechny typy dokladů', text: 'Faktury, zálohové faktury, dobropisy a daňové doklady k přijaté platbě do faktur přijatých, účtenky rovnou do pokladny - vše se správným typem dokladu.' },
   { icon: Mail, title: 'Sběrný e-mail i cloud', text: 'Vlastní adresa @inbox.foldera.cz, OneDrive i Google Drive. Foldera je kontroluje každých pár minut.' },
   { icon: ScanLine, title: 'Spolehlivé vytěžení', text: 'Přesné čtení dat, u elektronických dokladů rovnou z ISDOC. Zvládne cizí měny, přenesenou daňovou povinnost i více sazeb DPH.' },
   { icon: CopyCheck, title: 'Kontrola duplicit', text: 'Stejný doklad se nezaloží dvakrát. Porovnáváme podle IČO, čísla i variabilního symbolu.' },
-  { icon: Sparkles, title: 'Automatické zaúčtování', text: 'Doplní řádek DPH, předkontaci i řádek kontrolního hlášení — podle historie dodavatele, nebo návrhem od AI.' },
+  { icon: Sparkles, title: 'Automatické zaúčtování', text: 'Doplní řádek DPH, předkontaci i řádek kontrolního hlášení - podle historie dodavatele, nebo návrhem od AI.' },
   { icon: Paperclip, title: 'Originál i e-mail v příloze', text: 'Zdrojový doklad přiložíme k záznamu v ABRA. Volitelně k němu uložíme i původní e-mail (.eml) jako důkaz.' },
   { icon: Users, title: 'Více firem a tým', text: 'Pod jedním účtem spravujete více firem. Kolegy pozvete e-mailem jako správce, nebo jen pro nahlížení.' },
 ];
 
 const FAQ = [
-  { q: 'Kam putují moje data?', a: 'Vytěžení dokladů běží na evropské AI s OCR (Mistral, Francie) a servery i databázi hostujeme v EU (Německo). Pro odesílání e-mailů využíváme službu Resend (USA) — přenos je ošetřen standardními smluvními doložkami. Řídíme se GDPR a soubory trvale neukládáme: po vytěžení a nahrání do ABRA Flexi se originál smaže. Podrobnosti najdete v zásadách ochrany osobních údajů.' },
+  { q: 'Kam putují moje data?', a: 'Vytěžení dokladů běží na evropské AI s OCR (Mistral, Francie) a servery i databázi hostujeme v EU (Německo). Pro odesílání e-mailů využíváme službu Resend (USA) - přenos je ošetřen standardními smluvními doložkami. Řídíme se GDPR a soubory trvale neukládáme: po vytěžení a nahrání do ABRA Flexi se originál smaže. Podrobnosti najdete v zásadách ochrany osobních údajů.' },
   { q: 'Ukládáte naše soubory?', a: 'Ne. Soubor se jen zpracuje, nahraje jako příloha do ABRA Flexi a poté smaže. V aplikaci zůstanou pouze vytěžená metadata, abyste mohli export případně zopakovat.' },
   { q: 'Funguje to s mojí verzí ABRA Flexi?', a: 'Ano. Připojujeme se přes REST API ABRA Flexi (FlexiBee). Stačí zadat adresu instance, firmu a přihlašovací údaje.' },
   { q: 'Co když se doklad nerozpozná správně?', a: 'Nízká přesnost se označí a doklad lze znovu exportovat z uložených dat. Nepovedený export jde kdykoli zopakovat, nic se neztratí.' },
@@ -161,7 +161,7 @@ function Hero({ appHref, loggedIn }: { appHref: string; loggedIn: boolean }) {
       </h1>
       <div className="mt-8 flex flex-col gap-8 animate-rise md:flex-row md:items-end md:justify-between [animation-delay:80ms]">
         <p className="max-w-lg text-lg leading-relaxed text-[var(--text-secondary)]">
-          Faktury, zálohové faktury, dobropisy, účtenky i daňové doklady — vše se do ABRA Flexi založí samo. Vy už jen
+          Faktury, zálohové faktury, dobropisy, účtenky i daňové doklady - vše se do ABRA Flexi založí samo. Vy už jen
           zkontrolujete, co přišlo.
         </p>
         <div className="flex flex-wrap items-center gap-3">
@@ -362,7 +362,7 @@ function Contact() {
         {sent ? (
           <div className="flex items-center gap-3 border-t border-[var(--border-subtle)] py-10">
             <Check className="h-6 w-6 text-[var(--brand-primary-light)]" />
-            <p className="text-sm">Děkujeme, zpráva odešla — brzy se vám ozveme.</p>
+            <p className="text-sm">Děkujeme, zpráva odešla - brzy se vám ozveme.</p>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-6">

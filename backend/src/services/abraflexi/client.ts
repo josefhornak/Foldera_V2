@@ -148,7 +148,7 @@ export function parseAbraErrorMessages(responseText: string): string {
         .flatMap((r) => r.errors ?? [])
         .map((e) => e.message)
         .filter((m): m is string => !!m);
-      if (messages.length > 0) return ` — ${messages.join('; ')}`;
+      if (messages.length > 0) return ` - ${messages.join('; ')}`;
     }
   } catch {
     // Not JSON — return empty
@@ -188,7 +188,7 @@ export function parseWriteResponse(
 
   const parsed = abraWriteResponseSchema.safeParse(json);
   if (!parsed.success || !parsed.data.winstrom) {
-    throw new AppError(ErrorCodes.INTERNAL_SERVER_ERROR, 'Neplatná struktura odpovědi z ABRA Flexi — chybí winstrom', 500);
+    throw new AppError(ErrorCodes.INTERNAL_SERVER_ERROR, 'Neplatná struktura odpovědi z ABRA Flexi - chybí winstrom', 500);
   }
 
   const winstrom = parsed.data.winstrom;
@@ -234,7 +234,7 @@ export async function abraGetList(
 
   const envelope = abraListEnvelopeSchema.safeParse(json);
   if (!envelope.success) {
-    throw new AppError(ErrorCodes.INTERNAL_SERVER_ERROR, 'Neplatná struktura odpovědi z ABRA Flexi — chybí winstrom', 500);
+    throw new AppError(ErrorCodes.INTERNAL_SERVER_ERROR, 'Neplatná struktura odpovědi z ABRA Flexi - chybí winstrom', 500);
   }
 
   const rows = envelope.data.winstrom[winstromKey];

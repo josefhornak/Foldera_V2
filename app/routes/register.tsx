@@ -318,9 +318,9 @@ function CompanyStep(props: {
     try {
       const { company } = await api<{ company: { name: string | null; fullAddress: string | null } }>(`/api/ares/${clean}`);
       if (company.name) setName(company.name);
-      setAresMsg(company.fullAddress ? `Načteno z ARES — ${company.fullAddress}` : 'Načteno z ARES.');
+      setAresMsg(company.fullAddress ? `Načteno z ARES - ${company.fullAddress}` : 'Načteno z ARES.');
     } catch {
-      setAresMsg('Firma podle IČO se nenašla — vyplňte ručně.');
+      setAresMsg('Firma podle IČO se nenašla - vyplňte ručně.');
     } finally {
       setAresLoading(false);
     }
@@ -345,7 +345,7 @@ function CompanyStep(props: {
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <p className="text-sm text-[var(--text-secondary)]">Poslední krok — vaše firma. Spustíme 7denní trial.</p>
+      <p className="text-sm text-[var(--text-secondary)]">Poslední krok - vaše firma. Spustíme 7denní trial.</p>
       <Field label="IČO" htmlFor="c-ico" hint="Doplníme název z ARES.">
         <div className="flex gap-2">
           <Input
@@ -365,7 +365,7 @@ function CompanyStep(props: {
       <Field label="Název firmy" htmlFor="c-name">
         <Input id="c-name" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
       </Field>
-      <Field label="E-mail pro fakturaci" htmlFor="c-billing" hint="Kam posílat faktury za Folderu. Nepovinné — jinak na váš účet.">
+      <Field label="E-mail pro fakturaci" htmlFor="c-billing" hint="Kam posílat faktury za Folderu. Nepovinné - jinak na váš účet.">
         <Input
           id="c-billing"
           type="email"

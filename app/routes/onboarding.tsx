@@ -72,7 +72,7 @@ export default function OnboardingWizard() {
             <button onClick={finish} className="underline underline-offset-4 hover:text-[var(--text-primary)]">
               Dokončit později
             </button>{' '}
-            — vše najdete i v Nastavení.
+            - vše najdete i v Nastavení.
           </p>
         )}
       </div>
@@ -176,7 +176,7 @@ function AbraStep({ company, onNext }: { company: Company; onNext: () => void })
           )}
         >
           {test.ok ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <XCircle className="h-4 w-4 shrink-0" />}
-          <span>{test.ok ? `Připojeno${test.companyName ? ` — ${test.companyName}` : ''}` : test.error || 'Připojení se nezdařilo.'}</span>
+          <span>{test.ok ? `Připojeno${test.companyName ? ` - ${test.companyName}` : ''}` : test.error || 'Připojení se nezdařilo.'}</span>
         </div>
       )}
       {error && <p role="alert" className="text-xs text-[var(--status-error-text)]">{error}</p>}
@@ -235,7 +235,7 @@ function SourceStep({ company, onBack, onNext }: { company: Company; onBack: () 
               {copied ? 'Zkopírováno' : 'Kopírovat'}
             </Button>
           </div>
-          <p className="mt-2 text-xs text-[var(--text-tertiary)]">Doklady přeposílejte na tuto adresu — kontrolujeme ji každých pár minut.</p>
+          <p className="mt-2 text-xs text-[var(--text-tertiary)]">Doklady přeposílejte na tuto adresu - kontrolujeme ji každých pár minut.</p>
         </div>
       ) : (
         <button
@@ -320,7 +320,7 @@ function TuningStep({ company, onBack, onNext }: { company: Company; onBack: () 
 
       <div className="border-t border-[var(--border-subtle)] pt-4">
         <p className="text-sm font-semibold text-[var(--text-primary)]">Kontrola před založením</p>
-        <p className="mb-3 mt-0.5 text-xs text-[var(--text-tertiary)]">Ochrana proti přesměrování platby — Foldera ověřuje v ABRA Flexi.</p>
+        <p className="mb-3 mt-0.5 text-xs text-[var(--text-tertiary)]">Ochrana proti přesměrování platby - Foldera ověřuje v ABRA Flexi.</p>
         <div className="space-y-4">
           <Field label="Neznámý dodavatel (není v ABRA Flexi)" htmlFor="o-sup">
             <Select id="o-sup" value={newSupplier} onChange={(e) => setNewSupplier(e.target.value as Company['newSupplierMode'])}>

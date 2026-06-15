@@ -41,7 +41,7 @@ export async function testAbraConnection(cfg: AbraFlexiConfig): Promise<AbraConn
       return { ok: false, error: 'Neplatné přihlašovací údaje k ABRA Flexi' };
     }
     if (res.status === 404) {
-      return { ok: false, error: 'Firma (company) v ABRA Flexi nebyla nalezena — zkontrolujte URL' };
+      return { ok: false, error: 'Firma (company) v ABRA Flexi nebyla nalezena - zkontrolujte URL' };
     }
     if (!res.ok) {
       return { ok: false, error: `ABRA Flexi vrátila chybu ${res.status} ${res.statusText}` };
@@ -52,7 +52,7 @@ export async function testAbraConnection(cfg: AbraFlexiConfig): Promise<AbraConn
       json = JSON.parse(res.text);
     } catch {
       // HTML login page or proxy error masquerading as 200
-      return { ok: false, error: 'ABRA Flexi nevrátila platnou JSON odpověď — zkontrolujte URL' };
+      return { ok: false, error: 'ABRA Flexi nevrátila platnou JSON odpověď - zkontrolujte URL' };
     }
 
     const parsed = companyResponseSchema.safeParse(json);

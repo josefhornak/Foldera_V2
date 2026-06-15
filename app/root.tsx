@@ -48,9 +48,9 @@ export function Layout({ children }: { children: ReactNode }) {
         <meta name="theme-color" content="#0b0b10" />
         <meta
           name="description"
-          content="Foldera — příchozí doklady automaticky do ABRA Flexi. Faktury, zálohovky, dobropisy, účtenky i daňové doklady: vytěžení, kontrola duplicit a export bez ručního zásahu."
+          content="Foldera - příchozí doklady automaticky do ABRA Flexi. Faktury, zálohovky, dobropisy, účtenky i daňové doklady: vytěžení, kontrola duplicit a export bez ručního zásahu."
         />
-        <title>Foldera — faktury do ABRA Flexi</title>
+        <title>Foldera - faktury do ABRA Flexi</title>
         <Meta />
         <Links />
       </head>

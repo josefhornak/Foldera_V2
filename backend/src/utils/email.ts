@@ -142,7 +142,7 @@ export async function sendDocumentFailureAlert(
     <p style="font-size:13px;color:#666674;margin:18px 0 0">${
       opts.phase === 'export'
         ? 'Po opravě nastavení můžete export zopakovat přímo v aplikaci.'
-        : 'Doklad se nepodařilo přečíst — zkontrolujte ho v aplikaci a případně nahrajte znovu.'
+        : 'Doklad se nepodařilo přečíst - zkontrolujte ho v aplikaci a případně nahrajte znovu.'
     } Tato upozornění chodí správcům firmy.</p>`;
 
   await sendMail({
@@ -162,7 +162,7 @@ export async function sendBankReviewAlert(
 ): Promise<void> {
   const inner = `
     <p style="font-size:15px;margin:0 0 8px">Dobrý den,</p>
-    <p style="font-size:15px;color:#9c9cac;margin:0 0 16px">jeden doklad jsme <b style="color:#efeff4">pozdrželi ke kontrole</b>, protože obsahuje <b style="color:#efeff4">nový nebo změněný bankovní účet</b>. Do ABRA Flexi se založí až po vašem schválení — ochrana proti přesměrování platby.</p>
+    <p style="font-size:15px;color:#9c9cac;margin:0 0 16px">jeden doklad jsme <b style="color:#efeff4">pozdrželi ke kontrole</b>, protože obsahuje <b style="color:#efeff4">nový nebo změněný bankovní účet</b>. Do ABRA Flexi se založí až po vašem schválení - ochrana proti přesměrování platby.</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin:0 0 4px">
       <tr><td style="color:#9c9cac;padding:4px 0">Firma</td><td style="color:#efeff4;text-align:right">${escapeHtml(opts.companyName)}</td></tr>
       <tr><td style="color:#9c9cac;padding:4px 0">Soubor</td><td style="color:#efeff4;text-align:right">${escapeHtml(opts.fileName)}</td></tr>
@@ -175,7 +175,7 @@ export async function sendBankReviewAlert(
     to,
     subject: `Foldera – doklad ke kontrole: bankovní účet (${opts.companyName})`,
     html: SHELL(inner),
-    text: `Doklad "${opts.fileName}" (${opts.companyName}) byl pozdržen ke kontrole — nový/změněný bankovní účet. ${opts.reason} Ověřte a schvalte v aplikaci: ${opts.link}`,
+    text: `Doklad "${opts.fileName}" (${opts.companyName}) byl pozdržen ke kontrole - nový/změněný bankovní účet. ${opts.reason} Ověřte a schvalte v aplikaci: ${opts.link}`,
   });
 }
 
@@ -187,7 +187,7 @@ export async function sendTrialEndedAlert(
   const inner = `
     <p style="font-size:15px;margin:0 0 8px">Dobrý den,</p>
     <p style="font-size:15px;color:#9c9cac;margin:0 0 16px">zkušební období pro firmu <b style="color:#efeff4">${escapeHtml(opts.companyName)}</b> skončilo. Příchozí doklady se teď <b style="color:#efeff4">nezpracovávají</b>.</p>
-    <p style="font-size:15px;color:#9c9cac;margin:0 0 18px">Chcete-li přejít na ostrý provoz, je potřeba to potvrdit — aktivací se spustí předplatné <b style="color:#efeff4">199 Kč měsíčně</b> (100 dokladů v ceně, každý další 2 Kč). Bez vašeho potvrzení vám nic neúčtujeme.</p>
+    <p style="font-size:15px;color:#9c9cac;margin:0 0 18px">Chcete-li přejít na ostrý provoz, je potřeba to potvrdit - aktivací se spustí předplatné <b style="color:#efeff4">199 Kč měsíčně</b> (100 dokladů v ceně, každý další 2 Kč). Bez vašeho potvrzení vám nic neúčtujeme.</p>
     <a href="${opts.link}" style="display:inline-block;background:#8b5cf6;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 22px;border-radius:10px">Aktivovat předplatné</a>
     <p style="font-size:13px;color:#666674;margin:18px 0 0">Aktivaci potvrzuje správce firmy přímo v aplikaci. Dokud ji nepotvrdíte, zůstává účet bez poplatku.</p>`;
   await sendMail({

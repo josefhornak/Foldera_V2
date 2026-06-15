@@ -199,7 +199,7 @@ async function runAbraExport(
   try {
     result = await doExport(defaults);
     if (aiFilled.length > 0) {
-      notes.push(`Zaúčtování navrhla AI (${aiFilled.join(', ')}) — zkontrolujte ho v ABRA Flexi.`);
+      notes.push(`Zaúčtování navrhla AI (${aiFilled.join(', ')}) - zkontrolujte ho v ABRA Flexi.`);
     }
   } catch (error) {
     // An AI-suggested code must never break an otherwise valid export — if ABRA
@@ -211,7 +211,7 @@ async function runAbraExport(
     );
     result = await doExport(historyDefaults);
     notes.push(
-      `Zaúčtování navržené AI (${aiFilled.join(', ')}) ABRA odmítla — doklad byl vytvořen bez něj, ` +
+      `Zaúčtování navržené AI (${aiFilled.join(', ')}) ABRA odmítla - doklad byl vytvořen bez něj, ` +
         `doplňte ho prosím ručně.`
     );
   }
@@ -222,7 +222,7 @@ async function runAbraExport(
   if (!isReceipt && invoice.bankCode && !isKnownCzBankCode(invoice.bankCode)) {
     notes.push(
       `Kód banky „${invoice.bankCode}“ nebyl rozpoznán v registru bank ABRA Flexi, ` +
-        `proto nebyl k faktuře připojen. Číslo účtu zůstalo zachováno — kód banky ` +
+        `proto nebyl k faktuře připojen. Číslo účtu zůstalo zachováno - kód banky ` +
         `případně doplňte v ABRA Flexi ručně.`
     );
   }
@@ -316,8 +316,8 @@ async function reviewBeforeExport(
   try {
     const supplier = await findSupplierByIco(cfg, invoice.supplierIco);
     if (!supplier) {
-      if (wantSupplier) return `Dodavatel (IČO ${invoice.supplierIco}) není v ABRA Flexi — po schválení se založí nový.`;
-      if (wantBank && hasBank) return `Nový dodavatel (IČO ${invoice.supplierIco}) s bankovním účtem ${shownBank(invoice)} — ověřte příjemce platby.`;
+      if (wantSupplier) return `Dodavatel (IČO ${invoice.supplierIco}) není v ABRA Flexi - po schválení se založí nový.`;
+      if (wantBank && hasBank) return `Nový dodavatel (IČO ${invoice.supplierIco}) s bankovním účtem ${shownBank(invoice)} - ověřte příjemce platby.`;
       return null;
     }
     if (wantBank && hasBank) {

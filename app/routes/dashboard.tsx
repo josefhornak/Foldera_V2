@@ -28,7 +28,7 @@ function SetupReminder({ companyId }: { companyId: string }) {
     <div className="flex flex-col items-start gap-3 rounded-[var(--radius-token-lg)] border border-[var(--brand-primary)]/30 bg-[var(--brand-primary-subtle)] px-4 py-3.5 sm:flex-row sm:items-center">
       <Rocket className="h-5 w-5 shrink-0 text-[var(--brand-primary-light)]" aria-hidden="true" />
       <p className="flex-1 text-sm text-[var(--text-secondary)]">
-        Dokončete nastavení — chybí {missing}. Pak Foldera začne doklady zpracovávat automaticky.
+        Dokončete nastavení - chybí {missing}. Pak Foldera začne doklady zpracovávat automaticky.
       </p>
       <Link to="/vitejte" className="shrink-0">
         <Button size="sm">Dokončit nastavení</Button>
@@ -56,28 +56,28 @@ export default function DashboardPage() {
   // count of documents processed this month. Unlike counting the documents
   // table, it never drops when a document is deleted.
   const monthlyCounter = !billing
-    ? '—'
+    ? '-'
     : billing.status === 'trial'
       ? `${billing.trialDocsUsed} / ${billing.trialDocLimit}`
       : `${billing.used} / ${billing.included}`;
 
   // Spend this period (what will be billed) + when the next invoice is issued.
   const spentValue = !billing
-    ? '—'
+    ? '-'
     : billing.status === 'active'
       ? `${billing.estimatedTotalCzk.toLocaleString('cs-CZ')} Kč`
       : billing.status === 'trial'
         ? 'Zdarma'
-        : '—';
+        : '-';
   const nextBillingValue = !billing
-    ? '—'
+    ? '-'
     : billing.status === 'active'
       ? billing.nextInvoiceDate
         ? new Date(billing.nextInvoiceDate).toLocaleDateString('cs-CZ')
-        : '—'
+        : '-'
       : billing.status === 'trial'
         ? 'Po aktivaci'
-        : '—';
+        : '-';
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">

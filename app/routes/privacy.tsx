@@ -7,8 +7,8 @@ const SITE_URL = 'https://foldera.cz';
 
 export function meta() {
   return [
-    { title: 'Ochrana osobních údajů — Foldera' },
-    { name: 'description', content: 'Zásady ochrany osobních údajů služby Foldera — jaké údaje zpracováváme, proč, komu je předáváme a jaká máte práva.' },
+    { title: 'Ochrana osobních údajů - Foldera' },
+    { name: 'description', content: 'Zásady ochrany osobních údajů služby Foldera - jaké údaje zpracováváme, proč, komu je předáváme a jaká máte práva.' },
     { name: 'robots', content: 'index, follow' },
     { tagName: 'link', rel: 'canonical', href: `${SITE_URL}/ochrana-udaju` },
   ];
@@ -48,7 +48,7 @@ export default function Privacy() {
         <P>
           Tyto zásady popisují, jak služba Foldera zpracovává osobní údaje v souladu s nařízením (EU) 2016/679 (GDPR).
           Týkají se údajů, které zpracováváme jako <Strong>správce</Strong> (např. údaje o vašem účtu). Údaje obsažené
-          v dokladech, které do služby vkládáte, zpracováváme jako <Strong>zpracovatel</Strong> jménem vaší firmy —
+          v dokladech, které do služby vkládáte, zpracováváme jako <Strong>zpracovatel</Strong> jménem vaší firmy -
           tomu se věnují samostatné{' '}
           <Link to="/zpracovani-udaju" className="text-[var(--text-link)] underline underline-offset-2">podmínky zpracování osobních údajů</Link>.
         </P>
@@ -64,15 +64,15 @@ export default function Privacy() {
         <H2>2. Jaké údaje zpracováváme a na jakém základě</H2>
         <P>
           <Strong>Údaje účtu</Strong> (jméno, e-mailová adresa, zaheslovaná podoba hesla) a <Strong>údaje o firmě</Strong>
-          {' '}(název, IČO, sídlo, fakturační e-mail) — právním základem je <Strong>plnění smlouvy</Strong> (poskytování
+          {' '}(název, IČO, sídlo, fakturační e-mail) - právním základem je <Strong>plnění smlouvy</Strong> (poskytování
           služby) a u fakturačních a účetních údajů též <Strong>plnění právní povinnosti</Strong> (vedení účetnictví).
         </P>
         <P>
           <Strong>Provozní a technické údaje</Strong> (IP adresa, časy přístupů, technické logy, údaje nezbytné pro
-          přihlášení) — na základě <Strong>oprávněného zájmu</Strong> na bezpečném a spolehlivém provozu služby.
+          přihlášení) - na základě <Strong>oprávněného zájmu</Strong> na bezpečném a spolehlivém provozu služby.
         </P>
         <P>
-          <Strong>Obsah dokladů</Strong> (faktury, účtenky a další doklady, které do služby vložíte) — ty zpracováváme
+          <Strong>Obsah dokladů</Strong> (faktury, účtenky a další doklady, které do služby vložíte) - ty zpracováváme
           jménem vaší firmy jako zpracovatel. Originální soubory po vytěžení a nahrání do vašeho účetnictví
           <Strong> trvale neukládáme</Strong>; v aplikaci zůstávají jen vytěžená metadata nezbytná pro provoz a případné
           zopakování exportu.
@@ -112,7 +112,7 @@ export default function Privacy() {
           </table>
         </div>
         <P>
-          Vaše účetní data dále zapisujeme do <Strong>ABRA Flexi</Strong> — to je ale systém, který si volíte a provozujete
+          Vaše účetní data dále zapisujeme do <Strong>ABRA Flexi</Strong> - to je ale systém, který si volíte a provozujete
           vy; nevystupuje jako náš subdodavatel, jen jako cíl, kam doklady na váš pokyn zakládáme.
         </P>
 
@@ -127,7 +127,7 @@ export default function Privacy() {
         <H2>5. Jak dlouho údaje uchováváme</H2>
         <P>
           Údaje účtu zpracováváme po dobu trvání účtu. Fakturační a účetní doklady uchováváme po dobu stanovenou právními
-          předpisy (zejména zákonem o účetnictví, až 10 let). Originální soubory dokladů neukládáme — mažou se ihned po
+          předpisy (zejména zákonem o účetnictví, až 10 let). Originální soubory dokladů neukládáme - mažou se ihned po
           zpracování. Po zrušení účtu osobní údaje, které nemusíme uchovávat ze zákona, vymažeme.
         </P>
 
@@ -135,7 +135,7 @@ export default function Privacy() {
         <P>
           Máte právo na přístup ke svým údajům, jejich opravu nebo výmaz, omezení zpracování, přenositelnost a právo
           vznést námitku proti zpracování založenému na oprávněném zájmu. Žádost zašlete na uvedený kontaktní e-mail.
-          Máte rovněž právo podat stížnost u dozorového úřadu — <Strong>Úřad pro ochranu osobních údajů</Strong>,
+          Máte rovněž právo podat stížnost u dozorového úřadu - <Strong>Úřad pro ochranu osobních údajů</Strong>,
           Pplk. Sochora 27, 170 00 Praha 7 (<a className="text-[var(--text-link)] underline underline-offset-2" href="https://www.uoou.cz" target="_blank" rel="noreferrer">uoou.cz</a>).
         </P>
 
