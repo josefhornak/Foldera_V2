@@ -203,11 +203,7 @@ function Hero({ appHref, loggedIn }: { appHref: string; loggedIn: boolean }) {
       <div className="hero-glow left-[-8%] top-[2%] h-[420px] w-[420px]" aria-hidden="true" />
       <div className="hero-glow right-[-6%] top-[18%] h-[360px] w-[360px] [animation-delay:3.5s]" aria-hidden="true" />
       <div className="relative z-10">
-      <div className="kicker flex items-center gap-3 animate-rise">
-        <span className="h-px w-8 bg-[var(--brand-primary)]" />
-        Doklady → ABRA Flexi · bez přepisování
-      </div>
-      <h1 className="mt-6 max-w-4xl font-heading text-[2.7rem] font-bold leading-[0.98] tracking-[-0.02em] animate-rise md:text-[4.6rem]">
+      <h1 className="max-w-4xl font-heading text-[2.7rem] font-bold leading-[0.98] tracking-[-0.02em] animate-rise md:text-[4.6rem]">
         Konec přepisování dokladů.
         <br />
         Vy jen kontrolujete v <span className="text-[var(--brand-primary-light)]">ABRA&nbsp;Flexi</span>.
@@ -219,7 +215,7 @@ function Hero({ appHref, loggedIn }: { appHref: string; loggedIn: boolean }) {
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <Link to={appHref}>
-            <Button icon={<ArrowRight />}>{loggedIn ? 'Do aplikace' : 'Vyzkoušet 7 dní zdarma'}</Button>
+            <Button icon={loggedIn ? undefined : <ArrowRight />}>{loggedIn ? 'Do aplikace' : 'Vyzkoušet 7 dní zdarma'}</Button>
           </Link>
           <a href="#jak">
             <Button variant="secondary">Jak to funguje</Button>
