@@ -40,7 +40,7 @@ export default function AdminConsole() {
   if (user && !isAdmin) return <Navigate to="/dashboard" replace />;
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div className="mx-auto max-w-[1280px]">
       <header className="mb-6">
         <h1 className="font-heading text-2xl font-bold tracking-tight">Admin konzole</h1>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">Přehled napříč všemi firmami a uživateli.</p>

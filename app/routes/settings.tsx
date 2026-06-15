@@ -47,7 +47,7 @@ export default function SettingsPage() {
   if (!company) return null;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-[1280px] space-y-6">
       <header>
         <h1 className="font-heading text-[27px] font-bold tracking-tight text-[var(--text-primary)]">
           {t('settings.title')}

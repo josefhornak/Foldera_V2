@@ -27,7 +27,7 @@ export default function AdminInvoices() {
   const { user } = useMe();
   if (user && !isAdmin) return <Navigate to="/dashboard" replace />;
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div className="mx-auto max-w-[1280px]">
       <header className="mb-6">
         <h1 className="font-heading text-2xl font-bold tracking-tight">Fakturace</h1>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">Přehled vystavených faktur a jejich úhrad.</p>
