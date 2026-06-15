@@ -210,7 +210,7 @@
       "hint": "Účetní pole (řádek DPH, předpis zaúčtování…) se přebírají z historie dodavatele. Když dodavatel žádnou historii nemá:",
       "mode": "Při chybějící historii",
       "history": "Ponechat prázdné (pouze podle historie)",
-      "ai": "Navrhnout pomocí AI (ke kontrole)"
+      "ai": "Navrhnout pomocí AI"
     }
   }
 }

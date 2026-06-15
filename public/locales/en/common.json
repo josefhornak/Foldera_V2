@@ -210,7 +210,7 @@
       "hint": "Accounting fields (VAT row, posting rule…) are taken from the supplier history. When the supplier has none:",
       "mode": "When no history",
       "history": "Leave empty (history only)",
-      "ai": "Suggest with AI (for review)"
+      "ai": "Suggest with AI"
     }
   }
 }

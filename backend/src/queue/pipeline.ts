@@ -174,18 +174,16 @@ async function runAbraExport(
   // the model pick a code from the company's OWN číselník. The model never sees
   // hardcoded codes, and a suggestion never breaks the export (see below).
   const historyDefaults = defaults;
-  const aiFilled: string[] = [];
+  // AI accounting suggestions for the still-empty fields (never throws).
+  let aiClenDph: string | null = null;
+  let aiTypUcOp: string | null = null;
+  let aiClenKonVyk: string | null = null;
   if (company.accountingFillMode === 'ai' && !isAdvance && !isTaxPayment) {
-    const merged = { ...defaults };
-    const [clenDph, typUcOp, clenKonVyk] = await Promise.all([
-      defaults.cleneniDph == null ? suggestClenDph(cfg, invoice).catch(() => null) : null,
-      defaults.predpisZauctovani == null ? suggestTypUcOp(cfg, invoice).catch(() => null) : null,
-      defaults.cleneniKonVykDph == null ? suggestClenKonVykDph(cfg, invoice).catch(() => null) : null,
+    [aiClenDph, aiTypUcOp, aiClenKonVyk] = await Promise.all([
+      defaults.cleneniDph == null ? suggestClenDph(cfg, invoice).catch(() => null) : Promise.resolve(null),
+      defaults.predpisZauctovani == null ? suggestTypUcOp(cfg, invoice).catch(() => null) : Promise.resolve(null),
+      defaults.cleneniKonVykDph == null ? suggestClenKonVykDph(cfg, invoice).catch(() => null) : Promise.resolve(null),
     ]);
-    if (clenDph) { merged.cleneniDph = clenDph; aiFilled.push(`řádek DPH „${clenDph}“`); }
-    if (typUcOp) { merged.predpisZauctovani = typUcOp; aiFilled.push(`předpis zaúčtování „${typUcOp}“`); }
-    if (clenKonVyk) { merged.cleneniKonVykDph = clenKonVyk; aiFilled.push(`řádek KH „${clenKonVyk}“`); }
-    defaults = merged;
   }
 
   // Export the document (invoice → faktura-prijata, receipt → pokladni-pohyb)
@@ -195,25 +193,74 @@ async function runAbraExport(
       ? exportReceiptToPokladna(cfg, invoice, supplierCode, d)
       : exportPurchaseInvoice(cfg, invoice, d, exportOptions);
 
-  let result: AbraExportResult;
-  try {
-    result = await doExport(defaults);
-    if (aiFilled.length > 0) {
-      notes.push(`Zaúčtování navrhla AI (${aiFilled.join(', ')}) - zkontrolujte ho v ABRA Flexi.`);
+  // A single bad AI code (usually the DPH classification — e.g. a code ABRA
+  // can't apply to a domestic CZ doc) must NOT drop the whole suggestion. Try
+  // the full set, then předkontace-only (the safe field), then history-only —
+  // keeping whatever ABRA accepts instead of all-or-nothing.
+  const labelClenDph = aiClenDph ? `řádek DPH „${aiClenDph}“` : null;
+  const labelTypUcOp = aiTypUcOp ? `předkontace „${aiTypUcOp}“` : null;
+  const labelClenKonVyk = aiClenKonVyk ? `řádek KH „${aiClenKonVyk}“` : null;
+  const allAiLabels = [labelClenDph, labelTypUcOp, labelClenKonVyk].filter((x): x is string => x != null);
+
+  interface Attempt { defaults: AbraSupplierDefaults; applied: string[] }
+  const attempts: Attempt[] = [];
+  const seenAttempts = new Set<string>();
+  const addAttempt = (a: Attempt): void => {
+    const key = JSON.stringify(a.defaults);
+    if (!seenAttempts.has(key)) {
+      seenAttempts.add(key);
+      attempts.push(a);
     }
-  } catch (error) {
-    // An AI-suggested code must never break an otherwise valid export — if ABRA
-    // rejects the payload, retry once with history-only defaults and tell the user.
-    if (aiFilled.length === 0) throw error;
-    logger.warn(
-      { companyId: company.id, aiFilled, error: toError(error).message },
-      '[Pipeline] AI-suggested accounting rejected — retrying without it'
-    );
-    result = await doExport(historyDefaults);
-    notes.push(
-      `Zaúčtování navržené AI (${aiFilled.join(', ')}) ABRA odmítla - doklad byl vytvořen bez něj, ` +
-        `doplňte ho prosím ručně.`
-    );
+  };
+  addAttempt({
+    defaults: {
+      ...historyDefaults,
+      ...(aiClenDph ? { cleneniDph: aiClenDph } : {}),
+      ...(aiTypUcOp ? { predpisZauctovani: aiTypUcOp } : {}),
+      ...(aiClenKonVyk ? { cleneniKonVykDph: aiClenKonVyk } : {}),
+    },
+    applied: allAiLabels,
+  });
+  addAttempt({
+    defaults: { ...historyDefaults, ...(aiTypUcOp ? { predpisZauctovani: aiTypUcOp } : {}) },
+    applied: labelTypUcOp ? [labelTypUcOp] : [],
+  });
+  addAttempt({ defaults: historyDefaults, applied: [] });
+
+  let result: AbraExportResult | null = null;
+  let chosen: Attempt | null = null;
+  let lastExportError: unknown;
+  for (const attempt of attempts) {
+    try {
+      result = await doExport(attempt.defaults);
+      chosen = attempt;
+      break;
+    } catch (error) {
+      lastExportError = error;
+      logger.warn(
+        { companyId: company.id, applied: attempt.applied, error: toError(error).message },
+        '[Pipeline] Export attempt rejected — trying leaner accounting'
+      );
+    }
+  }
+  if (!result || !chosen) throw lastExportError ?? new Error('Export failed');
+
+  // Surface to the user what the AI filled and what ABRA refused.
+  if (allAiLabels.length > 0) {
+    const dropped = allAiLabels.filter((l) => !chosen.applied.includes(l));
+    if (chosen.applied.length > 0 && dropped.length === 0) {
+      notes.push(`Zaúčtování navrhla AI (${chosen.applied.join(', ')}) - zkontrolujte ho v ABRA Flexi.`);
+    } else if (chosen.applied.length > 0) {
+      notes.push(
+        `Část zaúčtování doplnila AI (${chosen.applied.join(', ')}). ` +
+          `ABRA nepřijala: ${dropped.join(', ')} - doplňte prosím ručně.`
+      );
+    } else {
+      notes.push(
+        `Zaúčtování navržené AI (${allAiLabels.join(', ')}) ABRA odmítla - doklad byl vytvořen bez něj, ` +
+          `doplňte ho prosím ručně.`
+      );
+    }
   }
 
   // smerKod is dropped from the invoice payload when the bank code is not a real
