@@ -53,6 +53,20 @@ export function Layout({ children }: { children: ReactNode }) {
         <title>Foldera - faktury do ABRA Flexi</title>
         <Meta />
         <Links />
+        {/* Google Analytics (gtag.js) with Consent Mode v2: analytics is DENIED
+            by default and only granted via the cookie banner. A returning
+            visitor who already accepted is re-granted before the first pageview. */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-PDK075MNN0" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}" +
+              "gtag('js',new Date());" +
+              "gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied',wait_for_update:500});" +
+              "try{if(localStorage.getItem('foldera.cookies')==='all'){gtag('consent','update',{analytics_storage:'granted'});}}catch(e){}" +
+              "gtag('config','G-PDK075MNN0');",
+          }}
+        />
       </head>
       <body>
         {children}

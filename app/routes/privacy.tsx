@@ -141,8 +141,24 @@ export default function Privacy() {
 
         <H2>7. Cookies a místní úložiště</H2>
         <P>
-          Foldera používá pouze <Strong>nezbytné</Strong> cookies a místní úložiště prohlížeče potřebné pro provoz a
-          přihlášení. Nenasazujeme marketingové ani sledovací cookies a nepředáváme údaje reklamním sítím.
+          <Strong>Nezbytné</Strong> cookies a místní úložiště prohlížeče potřebné pro provoz a přihlášení používáme
+          vždy. S vaším souhlasem nasazujeme také <Strong>analytické</Strong> cookies služby{' '}
+          <Strong>Google Analytics</Strong> (Google Ireland Ltd.), které nám pomáhají rozumět návštěvnosti a chování
+          na webu. Analytika se spustí teprve po souhlasu v cookie liště (Google Consent Mode v2) a souhlas můžete
+          kdykoli odvolat smazáním cookies v prohlížeči. Bez souhlasu se analytické cookies nenasazují. Marketingové
+          cookies nepoužíváme a údaje nepředáváme reklamním sítím.
+        </P>
+        <P>
+          Google může část údajů zpracovávat i mimo EU; přenos je ošetřen standardními smluvními doložkami. Více v{' '}
+          <a
+            href="https://policies.google.com/privacy"
+            target="_blank"
+            rel="noreferrer"
+            className="text-[var(--text-link)] underline underline-offset-2"
+          >
+            zásadách ochrany soukromí společnosti Google
+          </a>
+          .
         </P>
 
         <H2>8. Změny</H2>

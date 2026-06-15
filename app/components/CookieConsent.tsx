@@ -4,10 +4,12 @@ import { Link } from 'react-router';
 const STORAGE_KEY = 'foldera.cookies';
 
 /**
- * Minimal cookie notice. Foldera uses cookies / local storage only for sign-in
- * (strictly necessary) — no analytics, marketing or tracking — so this is an
- * informational acknowledgement, not a consent choice. The dismissal is
- * remembered in localStorage. Client-only (renders after hydration).
+ * Cookie consent. Strictly-necessary cookies (sign-in) always run; analytics
+ * (Google Analytics) only after the visitor accepts. The choice is stored in
+ * localStorage and drives Google Consent Mode v2 (analytics_storage): the gtag
+ * bootstrap in root.tsx defaults consent to denied and re-grants returning
+ * visitors who picked "all"; here we update consent live on click.
+ * Client-only (renders after hydration).
  */
 export function CookieConsent() {
   const [show, setShow] = useState(false);
@@ -28,6 +30,12 @@ export function CookieConsent() {
     } catch {
       /* ignore */
     }
+    try {
+      const gtag = (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag;
+      gtag?.('consent', 'update', { analytics_storage: value === 'all' ? 'granted' : 'denied' });
+    } catch {
+      /* gtag not loaded — ignore */
+    }
     setShow(false);
   };
 
@@ -37,8 +45,8 @@ export function CookieConsent() {
         <div className="max-w-2xl">
           <div className="kicker text-[var(--brand-primary-light)]">Cookies</div>
           <p className="mt-1.5 text-sm text-[var(--text-secondary)]">
-            Používáme jen nezbytné cookies pro provoz a přihlášení. Žádné marketingové ani sledovací cookies
-            nenasazujeme. Více v{' '}
+            Nezbytné cookies pro provoz a přihlášení používáme vždy. Se souhlasem nasazujeme i analytické
+            cookies (Google Analytics), abychom rozuměli návštěvnosti. Více v{' '}
             <Link to="/ochrana-udaju" className="text-[var(--text-link)] underline underline-offset-2">
               zásadách ochrany osobních údajů
             </Link>
@@ -48,10 +56,16 @@ export function CookieConsent() {
         <div className="flex shrink-0 items-center gap-2">
           <button
             onClick={() => choose('necessary')}
+            className="h-9 rounded-[var(--radius-token-md)] border border-[var(--border-strong)] px-4 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+          >
+            Jen nezbytné
+          </button>
+          <button
+            onClick={() => choose('all')}
             className="h-9 rounded-[var(--radius-token-md)] px-4 text-sm font-medium text-white [background:var(--accent-gradient)]"
             style={{ boxShadow: 'var(--accent-glow)' }}
           >
-            Rozumím
+            Přijmout vše
           </button>
         </div>
       </div>
