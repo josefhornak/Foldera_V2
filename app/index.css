@@ -210,6 +210,35 @@
     animation: foldera-rise 0.7s var(--ease-out) both;
   }
 
+  /* Scroll-reveal: hidden until the IntersectionObserver adds .is-visible.
+     Stagger via inline `transition-delay`. */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+      opacity 0.75s var(--ease-out),
+      transform 0.75s var(--ease-out);
+    will-change: opacity, transform;
+  }
+  .reveal-left {
+    transform: translateX(-22px);
+  }
+  .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Soft animated brand glow behind the hero. */
+  .hero-glow {
+    position: absolute;
+    pointer-events: none;
+    border-radius: 9999px;
+    filter: blur(80px);
+    opacity: 0.5;
+    background: radial-gradient(circle at center, rgba(139, 92, 246, 0.55), rgba(124, 78, 240, 0) 70%);
+    animation: foldera-glow 9s var(--ease-default) infinite;
+  }
+
   /* ---- Editorial landing system -------------------------------------- */
 
   /* Monospace kicker label (section eyebrows, meta). */
@@ -272,6 +301,11 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes foldera-glow {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.12); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
@@ -280,5 +314,10 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  /* Never leave reveal content stuck hidden when motion is reduced. */
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

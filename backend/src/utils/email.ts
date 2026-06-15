@@ -30,6 +30,7 @@ export async function sendMail(opts: {
   html: string;
   text: string;
   bcc?: string;
+  replyTo?: string;
   attachments?: { filename: string; content: Buffer; contentType?: string }[];
 }): Promise<void> {
   const t = getTransport();
@@ -216,5 +217,34 @@ export async function sendCompanyInvite(
     subject: `Foldera – pozvánka do firmy ${companyName}`,
     html: SHELL(inner),
     text: `Byli jste pozváni do firmy ${companyName} ve Foldeře jako ${roleLabel}. Pozvánku přijměte zde: ${link} (platí 7 dní).`,
+  });
+}
+
+/**
+ * Notify operators about a new message from the landing-page contact form.
+ * Reply-To is the submitter, so a reply goes straight back to them.
+ */
+export async function sendContactNotification(
+  to: string,
+  opts: { name: string; email: string; company?: string | null; message: string }
+): Promise<void> {
+  const rows = [
+    `<tr><td style="color:#9c9cac;padding:4px 0">Jméno</td><td style="color:#efeff4;text-align:right">${escapeHtml(opts.name)}</td></tr>`,
+    `<tr><td style="color:#9c9cac;padding:4px 0">E-mail</td><td style="text-align:right"><a href="mailto:${escapeHtml(opts.email)}" style="color:#8b5cf6;text-decoration:none">${escapeHtml(opts.email)}</a></td></tr>`,
+    ...(opts.company
+      ? [`<tr><td style="color:#9c9cac;padding:4px 0">Firma</td><td style="color:#efeff4;text-align:right">${escapeHtml(opts.company)}</td></tr>`]
+      : []),
+  ].join('');
+  const inner = `
+    <p style="font-size:15px;margin:0 0 16px">Nová zpráva z kontaktního formuláře 📨</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;border-collapse:collapse;margin:0 0 18px">${rows}</table>
+    <div style="background:#0e0e13;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px 16px;font-size:14px;color:#efeff4;white-space:pre-wrap;line-height:1.55">${escapeHtml(opts.message)}</div>
+    <p style="font-size:13px;color:#666674;margin:18px 0 0">Odpovězte přímo na tento e-mail – poputuje na adresu odesílatele.</p>`;
+  await sendMail({
+    to,
+    replyTo: opts.email,
+    subject: `Foldera – nová zpráva od ${opts.name}`,
+    html: SHELL(inner),
+    text: `Nová zpráva z kontaktního formuláře.\n\nJméno: ${opts.name}\nE-mail: ${opts.email}${opts.company ? `\nFirma: ${opts.company}` : ''}\n\n${opts.message}`,
   });
 }

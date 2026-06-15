@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ElementType, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import {
   ArrowRight,
@@ -111,6 +111,58 @@ function BrandMark({ className }: { className?: string }) {
   return <LogoMark className={cn('h-8 w-8', className)} />;
 }
 
+/**
+ * Scroll-reveal wrapper: renders hidden, then fades/slides in when it first
+ * enters the viewport. `delay` staggers siblings; honours reduced-motion via CSS.
+ */
+function Reveal({
+  children,
+  delay = 0,
+  className,
+  as: Tag = 'div',
+}: {
+  children: ReactNode;
+  delay?: number;
+  className?: string;
+  as?: ElementType;
+}) {
+  const ref = useRef<HTMLElement | null>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setVisible(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setVisible(true);
+            io.disconnect();
+            break;
+          }
+        }
+      },
+      { threshold: 0.12, rootMargin: '0px 0px -6% 0px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  return (
+    <Tag
+      ref={ref}
+      className={cn('reveal', visible && 'is-visible', className)}
+      style={delay ? { transitionDelay: `${delay}ms` } : undefined}
+    >
+      {children}
+    </Tag>
+  );
+}
+
 function Nav({ appHref, loggedIn }: { appHref: string; loggedIn: boolean }) {
   const links = [
     ['Jak to funguje', '#jak'],
@@ -149,7 +201,10 @@ function Nav({ appHref, loggedIn }: { appHref: string; loggedIn: boolean }) {
 
 function Hero({ appHref, loggedIn }: { appHref: string; loggedIn: boolean }) {
   return (
-    <section id="top" className="relative mx-auto max-w-6xl px-6 pb-10 pt-16 md:pt-24">
+    <section id="top" className="relative mx-auto max-w-6xl overflow-hidden px-6 pb-10 pt-16 md:overflow-visible md:pt-24">
+      <div className="hero-glow left-[-8%] top-[2%] h-[420px] w-[420px]" aria-hidden="true" />
+      <div className="hero-glow right-[-6%] top-[18%] h-[360px] w-[360px] [animation-delay:3.5s]" aria-hidden="true" />
+      <div className="relative z-10">
       <div className="kicker flex items-center gap-3 animate-rise">
         <span className="h-px w-8 bg-[var(--brand-primary)]" />
         Doklady → ABRA Flexi · bez přepisování
@@ -177,6 +232,7 @@ function Hero({ appHref, loggedIn }: { appHref: string; loggedIn: boolean }) {
       <HeroFrame />
 
       <p className="mt-5 kicker">Bez karty · 7 dní / 10 dokladů zdarma</p>
+      </div>
     </section>
   );
 }
@@ -199,8 +255,12 @@ function HeroFrame() {
         <span className="ml-2 font-mono text-[11px] text-[var(--text-tertiary)]">foldera.cz / dokumenty</span>
       </div>
       <div className="divide-y divide-[var(--border-subtle)]">
-        {rows.map((r) => (
-          <div key={r.num} className="flex items-center gap-4 px-5 py-4">
+        {rows.map((r, i) => (
+          <div
+            key={r.num}
+            className="flex items-center gap-4 px-5 py-4 animate-rise"
+            style={{ animationDelay: `${260 + i * 90}ms` }}
+          >
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold">{r.sup}</p>
               <p className="truncate font-mono text-[11px] text-[var(--text-tertiary)]">{r.num}</p>
@@ -224,14 +284,14 @@ function Block({ id, index, kicker, title, intro, children }: {
   return (
     <section id={id} className="border-t border-[var(--border-subtle)]">
       <div className="mx-auto max-w-6xl px-6 py-20 md:grid md:grid-cols-[260px_1fr] md:gap-14 md:py-28">
-        <div className="mb-10 md:mb-0">
+        <Reveal className="reveal-left mb-10 md:mb-0">
           <div className="kicker flex items-center gap-3">
             <span className="text-[var(--brand-primary-light)]">{index}</span>
             <span>{kicker}</span>
           </div>
           <h2 className="mt-4 font-heading text-3xl font-bold leading-[1.05] tracking-[-0.01em] md:text-[2.4rem]">{title}</h2>
           {intro && <p className="mt-4 max-w-xs text-sm leading-relaxed text-[var(--text-secondary)]">{intro}</p>}
-        </div>
+        </Reveal>
         <div>{children}</div>
       </div>
     </section>
@@ -243,13 +303,17 @@ function HowItWorks() {
     <Block id="jak" index="01" kicker="Jak to funguje" title="Jen jednou nastavíte" intro="Zdroj dokladů připojíte jednou. Od té chvíle Foldera pracuje sama a vy se k dokladům vrátíte už jen na kontrolu v ABRA Flexi.">
       <div>
         {STEPS.map((s, i) => (
-          <div key={s.title} className="flex gap-6 border-t border-[var(--border-subtle)] py-7 first:border-t-0">
+          <Reveal
+            key={s.title}
+            delay={i * 90}
+            className="flex gap-6 border-t border-[var(--border-subtle)] py-7 first:border-t-0"
+          >
             <span className="font-heading text-2xl font-bold tabular-nums text-[var(--text-tertiary)]">0{i + 1}</span>
             <div>
               <h3 className="text-lg font-semibold">{s.title}</h3>
               <p className="mt-1.5 max-w-md text-sm leading-relaxed text-[var(--text-secondary)]">{s.text}</p>
             </div>
-          </div>
+          </Reveal>
         ))}
       </div>
     </Block>
@@ -266,12 +330,16 @@ function Features() {
       intro="Na rozdíl od jiných nástrojů nepracujete v žádné další aplikaci. Všechno máte rovnou ve svém účetnictví."
     >
       <div className="grid border-l border-[var(--border-subtle)] sm:grid-cols-2">
-        {FEATURES.map((f) => (
-          <div key={f.title} className="group border-b border-r border-[var(--border-subtle)] p-7 transition-colors hover:bg-white/[0.02]">
-            <f.icon className="h-5 w-5 text-[var(--brand-primary-light)] transition-transform group-hover:-translate-y-0.5" />
+        {FEATURES.map((f, i) => (
+          <Reveal
+            key={f.title}
+            delay={(i % 2) * 70 + Math.floor(i / 2) * 60}
+            className="group border-b border-r border-[var(--border-subtle)] p-7 transition-colors hover:bg-white/[0.02]"
+          >
+            <f.icon className="h-5 w-5 text-[var(--brand-primary-light)] transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-110" />
             <h3 className="mt-4 text-base font-semibold">{f.title}</h3>
             <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">{f.text}</p>
-          </div>
+          </Reveal>
         ))}
       </div>
     </Block>
@@ -289,7 +357,7 @@ function Pricing() {
   ];
   return (
     <Block id="cenik" index="03" kicker="Ceník" title="Jeden plán, bez závazků" intro="Platíte za firmu, ne za uživatele. Každý měsíc vám přijde běžná faktura.">
-      <div className="gradient-border overflow-hidden rounded-[var(--radius-token-xl)] p-8">
+      <Reveal className="gradient-border card-lift overflow-hidden rounded-[var(--radius-token-xl)] p-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <div className="flex items-baseline gap-2">
@@ -310,7 +378,7 @@ function Pricing() {
             </li>
           ))}
         </ul>
-      </div>
+      </Reveal>
     </Block>
   );
 }
@@ -319,14 +387,14 @@ function Faq() {
   return (
     <Block index="04" kicker="Časté dotazy" title="Co se nejčastěji ptáte">
       <div className="border-t border-[var(--border-subtle)]">
-        {FAQ.map((item) => (
-          <details key={item.q} className="group border-b border-[var(--border-subtle)] py-5">
+        {FAQ.map((item, i) => (
+          <Reveal as="details" key={item.q} delay={i * 60} className="group border-b border-[var(--border-subtle)] py-5">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-semibold">
               {item.q}
               <span className="text-xl text-[var(--text-tertiary)] transition-transform group-open:rotate-45">+</span>
             </summary>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-[var(--text-secondary)]">{item.a}</p>
-          </details>
+          </Reveal>
         ))}
       </div>
     </Block>
@@ -358,7 +426,7 @@ function Contact() {
 
   return (
     <Block id="kontakt" index="05" kicker="Kontakt" title="Máte dotaz? Napište nám" intro="Ozveme se obvykle do jednoho pracovního dne.">
-      <div className="max-w-xl">
+      <Reveal className="max-w-xl">
         {sent ? (
           <div className="flex items-center gap-3 border-t border-[var(--border-subtle)] py-10">
             <Check className="h-6 w-6 text-[var(--brand-primary-light)]" />
@@ -376,7 +444,7 @@ function Contact() {
             <Button type="submit" loading={submitting}>Odeslat zprávu</Button>
           </form>
         )}
-      </div>
+      </Reveal>
     </Block>
   );
 }
