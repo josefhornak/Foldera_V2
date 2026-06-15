@@ -3,7 +3,6 @@ import { Link } from 'react-router';
 import {
   ArrowRight,
   Mail,
-  ScanLine,
   CopyCheck,
   FileCheck2,
   Receipt,
@@ -71,7 +70,6 @@ const STEPS = [
 const FEATURES = [
   { icon: Receipt, title: 'Všechny typy dokladů', text: 'Faktury, zálohové faktury, dobropisy a daňové doklady k přijaté platbě do faktur přijatých, účtenky rovnou do pokladny - vše se správným typem dokladu.' },
   { icon: Mail, title: 'Sběrný e-mail i cloud', text: 'Vlastní adresa @inbox.foldera.cz, OneDrive i Google Drive. Foldera je kontroluje každých pár minut.' },
-  { icon: ScanLine, title: 'Spolehlivé vytěžení', text: 'Přesné čtení dat, u elektronických dokladů rovnou z ISDOC. Zvládne cizí měny, přenesenou daňovou povinnost i více sazeb DPH.' },
   { icon: CopyCheck, title: 'Kontrola duplicit', text: 'Stejný doklad se nezaloží dvakrát. Porovnáváme podle IČO, čísla i variabilního symbolu.' },
   { icon: Sparkles, title: 'Automatické zaúčtování', text: 'Doplní řádek DPH, předkontaci i řádek kontrolního hlášení - podle historie dodavatele, nebo návrhem od AI.' },
   { icon: Paperclip, title: 'Originál i e-mail v příloze', text: 'Zdrojový doklad přiložíme k záznamu v ABRA. Volitelně k němu uložíme i původní e-mail (.eml) jako důkaz.' },
