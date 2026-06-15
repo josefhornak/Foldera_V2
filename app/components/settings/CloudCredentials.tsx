@@ -35,22 +35,22 @@ export function CloudCredentials({ companyId, oauthLoading, onConnect }: Props) 
         Pro připojení OneDrive nebo Google Drive si vytvoříte vlastní OAuth aplikaci u poskytovatele a zadáte sem její
         Client ID a Client Secret. Návod je u každého poskytovatele níže.
       </p>
-      {google && (
+      {onedrive && (
         <ProviderCard
-          info={google}
-          icon={<HardDrive className="h-5 w-5 text-[var(--brand-primary-light)]" />}
-          name="Google Drive"
+          info={onedrive}
+          icon={<Cloud className="h-5 w-5 text-[var(--brand-primary-light)]" />}
+          name="OneDrive"
           companyId={companyId}
           oauthLoading={oauthLoading}
           onConnect={onConnect}
           onChanged={() => mutate()}
         />
       )}
-      {onedrive && (
+      {google && (
         <ProviderCard
-          info={onedrive}
-          icon={<Cloud className="h-5 w-5 text-[var(--brand-primary-light)]" />}
-          name="OneDrive"
+          info={google}
+          icon={<HardDrive className="h-5 w-5 text-[var(--brand-primary-light)]" />}
+          name="Google Drive"
           companyId={companyId}
           oauthLoading={oauthLoading}
           onConnect={onConnect}
@@ -78,7 +78,7 @@ function ProviderCard({
   onConnect: (provider: Provider) => void;
   onChanged: () => void;
 }) {
-  const [open, setOpen] = useState(!info.configured);
+  const [open, setOpen] = useState(false);
   const [clientId, setClientId] = useState(info.clientId ?? '');
   const [clientSecret, setClientSecret] = useState('');
   const [saving, setSaving] = useState(false);

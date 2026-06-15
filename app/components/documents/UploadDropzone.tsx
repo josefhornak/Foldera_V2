@@ -99,10 +99,7 @@ export function UploadDropzone({ companyId, onUploaded }: UploadDropzoneProps) {
   }, [uploading, companyId]);
 
   return (
-    <div className="flex items-center gap-4">
-      <span className="hidden text-[13px] text-[var(--text-tertiary)] sm:inline">
-        {t('documents.upload.dragHint')}
-      </span>
+    <div className="flex flex-col items-end gap-1.5">
       <Button
         type="button"
         loading={uploading}
@@ -111,6 +108,9 @@ export function UploadDropzone({ companyId, onUploaded }: UploadDropzoneProps) {
       >
         {uploading ? t('documents.upload.uploading') : t('documents.upload.button')}
       </Button>
+      <span className="hidden text-right text-[13px] text-[var(--text-tertiary)] sm:inline">
+        {t('documents.upload.dragHint')}
+      </span>
       <input
         ref={inputRef}
         type="file"
