@@ -6,6 +6,7 @@ import { SourcesSection } from '~/components/settings/SourcesSection';
 import { Button } from '~/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/Card';
 import { Field, Input, Select } from '~/components/ui/Input';
+import { Switch } from '~/components/ui/Switch';
 import { LogOut, Mail, ShieldCheck, Trash2, UserRound } from 'lucide-react';
 import { useBilling, subscribeCompany, cancelSubscription } from '~/hooks/useBilling';
 import { deleteCompany, updateCompany, useCompanies } from '~/hooks/useCompanies';
@@ -315,28 +316,18 @@ function EmailOptionsCard({ company, onChanged }: { company: Company; onChanged:
               Ukládat originální e-mail (.eml) do ABRA Flexi
             </p>
             <p className="mt-1 text-xs text-[var(--text-tertiary)]">
-              U dokladů přijatých e-mailem se k dokladu v ABRA přiloží i původní zpráva (.eml). Týká se sběrného
-              e-mailu a IMAP; faktura z cloudu (OneDrive / Google Drive) e-mail nemá.
+              U dokladů přijatých e-mailem se k dokladu v ABRA přiloží i původní zpráva (.eml). Faktura z cloudu
+              (OneDrive / Google Drive) původní e-mail nemá.
             </p>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={on}
-            disabled={saving}
-            onClick={toggle}
-            className={cn(
-              'relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors',
-              on ? 'bg-[var(--brand-primary)]' : 'bg-[var(--surface-interactive)]'
-            )}
-          >
-            <span
-              className={cn(
-                'absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform',
-                on ? 'translate-x-[22px]' : 'translate-x-0.5'
-              )}
+          <div className="mt-0.5 shrink-0">
+            <Switch
+              checked={on}
+              onChange={toggle}
+              disabled={saving}
+              label="Ukládat originální e-mail (.eml) do ABRA Flexi"
             />
-          </button>
+          </div>
         </div>
       </CardContent>
     </Card>
