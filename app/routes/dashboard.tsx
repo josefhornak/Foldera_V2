@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { AlertTriangle, ArrowRight, Rocket } from 'lucide-react';
+import { AlertTriangle, Rocket } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { DocumentStatusBadge } from '~/components/ui/Badge';
 import { Button } from '~/components/ui/Button';
@@ -112,7 +112,6 @@ export default function DashboardPage() {
             className="inline-flex items-center gap-1 text-xs font-medium text-[var(--text-link)] hover:underline underline-offset-4"
           >
             {t('dashboard.viewAll')}
-            <ArrowRight className="h-3 w-3" aria-hidden="true" />
           </Link>
         </CardHeader>
         <CardContent>

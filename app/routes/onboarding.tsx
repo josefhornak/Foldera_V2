@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router';
-import { ArrowRight, Check, CheckCircle2, Cloud, Copy, Loader2, Mail, XCircle } from 'lucide-react';
+import { Check, CheckCircle2, Cloud, Copy, Loader2, Mail, XCircle } from 'lucide-react';
 import { Button } from '~/components/ui/Button';
 import { Card } from '~/components/ui/Card';
 import { LogoMark } from '~/components/ui/Logo';
@@ -20,7 +20,7 @@ export function meta() {
 
 const ORDER = ['abra', 'source', 'tuning', 'done'] as const;
 type WStep = (typeof ORDER)[number];
-const LABELS: Record<WStep, string> = { abra: 'ABRA Flexi', source: 'Zdroj', tuning: 'Doladění', done: 'Hotovo' };
+const LABELS: Record<WStep, string> = { abra: 'ABRA Flexi', source: 'Zdroj', tuning: 'Nastavení', done: 'Hotovo' };
 
 export default function OnboardingWizard() {
   const token = useAuthStore((s) => s.token);
@@ -297,7 +297,7 @@ function TuningStep({ company, onBack, onNext }: { company: Company; onBack: () 
 
   return (
     <div className="space-y-5">
-      <StepHeader title="Doladění (volitelné)" subtitle="Výchozí hodnoty vyhovují většině firem. Můžete upravit teď, nebo kdykoli později v Nastavení." />
+      <StepHeader title="Nastavení (volitelné)" subtitle="Můžete upravit teď, nebo kdykoli později v Nastavení." />
       <Field label="Vytěžování položek" htmlFor="o-li">
         <Select id="o-li" value={lineItemMode} onChange={(e) => setLineItemMode(e.target.value as Company['lineItemMode'])}>
           <option value="detail">Kompletní řádkové položky z dokladu</option>
@@ -358,7 +358,7 @@ function DoneStep({ onFinish }: { onFinish: () => void }) {
           Přeposlané doklady teď Foldera vytěží a založí do ABRA Flexi. Vy už jen kontrolujete ve svém účetnictví.
         </p>
       </div>
-      <Button onClick={onFinish} className="w-full" icon={<ArrowRight className="h-4 w-4" />}>Přejít do aplikace</Button>
+      <Button onClick={onFinish} className="w-full">Přejít do aplikace</Button>
     </div>
   );
 }

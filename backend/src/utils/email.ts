@@ -60,9 +60,6 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
-/** Hosted brand mark (e-mail clients don't render inline SVG). */
-const LOGO_URL = 'https://foldera.cz/icons/icon-128x128.png';
-
 const FONT = '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif';
 
 /**
@@ -94,7 +91,9 @@ const SHELL = (inner: string): string =>
               <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td style="padding-right:11px;vertical-align:middle">
-                    <img src="${LOGO_URL}" width="32" height="32" alt="Foldera" style="display:block;border-radius:8px" />
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+                      <td width="34" height="34" align="center" valign="middle" bgcolor="#7c4ef0" style="width:34px;height:34px;background:#7c4ef0;border-radius:8px;color:#ffffff;font-family:${FONT};font-size:20px;font-weight:800;line-height:34px;text-align:center">F</td>
+                    </tr></table>
                   </td>
                   <td style="vertical-align:middle;font-family:${FONT};font-weight:800;font-size:20px;letter-spacing:-0.02em;color:#16161d">Foldera</td>
                 </tr>

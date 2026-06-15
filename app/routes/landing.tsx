@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type ElementType, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import {
-  ArrowRight,
   Mail,
   CopyCheck,
   FileCheck2,
@@ -215,7 +214,7 @@ function Hero({ appHref, loggedIn }: { appHref: string; loggedIn: boolean }) {
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <Link to={appHref}>
-            <Button icon={loggedIn ? undefined : <ArrowRight />}>{loggedIn ? 'Do aplikace' : 'Vyzkoušet 7 dní zdarma'}</Button>
+            <Button>{loggedIn ? 'Do aplikace' : 'Vyzkoušet 7 dní zdarma'}</Button>
           </Link>
           <a href="#jak">
             <Button variant="secondary">Jak to funguje</Button>
@@ -361,7 +360,7 @@ function Pricing() {
             <p className="mt-2 text-sm text-[var(--text-tertiary)]">7 dní zdarma (až 10 dokladů), bez karty.</p>
           </div>
           <Link to="/register">
-            <Button icon={<ArrowRight />}>Vyzkoušet zdarma</Button>
+            <Button>Vyzkoušet zdarma</Button>
           </Link>
         </div>
         <ul className="mt-8 grid gap-3 border-t border-[var(--border-subtle)] pt-7 sm:grid-cols-2">
