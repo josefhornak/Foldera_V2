@@ -47,7 +47,7 @@
     "ico": "Company ID (IČO)",
     "icoPlaceholder": "12345678",
     "onboardingTitle": "Create your first company",
-    "onboardingHint": "Each company has its own ABRA Flexi connection and its own document sources."
+    "onboardingHint": "Each company has its own ABRA Flexi connection and its own inputs."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -58,7 +58,7 @@
     "avgConfidence": "Average accuracy",
     "errorsToResolve": "Errors to resolve",
     "recentDocuments": "Recent documents",
-    "noDocuments": "No documents processed yet. Configure sources in Settings.",
+    "noDocuments": "No documents processed yet. Configure inputs in Settings.",
     "viewAll": "View all"
   },
   "documents": {
@@ -142,11 +142,11 @@
   },
   "settings": {
     "title": "Settings",
-    "subtitle": "ABRA Flexi connection, document sources and company details",
+    "subtitle": "ABRA Flexi connection, inputs and company details",
     "saved": "Saved",
     "tabs": {
       "abraflexi": "ABRA Flexi",
-      "sources": "Document sources",
+      "sources": "Inputs",
       "company": "Company"
     },
     "abra": {
@@ -162,9 +162,9 @@
       "testFailed": "Connection failed"
     },
     "sources": {
-      "title": "Document sources",
-      "hint": "Configured sources are checked automatically every 5 minutes. New documents are extracted and sent straight to ABRA Flexi.",
-      "empty": "No sources yet. Create a collection email or connect a cloud drive.",
+      "title": "Inputs",
+      "hint": "Configured inputs are checked automatically every 5 minutes. New documents are extracted and sent straight to ABRA Flexi.",
+      "empty": "No inputs yet. Create a collection email or connect a cloud drive.",
       "createCollectionEmail": "Create collection email",
       "collectionEmailHint": "Forward invoices to this address - the mailbox is checked every 5 minutes and attachments are extracted and sent to ABRA Flexi automatically.",
       "addImap": "Add collection email (IMAP)",
@@ -186,7 +186,7 @@
       "imapPassword": "Password",
       "imapFolder": "Folder (default INBOX)",
       "imapSecure": "Secure connection (SSL/TLS)",
-      "createSource": "Add source",
+      "createSource": "Add input",
       "testOk": "Connection works",
       "testFailed": "Connection failed",
       "chooseFolder": "Choose watched folder",
@@ -199,7 +199,7 @@
     "company": {
       "title": "Company details",
       "dangerTitle": "Delete company",
-      "dangerHint": "Deletes the company including all sources and processed-document records. Documents in ABRA Flexi remain untouched.",
+      "dangerHint": "Deletes the company including all inputs and processed-document records. Documents in ABRA Flexi remain untouched.",
       "delete": "Delete company"
     },
     "account": {

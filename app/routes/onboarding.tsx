@@ -20,7 +20,7 @@ export function meta() {
 
 const ORDER = ['abra', 'source', 'tuning', 'done'] as const;
 type WStep = (typeof ORDER)[number];
-const LABELS: Record<WStep, string> = { abra: 'ABRA Flexi', source: 'Zdroj', tuning: 'Nastavení', done: 'Hotovo' };
+const LABELS: Record<WStep, string> = { abra: 'ABRA Flexi', source: 'Vstup', tuning: 'Nastavení', done: 'Hotovo' };
 
 export default function OnboardingWizard() {
   const token = useAuthStore((s) => s.token);
@@ -254,7 +254,7 @@ function SourceStep({ company, onBack, onNext }: { company: Company; onBack: () 
 
       <div className="flex items-center gap-3 rounded-[var(--radius-token-lg)] border border-[var(--border-subtle)] px-4 py-3">
         <Cloud className="h-5 w-5 text-[var(--text-tertiary)]" />
-        <span className="text-sm text-[var(--text-secondary)]">OneDrive a Google Drive připojíte v <span className="text-[var(--text-primary)]">Nastavení → Zdroje</span> (zadáte vlastní OAuth aplikaci).</span>
+        <span className="text-sm text-[var(--text-secondary)]">OneDrive a Google Drive připojíte v <span className="text-[var(--text-primary)]">Nastavení → Vstupy</span> (zadáte vlastní OAuth aplikaci).</span>
       </div>
 
       {error && <p role="alert" className="text-xs text-[var(--status-error-text)]">{error}</p>}

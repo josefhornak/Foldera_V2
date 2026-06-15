@@ -130,7 +130,7 @@ function CompaniesTab() {
               <th className="px-4 py-3 font-semibold">Stav</th>
               <th className="px-4 py-3 text-right font-semibold">Doklady (ABRA/celk.)</th>
               <th className="px-4 py-3 text-center font-semibold">Členové</th>
-              <th className="px-4 py-3 text-center font-semibold">Zdroje</th>
+              <th className="px-4 py-3 text-center font-semibold">Vstupy</th>
               <th className="px-4 py-3 text-center font-semibold">ABRA</th>
               <th className="px-4 py-3 font-semibold">Registrace</th>
             </tr>

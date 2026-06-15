@@ -23,7 +23,7 @@ function SetupReminder({ companyId }: { companyId: string }) {
   const needsAbra = !company.abraConfigured;
   const needsSource = sources.length === 0;
   if (!needsAbra && !needsSource) return null;
-  const missing = [needsAbra && 'připojení k ABRA Flexi', needsSource && 'zdroj dokladů'].filter(Boolean).join(' a ');
+  const missing = [needsAbra && 'připojení k ABRA Flexi', needsSource && 'vstup dokladů'].filter(Boolean).join(' a ');
   return (
     <div className="flex flex-col items-start gap-3 rounded-[var(--radius-token-lg)] border border-[var(--brand-primary)]/30 bg-[var(--brand-primary-subtle)] px-4 py-3.5 sm:flex-row sm:items-center">
       <Rocket className="h-5 w-5 shrink-0 text-[var(--brand-primary-light)]" aria-hidden="true" />

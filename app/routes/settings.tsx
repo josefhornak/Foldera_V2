@@ -28,7 +28,7 @@ const SECTIONS = ['abraflexi', 'sources', 'company', 'team'] as const;
 type Section = (typeof SECTIONS)[number];
 const TAB_LABEL: Record<Section, string> = {
   abraflexi: 'ABRA Flexi',
-  sources: 'Zdroje',
+  sources: 'Vstupy',
   company: 'Firma',
   team: 'Tým',
 };
@@ -651,7 +651,7 @@ function TeamSection({ company }: { company: Company }) {
             <p className="flex items-start gap-2">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-primary-light)]" />
               <span>
-                <b className="text-[var(--text-primary)]">Správce</b> - plný přístup: připojení k ABRA Flexi, zdroje
+                <b className="text-[var(--text-primary)]">Správce</b> - plný přístup: připojení k ABRA Flexi, vstupy
                 faktur, nahrávání a mazání dokladů, předplatné a správa týmu (zve a odebírá lidi).
               </span>
             </p>

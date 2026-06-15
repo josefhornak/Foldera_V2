@@ -47,7 +47,7 @@
     "ico": "IČO",
     "icoPlaceholder": "12345678",
     "onboardingTitle": "Vytvořte první firmu",
-    "onboardingHint": "Každá firma má vlastní připojení do ABRA Flexi a vlastní zdroje dokumentů."
+    "onboardingHint": "Každá firma má vlastní připojení do ABRA Flexi a vlastní vstupy."
   },
   "dashboard": {
     "title": "Přehled",
@@ -58,7 +58,7 @@
     "avgConfidence": "Průměrná přesnost",
     "errorsToResolve": "Chyby k vyřešení",
     "recentDocuments": "Poslední dokumenty",
-    "noDocuments": "Zatím nebyly zpracovány žádné dokumenty. Nastavte zdroje v Nastavení.",
+    "noDocuments": "Zatím nebyly zpracovány žádné dokumenty. Nastavte vstupy v Nastavení.",
     "viewAll": "Zobrazit vše"
   },
   "documents": {
@@ -142,11 +142,11 @@
   },
   "settings": {
     "title": "Nastavení",
-    "subtitle": "Připojení do ABRA Flexi, zdroje dokumentů a údaje firmy",
+    "subtitle": "Připojení do ABRA Flexi, vstupy a údaje firmy",
     "saved": "Uloženo",
     "tabs": {
       "abraflexi": "ABRA Flexi",
-      "sources": "Zdroje dokumentů",
+      "sources": "Vstupy",
       "company": "Firma"
     },
     "abra": {
@@ -162,9 +162,9 @@
       "testFailed": "Připojení se nezdařilo"
     },
     "sources": {
-      "title": "Zdroje dokumentů",
-      "hint": "Nakonfigurované zdroje se automaticky kontrolují každých 5 minut. Nové dokumenty se vytěží a rovnou odešlou do ABRA Flexi.",
-      "empty": "Zatím žádné zdroje. Vytvořte sběrný e-mail nebo připojte cloudové úložiště.",
+      "title": "Vstupy",
+      "hint": "Nakonfigurované vstupy se automaticky kontrolují každých 5 minut. Nové dokumenty se vytěží a rovnou odešlou do ABRA Flexi.",
+      "empty": "Zatím žádné vstupy. Vytvořte sběrný e-mail nebo připojte cloudové úložiště.",
       "createCollectionEmail": "Vytvořit sběrný e-mail",
       "collectionEmailHint": "Přeposílejte faktury na tuto adresu - schránka se kontroluje každých 5 minut, přílohy se automaticky vytěží a odešlou do ABRA Flexi.",
       "addImap": "Přidat sběrný e-mail (IMAP)",
@@ -186,7 +186,7 @@
       "imapPassword": "Heslo",
       "imapFolder": "Složka (výchozí INBOX)",
       "imapSecure": "Zabezpečené připojení (SSL/TLS)",
-      "createSource": "Přidat zdroj",
+      "createSource": "Přidat vstup",
       "testOk": "Připojení funguje",
       "testFailed": "Připojení se nezdařilo",
       "chooseFolder": "Vybrat sledovanou složku",
@@ -199,7 +199,7 @@
     "company": {
       "title": "Údaje firmy",
       "dangerTitle": "Smazání firmy",
-      "dangerHint": "Smaže firmu včetně všech zdrojů a záznamů o zpracovaných dokumentech. Doklady v ABRA Flexi zůstanou beze změny.",
+      "dangerHint": "Smaže firmu včetně všech vstupů a záznamů o zpracovaných dokumentech. Doklady v ABRA Flexi zůstanou beze změny.",
       "delete": "Smazat firmu"
     },
     "account": {
