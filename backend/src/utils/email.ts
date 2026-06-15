@@ -63,42 +63,71 @@ function escapeHtml(s: string): string {
 /** Hosted brand mark (e-mail clients don't render inline SVG). */
 const LOGO_URL = 'https://foldera.cz/icons/icon-128x128.png';
 
+const FONT = '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif';
+
 /**
- * Shared brand shell for every transactional e-mail: dark card with a logo
- * header and a footer. Table-based header for bullet-proof alignment in Outlook.
+ * Shared brand shell for every transactional e-mail. A LIGHT, table-based
+ * layout with solid colors — renders consistently across clients and, unlike a
+ * dark card, survives Outlook desktop dark-mode without low-contrast mangling.
+ * The text wordmark sits next to the logo so branding holds even when the
+ * image is blocked.
  */
 const SHELL = (inner: string): string =>
-  `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#0b0b10;color:#efeff4;padding:32px 16px;margin:0">
-     <div style="max-width:480px;margin:0 auto;background:#14141c;border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow:hidden">
-       <div style="padding:22px 32px;border-bottom:1px solid rgba(255,255,255,.06)">
-         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse">
-           <tr>
-             <td style="padding-right:11px;vertical-align:middle">
-               <img src="${LOGO_URL}" width="34" height="34" alt="Foldera" style="display:block;border-radius:9px" />
-             </td>
-             <td style="vertical-align:middle;font-weight:800;font-size:20px;letter-spacing:-0.02em;color:#efeff4">Foldera</td>
-           </tr>
-         </table>
-       </div>
-       <div style="padding:30px 32px">
-         ${inner}
-       </div>
-       <div style="padding:18px 32px;border-top:1px solid rgba(255,255,255,.06)">
-         <p style="color:#666674;font-size:12px;line-height:1.5;margin:0">
-           Doklady automaticky do ABRA Flexi · <a href="https://foldera.cz" style="color:#8b5cf6;text-decoration:none">foldera.cz</a>
-         </p>
-       </div>
-     </div>
-   </div>`;
+  `<!DOCTYPE html>
+<html lang="cs" xmlns="http://www.w3.org/1999/xhtml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="color-scheme" content="light only" />
+  <meta name="supported-color-schemes" content="light only" />
+  <!--[if mso]><style>table,td,div,p,a{font-family:Arial,Helvetica,sans-serif !important}</style><![endif]-->
+</head>
+<body style="margin:0;padding:0;background:#f3f3f6;-webkit-text-size-adjust:100%">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f3f3f6">
+    <tr>
+      <td align="center" style="padding:32px 16px">
+        <table role="presentation" width="480" cellpadding="0" cellspacing="0" border="0" style="width:480px;max-width:480px;background:#ffffff;border:1px solid #e7e7ee;border-radius:16px;overflow:hidden">
+          <tr><td height="4" style="height:4px;background:#7c4ef0;font-size:0;line-height:0">&nbsp;</td></tr>
+          <tr>
+            <td style="padding:22px 32px;border-bottom:1px solid #eeeef2">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding-right:11px;vertical-align:middle">
+                    <img src="${LOGO_URL}" width="32" height="32" alt="Foldera" style="display:block;border-radius:8px" />
+                  </td>
+                  <td style="vertical-align:middle;font-family:${FONT};font-weight:800;font-size:20px;letter-spacing:-0.02em;color:#16161d">Foldera</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px 32px;font-family:${FONT};font-size:15px;line-height:1.55;color:#16161d">
+              ${inner}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:18px 32px;border-top:1px solid #eeeef2;background:#fafafb">
+              <p style="font-family:${FONT};color:#9a9aa7;font-size:12px;line-height:1.5;margin:0">
+                Doklady automaticky do ABRA Flexi · <a href="https://foldera.cz" style="color:#7c4ef0;text-decoration:none">foldera.cz</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
 /** Send the 6-digit signup verification code. */
 export async function sendVerificationCode(to: string, name: string, code: string): Promise<void> {
   const safeName = name ? escapeHtml(name) : '';
   const inner = `
     <p style="font-size:15px;margin:0 0 8px">Dobrý den${safeName ? ` ${safeName}` : ''},</p>
-    <p style="font-size:15px;color:#9c9cac;margin:0 0 20px">váš ověřovací kód pro registraci do Foldera je:</p>
-    <div style="font-size:34px;font-weight:700;letter-spacing:8px;text-align:center;background:#0e0e13;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:18px 0;color:#efeff4">${code}</div>
-    <p style="font-size:13px;color:#666674;margin:18px 0 0">Kód platí 15 minut. Pokud jste o registraci nežádali, e-mail ignorujte.</p>`;
+    <p style="font-size:15px;color:#56566a;margin:0 0 20px">váš ověřovací kód pro registraci do Foldera je:</p>
+    <div style="font-size:34px;font-weight:700;letter-spacing:8px;text-align:center;background:#f4f4f7;border:1px solid #e6e6ec;border-radius:10px;padding:18px 0;color:#16161d">${code}</div>
+    <p style="font-size:13px;color:#8a8a99;margin:18px 0 0">Kód platí 15 minut. Pokud jste o registraci nežádali, e-mail ignorujte.</p>`;
   await sendMail({
     to,
     subject: `Foldera – ověřovací kód ${code}`,
@@ -122,25 +151,25 @@ export async function sendDocumentFailureAlert(
 ): Promise<void> {
   const phaseLabel = opts.phase === 'export' ? 'při exportu do ABRA Flexi' : 'při zpracování';
   const rows: string[] = [
-    `<tr><td style="color:#9c9cac;padding:4px 0">Firma</td><td style="color:#efeff4;text-align:right">${escapeHtml(opts.companyName)}</td></tr>`,
-    `<tr><td style="color:#9c9cac;padding:4px 0">Soubor</td><td style="color:#efeff4;text-align:right">${escapeHtml(opts.fileName)}</td></tr>`,
+    `<tr><td style="color:#56566a;padding:4px 0">Firma</td><td style="color:#16161d;text-align:right">${escapeHtml(opts.companyName)}</td></tr>`,
+    `<tr><td style="color:#56566a;padding:4px 0">Soubor</td><td style="color:#16161d;text-align:right">${escapeHtml(opts.fileName)}</td></tr>`,
   ];
   if (opts.supplierName)
-    rows.push(`<tr><td style="color:#9c9cac;padding:4px 0">Dodavatel</td><td style="color:#efeff4;text-align:right">${escapeHtml(opts.supplierName)}</td></tr>`);
+    rows.push(`<tr><td style="color:#56566a;padding:4px 0">Dodavatel</td><td style="color:#16161d;text-align:right">${escapeHtml(opts.supplierName)}</td></tr>`);
   if (opts.amount)
-    rows.push(`<tr><td style="color:#9c9cac;padding:4px 0">Částka</td><td style="color:#efeff4;text-align:right">${escapeHtml(opts.amount)}</td></tr>`);
+    rows.push(`<tr><td style="color:#56566a;padding:4px 0">Částka</td><td style="color:#16161d;text-align:right">${escapeHtml(opts.amount)}</td></tr>`);
 
   const reason = opts.errorMessage
-    ? `<div style="background:#0e0e13;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px 14px;margin:16px 0;color:#f0a3a3;font-size:13px;line-height:1.5">${escapeHtml(opts.errorMessage)}</div>`
+    ? `<div style="background:#f4f4f7;border:1px solid #e6e6ec;border-radius:10px;padding:12px 14px;margin:16px 0;color:#c0392b;font-size:13px;line-height:1.5">${escapeHtml(opts.errorMessage)}</div>`
     : '';
 
   const inner = `
     <p style="font-size:15px;margin:0 0 8px">Dobrý den,</p>
-    <p style="font-size:15px;color:#9c9cac;margin:0 0 16px">u jednoho dokladu nastala chyba <b style="color:#efeff4">${phaseLabel}</b>. Doklad <b style="color:#efeff4">nebyl</b> založen do účetnictví.</p>
+    <p style="font-size:15px;color:#56566a;margin:0 0 16px">u jednoho dokladu nastala chyba <b style="color:#16161d">${phaseLabel}</b>. Doklad <b style="color:#16161d">nebyl</b> založen do účetnictví.</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin:0 0 4px">${rows.join('')}</table>
     ${reason}
-    <a href="${opts.link}" style="display:inline-block;background:#8b5cf6;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 22px;border-radius:10px;margin-top:6px">Zobrazit doklady</a>
-    <p style="font-size:13px;color:#666674;margin:18px 0 0">${
+    <a href="${opts.link}" style="display:inline-block;background:#7c4ef0;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 22px;border-radius:10px;margin-top:6px">Zobrazit doklady</a>
+    <p style="font-size:13px;color:#8a8a99;margin:18px 0 0">${
       opts.phase === 'export'
         ? 'Po opravě nastavení můžete export zopakovat přímo v aplikaci.'
         : 'Doklad se nepodařilo přečíst - zkontrolujte ho v aplikaci a případně nahrajte znovu.'
@@ -163,15 +192,15 @@ export async function sendBankReviewAlert(
 ): Promise<void> {
   const inner = `
     <p style="font-size:15px;margin:0 0 8px">Dobrý den,</p>
-    <p style="font-size:15px;color:#9c9cac;margin:0 0 16px">jeden doklad jsme <b style="color:#efeff4">pozdrželi ke kontrole</b>, protože obsahuje <b style="color:#efeff4">nový nebo změněný bankovní účet</b>. Do ABRA Flexi se založí až po vašem schválení - ochrana proti přesměrování platby.</p>
+    <p style="font-size:15px;color:#56566a;margin:0 0 16px">jeden doklad jsme <b style="color:#16161d">pozdrželi ke kontrole</b>, protože obsahuje <b style="color:#16161d">nový nebo změněný bankovní účet</b>. Do ABRA Flexi se založí až po vašem schválení - ochrana proti přesměrování platby.</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin:0 0 4px">
-      <tr><td style="color:#9c9cac;padding:4px 0">Firma</td><td style="color:#efeff4;text-align:right">${escapeHtml(opts.companyName)}</td></tr>
-      <tr><td style="color:#9c9cac;padding:4px 0">Soubor</td><td style="color:#efeff4;text-align:right">${escapeHtml(opts.fileName)}</td></tr>
-      ${opts.supplierName ? `<tr><td style="color:#9c9cac;padding:4px 0">Dodavatel</td><td style="color:#efeff4;text-align:right">${escapeHtml(opts.supplierName)}</td></tr>` : ''}
+      <tr><td style="color:#56566a;padding:4px 0">Firma</td><td style="color:#16161d;text-align:right">${escapeHtml(opts.companyName)}</td></tr>
+      <tr><td style="color:#56566a;padding:4px 0">Soubor</td><td style="color:#16161d;text-align:right">${escapeHtml(opts.fileName)}</td></tr>
+      ${opts.supplierName ? `<tr><td style="color:#56566a;padding:4px 0">Dodavatel</td><td style="color:#16161d;text-align:right">${escapeHtml(opts.supplierName)}</td></tr>` : ''}
     </table>
-    <div style="background:#0e0e13;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px 14px;margin:16px 0;color:#f0b254;font-size:13px;line-height:1.5">${escapeHtml(opts.reason)}</div>
-    <a href="${opts.link}" style="display:inline-block;background:#8b5cf6;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 22px;border-radius:10px">Zkontrolovat doklad</a>
-    <p style="font-size:13px;color:#666674;margin:18px 0 0">Ověřte bankovní účet u dodavatele. Pokud je správný, doklad v aplikaci schválíte a založí se do ABRA Flexi.</p>`;
+    <div style="background:#f4f4f7;border:1px solid #e6e6ec;border-radius:10px;padding:12px 14px;margin:16px 0;color:#9a6a14;font-size:13px;line-height:1.5">${escapeHtml(opts.reason)}</div>
+    <a href="${opts.link}" style="display:inline-block;background:#7c4ef0;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 22px;border-radius:10px">Zkontrolovat doklad</a>
+    <p style="font-size:13px;color:#8a8a99;margin:18px 0 0">Ověřte bankovní účet u dodavatele. Pokud je správný, doklad v aplikaci schválíte a založí se do ABRA Flexi.</p>`;
   await sendMail({
     to,
     subject: `Foldera – doklad ke kontrole: bankovní účet (${opts.companyName})`,
@@ -187,10 +216,10 @@ export async function sendTrialEndedAlert(
 ): Promise<void> {
   const inner = `
     <p style="font-size:15px;margin:0 0 8px">Dobrý den,</p>
-    <p style="font-size:15px;color:#9c9cac;margin:0 0 16px">zkušební období pro firmu <b style="color:#efeff4">${escapeHtml(opts.companyName)}</b> skončilo. Příchozí doklady se teď <b style="color:#efeff4">nezpracovávají</b>.</p>
-    <p style="font-size:15px;color:#9c9cac;margin:0 0 18px">Chcete-li přejít na ostrý provoz, je potřeba to potvrdit - aktivací se spustí předplatné <b style="color:#efeff4">199 Kč měsíčně</b> (100 dokladů v ceně, každý další 2 Kč). Bez vašeho potvrzení vám nic neúčtujeme.</p>
-    <a href="${opts.link}" style="display:inline-block;background:#8b5cf6;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 22px;border-radius:10px">Aktivovat předplatné</a>
-    <p style="font-size:13px;color:#666674;margin:18px 0 0">Aktivaci potvrzuje správce firmy přímo v aplikaci. Dokud ji nepotvrdíte, zůstává účet bez poplatku.</p>`;
+    <p style="font-size:15px;color:#56566a;margin:0 0 16px">zkušební období pro firmu <b style="color:#16161d">${escapeHtml(opts.companyName)}</b> skončilo. Příchozí doklady se teď <b style="color:#16161d">nezpracovávají</b>.</p>
+    <p style="font-size:15px;color:#56566a;margin:0 0 18px">Chcete-li přejít na ostrý provoz, je potřeba to potvrdit - aktivací se spustí předplatné <b style="color:#16161d">199 Kč měsíčně</b> (100 dokladů v ceně, každý další 2 Kč). Bez vašeho potvrzení vám nic neúčtujeme.</p>
+    <a href="${opts.link}" style="display:inline-block;background:#7c4ef0;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 22px;border-radius:10px">Aktivovat předplatné</a>
+    <p style="font-size:13px;color:#8a8a99;margin:18px 0 0">Aktivaci potvrzuje správce firmy přímo v aplikaci. Dokud ji nepotvrdíte, zůstává účet bez poplatku.</p>`;
   await sendMail({
     to,
     subject: `Foldera – zkušební období skončilo (${opts.companyName})`,
@@ -209,9 +238,9 @@ export async function sendCompanyInvite(
   const roleLabel = role === 'admin' ? 'správce' : 'běžný uživatel (jen nahlíží)';
   const inner = `
     <p style="font-size:15px;margin:0 0 8px">Dobrý den,</p>
-    <p style="font-size:15px;color:#9c9cac;margin:0 0 18px">byli jste pozváni do firmy <b style="color:#efeff4">${escapeHtml(companyName)}</b> ve Foldeře jako <b style="color:#efeff4">${roleLabel}</b>.</p>
-    <a href="${link}" style="display:inline-block;background:#8b5cf6;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 22px;border-radius:10px">Přijmout pozvánku</a>
-    <p style="font-size:13px;color:#666674;margin:18px 0 0">Pozvánka platí 7 dní. Pokud ještě nemáte účet, nejprve se zaregistrujte stejným e-mailem a poté pozvánku přijměte.</p>`;
+    <p style="font-size:15px;color:#56566a;margin:0 0 18px">byli jste pozváni do firmy <b style="color:#16161d">${escapeHtml(companyName)}</b> ve Foldeře jako <b style="color:#16161d">${roleLabel}</b>.</p>
+    <a href="${link}" style="display:inline-block;background:#7c4ef0;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 22px;border-radius:10px">Přijmout pozvánku</a>
+    <p style="font-size:13px;color:#8a8a99;margin:18px 0 0">Pozvánka platí 7 dní. Pokud ještě nemáte účet, nejprve se zaregistrujte stejným e-mailem a poté pozvánku přijměte.</p>`;
   await sendMail({
     to,
     subject: `Foldera – pozvánka do firmy ${companyName}`,
@@ -229,17 +258,17 @@ export async function sendContactNotification(
   opts: { name: string; email: string; company?: string | null; message: string }
 ): Promise<void> {
   const rows = [
-    `<tr><td style="color:#9c9cac;padding:4px 0">Jméno</td><td style="color:#efeff4;text-align:right">${escapeHtml(opts.name)}</td></tr>`,
-    `<tr><td style="color:#9c9cac;padding:4px 0">E-mail</td><td style="text-align:right"><a href="mailto:${escapeHtml(opts.email)}" style="color:#8b5cf6;text-decoration:none">${escapeHtml(opts.email)}</a></td></tr>`,
+    `<tr><td style="color:#56566a;padding:4px 0">Jméno</td><td style="color:#16161d;text-align:right">${escapeHtml(opts.name)}</td></tr>`,
+    `<tr><td style="color:#56566a;padding:4px 0">E-mail</td><td style="text-align:right"><a href="mailto:${escapeHtml(opts.email)}" style="color:#7c4ef0;text-decoration:none">${escapeHtml(opts.email)}</a></td></tr>`,
     ...(opts.company
-      ? [`<tr><td style="color:#9c9cac;padding:4px 0">Firma</td><td style="color:#efeff4;text-align:right">${escapeHtml(opts.company)}</td></tr>`]
+      ? [`<tr><td style="color:#56566a;padding:4px 0">Firma</td><td style="color:#16161d;text-align:right">${escapeHtml(opts.company)}</td></tr>`]
       : []),
   ].join('');
   const inner = `
     <p style="font-size:15px;margin:0 0 16px">Nová zpráva z kontaktního formuláře 📨</p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;border-collapse:collapse;margin:0 0 18px">${rows}</table>
-    <div style="background:#0e0e13;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px 16px;font-size:14px;color:#efeff4;white-space:pre-wrap;line-height:1.55">${escapeHtml(opts.message)}</div>
-    <p style="font-size:13px;color:#666674;margin:18px 0 0">Odpovězte přímo na tento e-mail – poputuje na adresu odesílatele.</p>`;
+    <div style="background:#f4f4f7;border:1px solid #e6e6ec;border-radius:10px;padding:14px 16px;font-size:14px;color:#16161d;white-space:pre-wrap;line-height:1.55">${escapeHtml(opts.message)}</div>
+    <p style="font-size:13px;color:#8a8a99;margin:18px 0 0">Odpovězte přímo na tento e-mail – poputuje na adresu odesílatele.</p>`;
   await sendMail({
     to,
     replyTo: opts.email,

@@ -4,12 +4,14 @@ import { z } from 'zod';
 
 import { db } from '../db/client.js';
 import { contactMessages } from '../db/schema/index.js';
-import env from '../config/env.js';
 import { generateId } from '../utils/ids.js';
 import { logger } from '../utils/logger.js';
 import { sendContactNotification } from '../utils/email.js';
 
 const router = Router();
+
+/** Contact-form notifications go to this single inbox only. */
+const CONTACT_NOTIFY_EMAIL = 'hornakjosef@outlook.cz';
 
 /** Public endpoint — keep it cheap and abuse-resistant. */
 const contactLimiter = rateLimit({
@@ -39,22 +41,17 @@ router.post('/', contactLimiter, async (req, res, next) => {
     });
     logger.info({ id, email: body.email, company: body.company }, '[Contact] New message');
 
-    // Notify operators (best-effort — the message is already persisted, so a
-    // mail failure must not fail the request the visitor sees).
-    const recipients = env.ADMIN_EMAILS.split(',')
-      .map((e) => e.trim())
-      .filter(Boolean)
-      .join(', ');
-    if (recipients) {
-      void sendContactNotification(recipients, {
-        name: body.name,
-        email: body.email,
-        company: body.company || null,
-        message: body.message,
-      }).catch((err) => {
-        logger.error({ id, error: err instanceof Error ? err.message : String(err) }, '[Contact] Notification e-mail failed');
-      });
-    }
+    // Notify the operator (best-effort — the message is already persisted, so a
+    // mail failure must not fail the request the visitor sees). Contact-form
+    // notifications go to a single inbox only.
+    void sendContactNotification(CONTACT_NOTIFY_EMAIL, {
+      name: body.name,
+      email: body.email,
+      company: body.company || null,
+      message: body.message,
+    }).catch((err) => {
+      logger.error({ id, error: err instanceof Error ? err.message : String(err) }, '[Contact] Notification e-mail failed');
+    });
 
     res.status(201).json({ ok: true });
   } catch (err) {
