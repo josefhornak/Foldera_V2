@@ -94,7 +94,7 @@ export async function getMonthlyCount(companyId: string, period = currentPeriod(
   return row?.c ?? 0;
 }
 
-export type BlockReason = 'trial_expired' | 'trial_docs' | 'cancelled';
+export type BlockReason = 'trial_expired' | 'trial_docs' | 'cancelled' | 'subscription_required';
 export interface BillingDecision {
   allowed: boolean;
   reason?: BlockReason;
@@ -104,6 +104,8 @@ export interface BillingDecision {
 export function decideBilling(company: Pick<Company, 'billingStatus' | 'trialEndsAt' | 'trialDocsUsed'>): BillingDecision {
   if (company.billingStatus === 'active') return { allowed: true };
   if (company.billingStatus === 'cancelled') return { allowed: false, reason: 'cancelled' };
+  // Additional company — never had a trial, must subscribe.
+  if (company.billingStatus === 'awaiting_subscription') return { allowed: false, reason: 'subscription_required' };
   // trial
   const trialEnded = !company.trialEndsAt || company.trialEndsAt.getTime() < Date.now();
   if (trialEnded) return { allowed: false, reason: 'trial_expired' };
@@ -119,6 +121,8 @@ export function blockMessage(reason: BlockReason): string {
       return `Vyčerpali jste ${TRIAL_DOC_LIMIT} dokladů zdarma ze zkušebního období. Aktivujte předplatné v Nastavení.`;
     case 'cancelled':
       return 'Předplatné je zrušené. Obnovte ho v Nastavení, aby se doklady zase zpracovávaly.';
+    case 'subscription_required':
+      return 'Pro tuto firmu aktivujte předplatné v Nastavení, aby se doklady zpracovávaly.';
   }
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState, type ComponentType, type FormEvent } from 'react';
-import { Link, Navigate, NavLink, Outlet } from 'react-router';
-import { AlertTriangle, Building2, Check, ChevronsUpDown, Clock, FileText, LayoutDashboard, Plus, Settings, ShieldCheck } from 'lucide-react';
+import { Link, Navigate, NavLink, Outlet, useNavigate } from 'react-router';
+import { AlertTriangle, Building2, Check, ChevronsUpDown, Clock, FileText, LayoutDashboard, Loader2, Plus, Settings, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '~/components/ui/Button';
 import { Card } from '~/components/ui/Card';
@@ -10,7 +10,7 @@ import { StateWrapper } from '~/components/ui/StateWrapper';
 import { useMe } from '~/hooks/useAdmin';
 import { useBilling } from '~/hooks/useBilling';
 import { createCompany, useCompanies } from '~/hooks/useCompanies';
-import { ApiError } from '~/lib/api';
+import { api, ApiError } from '~/lib/api';
 import { cn } from '~/lib/utils';
 import { useAuthStore } from '~/stores/auth';
 import { useCompanyStore } from '~/stores/company';
@@ -258,19 +258,44 @@ function CompanySwitcher() {
 
 function AddCompanyModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [ico, setIco] = useState('');
   const [billingEmail, setBillingEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [aresLoading, setAresLoading] = useState(false);
+  const [aresMsg, setAresMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  async function lookupAres() {
+    const clean = ico.replace(/\D/g, '');
+    if (clean.length < 1) return;
+    setAresLoading(true);
+    setAresMsg(null);
+    try {
+      const { company } = await api<{ company: { name: string | null; fullAddress: string | null } }>(`/api/ares/${clean}`);
+      if (company.name) setName(company.name);
+      setAresMsg(company.fullAddress ? `Načteno z ARES - ${company.fullAddress}` : 'Načteno z ARES.');
+    } catch {
+      setAresMsg('Firma podle IČO se nenašla - vyplňte ručně.');
+    } finally {
+      setAresLoading(false);
+    }
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
     try {
-      const { company } = await createCompany({ name, ico: ico || undefined, billingEmail: billingEmail || undefined });
+      const { company } = await createCompany({
+        name,
+        ico: ico.replace(/\D/g, '') || undefined,
+        billingEmail: billingEmail || undefined,
+      });
       onCreated(company.id);
+      // Walk the new company through the setup wizard (ABRA, zdroje, doklady).
+      navigate('/vitejte');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('common.error'));
     } finally {
@@ -283,19 +308,35 @@ function AddCompanyModal({ onClose, onCreated }: { onClose: () => void; onCreate
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm">
         <Card className="p-6">
           <h2 className="text-base font-semibold">Přidat firmu</h2>
-          <p className="mt-1 text-xs text-[var(--text-secondary)]">Každá firma má vlastní předplatné i fakturaci.</p>
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">
+            Každá firma má vlastní připojení k ABRA Flexi, předplatné i fakturaci. Po vytvoření vás provedeme nastavením.
+          </p>
           <form onSubmit={submit} className="mt-5 space-y-4">
+            <Field label="IČO" htmlFor="ac-ico" hint="Doplníme název z ARES.">
+              <div className="flex gap-2">
+                <Input
+                  id="ac-ico"
+                  value={ico}
+                  onChange={(e) => setIco(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                  onBlur={lookupAres}
+                  inputMode="numeric"
+                  placeholder="12345678"
+                  autoFocus
+                />
+                <Button type="button" variant="secondary" onClick={lookupAres} disabled={aresLoading}>
+                  {aresLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Načíst'}
+                </Button>
+              </div>
+            </Field>
+            {aresMsg && <p className="text-xs text-[var(--text-tertiary)]">{aresMsg}</p>}
             <Field label="Název firmy" htmlFor="ac-name">
-              <Input id="ac-name" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
+              <Input id="ac-name" value={name} onChange={(e) => setName(e.target.value)} required />
             </Field>
-            <Field label="IČO (nepovinné)" htmlFor="ac-ico">
-              <Input id="ac-ico" value={ico} onChange={(e) => setIco(e.target.value)} />
-            </Field>
-            <Field label="E-mail pro fakturaci" htmlFor="ac-billing">
+            <Field label="E-mail pro fakturaci" htmlFor="ac-billing" hint="Kam posílat faktury za Folderu. Nepovinné - jinak na váš účet.">
               <Input
                 id="ac-billing"
                 type="email"
-                placeholder="kam posílat faktury za Folderu"
+                placeholder="fakturace@vasefirma.cz"
                 value={billingEmail}
                 onChange={(e) => setBillingEmail(e.target.value)}
               />
@@ -307,7 +348,7 @@ function AddCompanyModal({ onClose, onCreated }: { onClose: () => void; onCreate
             )}
             <div className="flex gap-2">
               <Button type="submit" loading={submitting} className="flex-1">
-                Vytvořit
+                Vytvořit a nastavit
               </Button>
               <Button type="button" variant="secondary" onClick={onClose}>
                 Zrušit
@@ -324,6 +365,7 @@ const BLOCK_MESSAGES: Record<string, string> = {
   trial_expired: 'Zkušební období skončilo. Aktivujte předplatné, aby se doklady zase zpracovávaly.',
   trial_docs: 'Vyčerpali jste 10 dokladů zdarma ze zkušebního období. Aktivujte předplatné.',
   cancelled: 'Předplatné je zrušené. Obnovte ho, aby se doklady zase zpracovávaly.',
+  subscription_required: 'Pro tuto firmu aktivujte předplatné, aby se doklady zpracovávaly.',
 };
 
 function pluralDays(n: number): string {

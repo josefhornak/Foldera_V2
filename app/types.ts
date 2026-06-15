@@ -102,7 +102,7 @@ export interface StatsResponse {
 }
 
 export interface Billing {
-  status: 'trial' | 'active' | 'cancelled';
+  status: 'trial' | 'active' | 'cancelled' | 'awaiting_subscription';
   trialEndsAt: string | null;
   trialDocsUsed: number;
   trialDocLimit: number;

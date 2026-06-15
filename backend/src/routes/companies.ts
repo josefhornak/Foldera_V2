@@ -110,7 +110,11 @@ router.post('/', async (req, res, next) => {
       .limit(1);
     const now = new Date();
     const firstTrial = !owner?.trialStartedAt;
-    const trialEndsAt = firstTrial ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) : now;
+    // The first company a user creates gets the 7-day trial. Additional
+    // companies never had a trial — they start in `awaiting_subscription`
+    // (must subscribe) rather than a confusing already-expired trial.
+    const billingStatus = firstTrial ? 'trial' : 'awaiting_subscription';
+    const trialEndsAt = firstTrial ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) : null;
 
     await db.insert(companies).values({
       id,
@@ -119,6 +123,7 @@ router.post('/', async (req, res, next) => {
       ico: body.ico ?? null,
       // Invoices go to the chosen billing e-mail, defaulting to the account e-mail.
       billingEmail: body.billingEmail ?? req.auth!.email,
+      billingStatus,
       trialEndsAt,
     });
     if (firstTrial) {

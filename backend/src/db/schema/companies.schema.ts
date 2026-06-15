@@ -56,8 +56,9 @@ export const companies = pgTable(
       .default('review'),
 
     // Billing. trial → free 7 days / 10 docs, then blocked until active.
+    // awaiting_subscription → additional companies (no trial; must subscribe).
     billingStatus: text('billing_status')
-      .$type<'trial' | 'active' | 'cancelled'>()
+      .$type<'trial' | 'active' | 'cancelled' | 'awaiting_subscription'>()
       .notNull()
       .default('trial'),
     trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),

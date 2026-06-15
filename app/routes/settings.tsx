@@ -443,6 +443,18 @@ function BillingCard({ companyId }: { companyId: string }) {
           </>
         )}
 
+        {billing.status === 'awaiting_subscription' && (
+          <>
+            <Pill tone="info" label="Bez předplatného" />
+            <p className="text-sm text-[var(--text-secondary)]">
+              Tato firma nemá zkušební období. Aktivujte předplatné, aby se doklady začaly zpracovávat.
+            </p>
+            <Button loading={busy} onClick={() => act(() => subscribeCompany(companyId))}>
+              Aktivovat předplatné (199 Kč/měsíc)
+            </Button>
+          </>
+        )}
+
         {billing.status === 'cancelled' && (
           <>
             <Pill tone="warning" label="Zrušeno" />
