@@ -118,7 +118,9 @@
       "receipt": "Účtenka",
       "credit_note": "Dobropis",
       "other": "Jiný doklad"
-    }
+    },
+    "whyFailed": "Proč se nepodařilo odeslat",
+    "resend": "Odeslat znovu"
   },
   "status": {
     "processing": "Zpracovává se",

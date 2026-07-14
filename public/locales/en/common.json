@@ -118,7 +118,9 @@
       "receipt": "Receipt",
       "credit_note": "Credit note",
       "other": "Other"
-    }
+    },
+    "whyFailed": "Why the export failed",
+    "resend": "Resend"
   },
   "status": {
     "processing": "Processing",

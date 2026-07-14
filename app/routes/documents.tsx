@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { DocumentDetailPanel } from '~/components/documents/DocumentDetailPanel';
 import { UploadDropzone } from '~/components/documents/UploadDropzone';
 import { Button } from '~/components/ui/Button';
+import { HelpHint } from '~/components/ui/HelpHint';
 import { Card } from '~/components/ui/Card';
 import { Input } from '~/components/ui/Input';
 import { StateWrapper } from '~/components/ui/StateWrapper';
@@ -283,7 +284,17 @@ export default function DocumentsPage() {
                     <AccuracyCell confidence={doc.confidence} />
                   </Td>
                   <Td>
-                    <StatusCell status={doc.status} />
+                    <div className="flex items-center gap-1">
+                      <StatusCell status={doc.status} />
+                      {(doc.status === 'export_failed' || doc.status === 'extraction_failed') &&
+                        doc.errorMessage && (
+                          <span className="inline-flex" onClick={(e) => e.stopPropagation()}>
+                            <HelpHint label={t('documents.whyFailed')} title={t('documents.whyFailed')}>
+                              <p className="text-[var(--text-secondary)]">{doc.errorMessage}</p>
+                            </HelpHint>
+                          </span>
+                        )}
+                    </div>
                   </Td>
                   <Td className="whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="inline-flex items-center gap-1">
@@ -300,14 +311,15 @@ export default function DocumentsPage() {
                       )}
                       {doc.status === 'export_failed' && (
                         <Button
-                          variant="ghost"
+                          variant="secondary"
                           size="sm"
                           loading={retryingId === doc.id}
                           onClick={() => handleRetry(doc.id)}
                           icon={<RefreshCw />}
-                          title={t('documents.retry')}
-                          aria-label={t('documents.retry')}
-                        />
+                          title={t('documents.resend')}
+                        >
+                          {t('documents.resend')}
+                        </Button>
                       )}
                       {doc.status === 'needs_review' && (
                         <Button
