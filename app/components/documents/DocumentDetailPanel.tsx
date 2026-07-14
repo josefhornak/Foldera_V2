@@ -219,7 +219,7 @@ export function DocumentDetailPanel({ companyId, docId, onClose, onRetried, onDe
                       onClick={handleRetry}
                       icon={<RefreshCw />}
                     >
-                      {t('documents.retry')}
+                      {t('documents.resend')}
                     </Button>
                   )}
                   {deleteDone ? (
