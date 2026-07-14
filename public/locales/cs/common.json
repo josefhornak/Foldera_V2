@@ -159,7 +159,15 @@
       "testConnection": "Otestovat připojení",
       "testOk": "Připojení funguje",
       "testOkWithName": "Připojení funguje - firma {{name}}",
-      "testFailed": "Připojení se nezdařilo"
+      "testFailed": "Připojení se nezdařilo",
+      "urlHelp": {
+        "trigger": "Nápověda k zadání adresy",
+        "title": "Kam se podívat na adresu",
+        "browserTitle": "Přímo z prohlížeče",
+        "browserBody": "Otevřete svou firmu ve FlexiBee a zkopírujte adresu z adresního řádku. Foldera si ji sama převede na správný tvar API.",
+        "apiTitle": "Nebo přímo API adresa",
+        "apiBody": "Pokud znáte tvar API, zadejte adresu s /c/ a názvem firmy."
+      }
     },
     "sources": {
       "title": "Vstupy",

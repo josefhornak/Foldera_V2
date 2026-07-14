@@ -241,6 +241,19 @@ describe('helpers', () => {
     expect(() => normalizeBaseUrl('http://192.168.1.5/c/demo')).toThrow(/SSRF/);
   });
 
+  it('normalizeBaseUrl rewrites a pasted web-UI /flexi/ URL to the REST /c/ URL', () => {
+    expect(normalizeBaseUrl('https://digiapp.flexibee.eu/flexi/adam_test')).toBe(
+      'https://digiapp.flexibee.eu/c/adam_test',
+    );
+    expect(normalizeBaseUrl('https://digiapp.flexibee.eu/flexi/adam_test/')).toBe(
+      'https://digiapp.flexibee.eu/c/adam_test',
+    );
+    // deep link pasted from the browser → base REST URL
+    expect(normalizeBaseUrl('https://digiapp.flexibee.eu/flexi/adam_test/faktura-prijata/42/edit')).toBe(
+      'https://digiapp.flexibee.eu/c/adam_test',
+    );
+  });
+
   it('buildAbraWebUrl builds the /flexi/ deep link', () => {
     const cfg = { apiUrl: 'https://demo.flexibee.eu/c/demo', apiUser: 'u', apiPassword: 'p', companyId: 'c1' };
     expect(buildAbraWebUrl(cfg, '42')).toBe('https://demo.flexibee.eu/flexi/demo/faktura-prijata/42/edit');

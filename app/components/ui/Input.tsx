@@ -48,16 +48,21 @@ interface FieldProps {
   label: string;
   htmlFor?: string;
   hint?: string;
+  /** Optional control rendered inline at the end of the label row (e.g. a help "?"). */
+  labelAction?: ReactNode;
   children: ReactNode;
   className?: string;
 }
 
-export function Field({ label, htmlFor, hint, children, className }: FieldProps) {
+export function Field({ label, htmlFor, hint, labelAction, children, className }: FieldProps) {
   return (
     <div className={cn('space-y-1.5', className)}>
-      <label htmlFor={htmlFor} className="block text-xs font-medium text-[var(--text-secondary)]">
-        {label}
-      </label>
+      <div className="flex items-center justify-between gap-2">
+        <label htmlFor={htmlFor} className="block text-xs font-medium text-[var(--text-secondary)]">
+          {label}
+        </label>
+        {labelAction}
+      </div>
       {children}
       {hint && <p className="text-xs text-[var(--text-tertiary)]">{hint}</p>}
     </div>

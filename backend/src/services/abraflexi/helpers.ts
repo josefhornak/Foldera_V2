@@ -19,9 +19,17 @@ export const ENTITY_FAKTURA_PRIJATA = 'faktura-prijata' as const;
  * Normalize an ABRA Flexi API URL by removing trailing slashes and `/v2`
  * segments, and validate it against private network ranges (SSRF guard).
  * Result shape: `https://host/c/company`.
+ *
+ * Users frequently paste the web-UI address (`https://host/flexi/<company>/...`)
+ * copied from the browser instead of the REST API URL. That path only serves the
+ * HTML app, so requests fail with 406/405 across every endpoint. We rewrite
+ * `/flexi/<company>` → `/c/<company>` (dropping any trailing deep-link segments)
+ * so the pasted browser address just works.
  */
 export function normalizeBaseUrl(apiUrl: string): string {
   let u = apiUrl.trim();
+  const flexiMatch = u.match(/^(https?:\/\/[^/]+)\/flexi\/([^/?#]+)/i);
+  if (flexiMatch) u = `${flexiMatch[1]}/c/${flexiMatch[2]}`;
   if (u.endsWith('/')) u = u.slice(0, -1);
   if (u.endsWith('/v2')) u = u.slice(0, -3);
   u = u.replace('/v2/c/', '/c/');

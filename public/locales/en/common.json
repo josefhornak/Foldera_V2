@@ -159,7 +159,15 @@
       "testConnection": "Test connection",
       "testOk": "Connection works",
       "testOkWithName": "Connection works - company {{name}}",
-      "testFailed": "Connection failed"
+      "testFailed": "Connection failed",
+      "urlHelp": {
+        "trigger": "Help with entering the address",
+        "title": "Where to find the address",
+        "browserTitle": "Straight from the browser",
+        "browserBody": "Open your company in FlexiBee and copy the address from the address bar. Foldera converts it to the correct API form for you.",
+        "apiTitle": "Or the API address directly",
+        "apiBody": "If you know the API form, enter the address with /c/ and the company name."
+      }
     },
     "sources": {
       "title": "Inputs",

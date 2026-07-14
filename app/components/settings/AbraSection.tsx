@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { CheckCircle2, XCircle } from 'lucide-react';
+import { CheckCircle2, Code2, Globe, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '~/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/Card';
+import { HelpHint } from '~/components/ui/HelpHint';
 import { Field, Input } from '~/components/ui/Input';
 import { api, ApiError } from '~/lib/api';
 import { cn } from '~/lib/utils';
@@ -94,7 +95,47 @@ export function AbraSection({ company, onSaved }: AbraSectionProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSave} className="max-w-md space-y-4">
-          <Field label={t('settings.abra.apiUrl')} htmlFor="abra-url">
+          <Field
+            label={t('settings.abra.apiUrl')}
+            htmlFor="abra-url"
+            labelAction={
+              <HelpHint
+                label={t('settings.abra.urlHelp.trigger')}
+                title={t('settings.abra.urlHelp.title')}
+              >
+                <div className="flex gap-2.5">
+                  <Globe
+                    className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-primary)]"
+                    aria-hidden="true"
+                  />
+                  <div className="space-y-1">
+                    <p className="font-medium text-[var(--text-primary)]">
+                      {t('settings.abra.urlHelp.browserTitle')}
+                    </p>
+                    <p>{t('settings.abra.urlHelp.browserBody')}</p>
+                    <code className="block break-all rounded-[var(--radius-token-sm)] bg-[var(--surface-sunken,var(--surface-default))] px-2 py-1 font-mono text-[11px] text-[var(--text-secondary)]">
+                      https://firma.flexibee.eu/flexi/moje_firma
+                    </code>
+                  </div>
+                </div>
+                <div className="flex gap-2.5">
+                  <Code2
+                    className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-primary)]"
+                    aria-hidden="true"
+                  />
+                  <div className="space-y-1">
+                    <p className="font-medium text-[var(--text-primary)]">
+                      {t('settings.abra.urlHelp.apiTitle')}
+                    </p>
+                    <p>{t('settings.abra.urlHelp.apiBody')}</p>
+                    <code className="block break-all rounded-[var(--radius-token-sm)] bg-[var(--surface-sunken,var(--surface-default))] px-2 py-1 font-mono text-[11px] text-[var(--text-secondary)]">
+                      https://firma.flexibee.eu/c/moje_firma
+                    </code>
+                  </div>
+                </div>
+              </HelpHint>
+            }
+          >
             <Input
               id="abra-url"
               type="url"
