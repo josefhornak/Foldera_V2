@@ -70,10 +70,21 @@ async function resolveCashMovementType(cfg: AbraFlexiConfig): Promise<string> {
     const kod = (expense as { kod?: string } | undefined)?.kod;
     if (kod) {
       resolved = kod;
+    } else if (rows.length > 0) {
+      // No explicit výdej type — use any type that actually exists here. The
+      // direction is forced to výdej on the movement itself (typPohybuK), so a
+      // neutrally-configured type is fine. This beats a hardcoded default code
+      // that may not exist in this accounting unit.
+      const anyKod = (rows[0] as { kod?: string }).kod;
+      if (anyKod) resolved = anyKod;
+      logger.warn(
+        { companyId: cfg.companyId, chosen: resolved },
+        '[AbraFlexi] No výdej cash-movement type found — using first available type (direction forced to výdej)',
+      );
     } else {
       logger.warn(
         { companyId: cfg.companyId, fallback: resolved },
-        '[AbraFlexi] No výdej cash-movement type found — receipt may be booked in the wrong direction',
+        '[AbraFlexi] No cash-movement types found — using default',
       );
     }
   } catch (error) {
@@ -85,6 +96,66 @@ async function resolveCashMovementType(cfg: AbraFlexiConfig): Promise<string> {
 
   expenseTypeCache.set(cacheKey, resolved);
   return resolved;
+}
+
+/** Cache the resolved cash registers per connection (rarely change). */
+const cashRegisterCache = new Map<string, Array<{ kod: string; mena: string | null }>>();
+
+/** Extract a bare currency code from an ABRA reference ("code:CZK" → "CZK"). */
+function extractCurrencyCode(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const code = value.replace(/^code:/i, '').trim().toUpperCase();
+  return code === '' ? null : code;
+}
+
+/**
+ * Resolve the target cash register (pokladna) for a receipt.
+ *
+ * ABRA_DEFAULT_POKLADNA is only a last-resort default — real accounting units
+ * name their cash registers differently (e.g. "POKLADNA KČ", not "CASH-CZK").
+ * Prefer a register whose currency matches the receipt, then any CZK register,
+ * then any register at all, and only then the configured default.
+ */
+async function resolveCashRegister(cfg: AbraFlexiConfig, currency: string): Promise<string> {
+  const cacheKey = `${cfg.apiUrl}|${cfg.companyId}`;
+  let list = cashRegisterCache.get(cacheKey);
+  if (!list) {
+    try {
+      const rows = await abraGetList(
+        cfg,
+        '/pokladna.json?detail=custom:kod,mena&limit=100',
+        'pokladna',
+      );
+      list = rows
+        .map((r) => {
+          const row = r as { kod?: unknown; mena?: unknown };
+          const kod = typeof row.kod === 'string' && row.kod !== '' ? row.kod : null;
+          return kod ? { kod, mena: extractCurrencyCode(row.mena) } : null;
+        })
+        .filter((x): x is { kod: string; mena: string | null } => x !== null);
+      cashRegisterCache.set(cacheKey, list);
+    } catch (error) {
+      logger.warn(
+        { companyId: cfg.companyId, error: toError(error).message, fallback: env.ABRA_DEFAULT_POKLADNA },
+        '[AbraFlexi] Failed to list cash registers — using default pokladna',
+      );
+      return env.ABRA_DEFAULT_POKLADNA;
+    }
+  }
+
+  const want = currency.toUpperCase();
+  const byCurrency = list.find((p) => p.mena === want);
+  if (byCurrency) return byCurrency.kod;
+  const czk = list.find((p) => p.mena === 'CZK');
+  if (czk) return czk.kod;
+  const first = list[0];
+  if (first) return first.kod;
+
+  logger.warn(
+    { companyId: cfg.companyId, fallback: env.ABRA_DEFAULT_POKLADNA },
+    '[AbraFlexi] No cash register found — using default pokladna',
+  );
+  return env.ABRA_DEFAULT_POKLADNA;
 }
 
 /** Build the ABRA Flexi web UI deep link for a cash movement. */
@@ -110,6 +181,7 @@ export async function exportReceiptToPokladna(
   const typDokl = await resolveCashMovementType(cfg);
   const currency = invoice.currency?.trim().toUpperCase() || 'CZK';
   const isForeign = currency !== 'CZK';
+  const pokladnaCode = await resolveCashRegister(cfg, currency);
   // A purchase receipt is booked as a cash výdej with POSITIVE amounts (the
   // movement type carries the direction). Force positive in case an older/stored
   // extraction still holds the negative the model occasionally returns.
@@ -127,7 +199,7 @@ export async function exportReceiptToPokladna(
     // — so even with a neutrally-configured typDokl, a purchase receipt is booked
     // as a cash výdej, never an income.
     typPohybuK: 'typPohybu.vydej',
-    pokladna: `code:${env.ABRA_DEFAULT_POKLADNA}`,
+    pokladna: `code:${pokladnaCode}`,
     stat: 'code:CZ',
     statDph: 'code:CZ',
     bezPolozek: 'true',
@@ -169,7 +241,7 @@ export async function exportReceiptToPokladna(
   }
 
   logger.info(
-    { companyId: cfg.companyId, typDokl, pokladna: env.ABRA_DEFAULT_POKLADNA, receiptNumber: invoice.invoiceNumber },
+    { companyId: cfg.companyId, typDokl, pokladna: pokladnaCode, receiptNumber: invoice.invoiceNumber },
     '[AbraFlexi] Exporting receipt to cash register',
   );
 
