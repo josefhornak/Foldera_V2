@@ -35,7 +35,7 @@ import {
   suggestClenKonVykDph,
   uploadInvoiceAttachment,
 } from '../services/abraflexi/index.js';
-import { isKnownCzBankCode } from '../services/abraflexi/helpers.js';
+import { humanizeAbraError, isKnownCzBankCode } from '../services/abraflexi/helpers.js';
 import { blockMessage, decideBilling, recordDocumentUsage } from '../services/billing.js';
 import { notifyBankReview, notifyDocumentFailure } from '../services/notifications.js';
 import { extractInvoice } from '../services/extraction/index.js';
@@ -540,7 +540,7 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
     } catch (error) {
       outcome = {
         status: DOCUMENT_STATUS.EXPORT_FAILED,
-        errorMessage: toError(error).message,
+        errorMessage: humanizeAbraError(toError(error).message),
       };
     }
 
@@ -602,7 +602,7 @@ export async function retryExport(documentId: string, companyId: string): Promis
       outcome.errorMessage = null;
     }
   } catch (error) {
-    outcome = { status: DOCUMENT_STATUS.EXPORT_FAILED, errorMessage: toError(error).message };
+    outcome = { status: DOCUMENT_STATUS.EXPORT_FAILED, errorMessage: humanizeAbraError(toError(error).message) };
   }
 
   await db

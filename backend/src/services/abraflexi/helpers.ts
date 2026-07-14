@@ -38,6 +38,26 @@ export function normalizeBaseUrl(apiUrl: string): string {
 }
 
 /**
+ * Turn a raw ABRA Flexi rejection into a human, actionable Czech message for the
+ * end user. Known failure modes get specific guidance; anything unrecognized is
+ * returned unchanged, so a real error is never hidden.
+ */
+export function humanizeAbraError(message: string | null | undefined): string {
+  const m = message ?? '';
+
+  // Accounting period for the document date is not open in ABRA Flexi
+  // (messageCode importXmlNeexistujeUcObdobi / "Účetní období k datu … neexistuje").
+  if (/neexistujeUcObdobi/i.test(m) || /účetní období.*neexistuj/i.test(m)) {
+    const date = m.match(/(\d{1,2}\.\s?\d{1,2}\.\s?\d{4})/)?.[1]?.replace(/\s/g, '');
+    return date
+      ? `V ABRA Flexi není otevřené účetní období pro datum dokladu (${date}). Otevřete v ABRA Flexi příslušné účetní období a doklad odešlete znovu.`
+      : 'V ABRA Flexi není otevřené účetní období pro datum tohoto dokladu. Otevřete v ABRA Flexi příslušné účetní období a doklad odešlete znovu.';
+  }
+
+  return m;
+}
+
+/**
  * Build the deep link into the ABRA Flexi web UI for a received invoice.
  *
  * API URL pattern:  `https://host/c/company`
