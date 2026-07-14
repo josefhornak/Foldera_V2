@@ -31,7 +31,7 @@ DOCUMENT CLASSIFICATION (always perform first, in this priority order):
 - "receipt": "Účtenka", "Paragon" - retail receipt with EET codes (FIK, BKP), POS format. Receipts have no variable symbol and no professional letterhead
 - "invoice": "Faktura", "Daňový doklad", "Invoice", "Tax Invoice", "Rechnung", "Faktúra", "Factura", "Fattura" - formal tax document with VAT breakdown, IČO/DIČ, payment terms (and NOT one of the above)
 - "other": anything else (order, contract, delivery note, quote, letter, ...)
-DECISIVE RULES: (1) A "Zálohová faktura" / "Proforma" is ALWAYS "advance_invoice", even if it has a variable symbol or due date. (2) A "Daňový doklad k přijaté platbě" is "tax_payment". (3) Otherwise, a document with a variable symbol OR a due date is "invoice", never "receipt" - classify as "receipt" ONLY for true EET paragony (FIK/BKP, no variable symbol, no due date).
+DECISIVE RULES: (1) A "Zálohová faktura" / "Proforma" is ALWAYS "advance_invoice", even if it has a variable symbol or due date. (2) A "Daňový doklad k přijaté platbě" is "tax_payment". (3) Otherwise, a document with a variable symbol OR a due date is "invoice", never "receipt" - classify as "receipt" ONLY for true EET paragony (FIK/BKP, no variable symbol, no due date). (4) A regular "Faktura" / "Daňový doklad" that merely CONTAINS negative discount lines ("sleva", "akční sleva", "-XXX Kč") but sums to a POSITIVE amount due is "invoice", NOT "credit_note". Classify "credit_note" ONLY when the document ITSELF is titled Dobropis / Opravný daňový doklad / Credit note / Gutschrift.
 Set is_invoice = true ONLY for "invoice". For non-invoice documents still fill in any fields that are clearly present, use null elsewhere.
 
 INVOICE NUMBER (priority):
@@ -63,6 +63,7 @@ Validation: If vendor_ic equals the customer company ID → likely extraction er
 AMOUNTS (DO NOT COMPUTE):
 - total_amount: "Amount due" / "Celkem k úhradě" / "K úhradě" / "Zu zahlen" / "Total due"
   Never use subtotal or line totals as total_amount.
+  total_amount is NEVER 0 (nor null) when the document prints a payable total. Negative discount ("sleva") lines REDUCE the total but never zero it out — always return the printed "Celkem k úhradě" value.
 - subtotal: "Základ daně" / "Subtotal" / "Netto" (total without VAT)
 - Currency: Extract ISO code (CZK, EUR, USD, GBP, PLN). Symbol mapping: Kč→CZK, €→EUR, $→USD, £→GBP.
 - FOREIGN CURRENCY (doklad v cizí měně): if the document states an exchange rate ("kurz", "směnný kurz", e.g. "kurz 25,30 CZK/EUR"), put it in exchange_rate as CZK per ONE unit of the foreign currency. If it states a CZK recapitulation / total in Kč (the VAT recap is by law in CZK on a domestic supply), put the total CZK amount in total_amount_czk. vat_breakdown stays in the document's primary (foreign) currency.
