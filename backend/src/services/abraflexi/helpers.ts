@@ -54,6 +54,14 @@ export function humanizeAbraError(message: string | null | undefined): string {
       : 'V ABRA Flexi není otevřené účetní období pro datum tohoto dokladu. Otevřete v ABRA Flexi příslušné účetní období a doklad odešlete znovu.';
   }
 
+  // ABRA Flexi itself refuses to answer ("Request blocked, please contact our
+  // support"). Not a problem with the document — every request to that server is
+  // being turned away, so pointing the user at the document would send them
+  // looking in the wrong place.
+  if (/request blocked/i.test(m)) {
+    return 'ABRA Flexi odmítla požadavek (403). Neblokuje ho Foldera, ale samotný server ABRA — u veřejného dema se to stává po vyčerpání limitu, u vlastní instance bývá příčinou omezení práv API uživatele nebo firewall. Zkuste to prosím později nebo ověřte přístup v ABRA Flexi.';
+  }
+
   return m;
 }
 
