@@ -160,13 +160,33 @@ export function parseAbraErrorMessages(responseText: string): string {
   return '';
 }
 
+/**
+ * Czech gloss for the HTTP statuses ABRA actually returns. The raw statusText
+ * is English ("Forbidden"), and this message is shown to the user as-is.
+ */
+const HTTP_STATUS_CS: Record<number, string> = {
+  400: 'neplatný požadavek',
+  401: 'nesprávné přihlašovací údaje',
+  403: 'přístup odmítnut',
+  404: 'nenalezeno',
+  405: 'nepovolená metoda',
+  406: 'nepodporovaný formát odpovědi',
+  409: 'konflikt',
+  429: 'příliš mnoho požadavků',
+  500: 'vnitřní chyba serveru ABRA',
+  502: 'ABRA je nedostupná',
+  503: 'ABRA je dočasně nedostupná',
+  504: 'ABRA neodpověděla včas',
+};
+
 /** Build the standard AppError for an HTTP-level rejection by ABRA Flexi. */
 export function abraRejectionError(res: AbraHttpResponse, contextLabel: string): AppError {
   const detail = parseAbraErrorMessages(res.text);
   const isServerSide = res.status >= 500;
+  const status = HTTP_STATUS_CS[res.status] ?? res.statusText;
   return new AppError(
     isServerSide ? ErrorCodes.SERVICE_UNAVAILABLE : ErrorCodes.BAD_REQUEST,
-    `ABRA Flexi: ${contextLabel} selhalo: ${res.status} ${res.statusText}${detail}`,
+    `ABRA Flexi: ${contextLabel} selhalo: ${res.status} ${status}${detail}`,
     isServerSide ? 503 : 400,
     { body: res.text.slice(0, 500) },
   );

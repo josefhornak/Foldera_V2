@@ -76,8 +76,9 @@ export default function DocumentsPage() {
   const { t } = useTranslation();
   const companyId = useCompanyStore((s) => s.companyId);
   const { companies } = useCompanies();
-  // Members may add documents, but resending and approving stay with admins —
-  // mirrors the route guards, so we don't offer a button the API would 403.
+  // Members add, fix and resend documents; approving a held payee and deleting
+  // stay with admins — mirrors the route guards, so we don't offer a button the
+  // API would answer with 403.
   const isAdmin = companies?.find((c) => c.id === companyId)?.role === 'admin';
 
   const [page, setPage] = useState(1);
@@ -312,7 +313,7 @@ export default function DocumentsPage() {
                           <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                         </a>
                       )}
-                      {doc.status === 'export_failed' && isAdmin && (
+                      {doc.status === 'export_failed' && (
                         <Button
                           variant="secondary"
                           size="sm"

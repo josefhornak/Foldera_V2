@@ -72,7 +72,18 @@ export default function LoginPage() {
               required
             />
           </Field>
-          <Field label={t('auth.password')} htmlFor="login-password">
+          <Field
+            label={t('auth.password')}
+            htmlFor="login-password"
+            labelAction={
+              <Link
+                to="/zapomenute-heslo"
+                className="text-xs text-[var(--text-link)] underline-offset-4 hover:underline"
+              >
+                {t('auth.forgotPassword')}
+              </Link>
+            }
+          >
             <Input
               id="login-password"
               type="password"

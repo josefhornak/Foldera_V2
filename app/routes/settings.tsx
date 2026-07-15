@@ -7,7 +7,7 @@ import { Button } from '~/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/Card';
 import { Field, Input, Select } from '~/components/ui/Input';
 import { Switch } from '~/components/ui/Switch';
-import { LogOut, Mail, ShieldCheck, Trash2, UserRound } from 'lucide-react';
+import { KeyRound, LogOut, Mail, ShieldCheck, Trash2, UserRound } from 'lucide-react';
 import { useBilling, subscribeCompany, cancelSubscription } from '~/hooks/useBilling';
 import { deleteCompany, updateCompany, useCompanies } from '~/hooks/useCompanies';
 import {
@@ -18,11 +18,19 @@ import {
   useTeam,
   type Role,
 } from '~/hooks/useTeam';
-import { ApiError } from '~/lib/api';
+import { api, ApiError } from '~/lib/api';
 import { cn } from '~/lib/utils';
 import { useAuthStore } from '~/stores/auth';
 import { useCompanyStore } from '~/stores/company';
 import type { Company } from '~/types';
+
+/** Change the signed-in user's password; the current one is required. */
+function changePassword(currentPassword: string, password: string) {
+  return api<{ ok: boolean }>('/api/auth/change-password', {
+    method: 'POST',
+    body: { currentPassword, password },
+  });
+}
 
 const SECTIONS = ['abraflexi', 'sources', 'company', 'team'] as const;
 type Section = (typeof SECTIONS)[number];
@@ -97,6 +105,7 @@ function AccountCard() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const [changing, setChanging] = useState(false);
 
   return (
     <Card>
@@ -118,12 +127,114 @@ function AccountCard() {
               <p className="truncate text-xs text-[var(--text-secondary)]">{user?.email}</p>
             </div>
           </div>
-          <Button variant="secondary" onClick={logout} icon={<LogOut />}>
-            {t('nav.logout')}
-          </Button>
+          <div className="flex shrink-0 gap-2">
+            {!changing && (
+              <Button variant="secondary" onClick={() => setChanging(true)} icon={<KeyRound />}>
+                {t('settings.account.changePassword')}
+              </Button>
+            )}
+            <Button variant="ghost" onClick={logout} icon={<LogOut />}>
+              {t('nav.logout')}
+            </Button>
+          </div>
         </div>
+
+        {changing && (
+          <div className="mt-5 border-t border-[var(--border-subtle)] pt-5">
+            <ChangePasswordForm onDone={() => setChanging(false)} />
+          </div>
+        )}
       </CardContent>
     </Card>
+  );
+}
+
+function ChangePasswordForm({ onDone }: { onDone: () => void }) {
+  const { t } = useTranslation();
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    // Caught here rather than at the API: the confirmation exists to catch a
+    // typo in a value the user cannot see, and the server has no second copy.
+    if (password !== confirm) {
+      setError(t('settings.account.passwordMismatch'));
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await changePassword(currentPassword, password);
+      setSaved(true);
+      setCurrentPassword('');
+      setPassword('');
+      setConfirm('');
+      setTimeout(onDone, 1500);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('common.error'));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-md space-y-4">
+      <Field label={t('settings.account.currentPassword')} htmlFor="acc-current">
+        <Input
+          id="acc-current"
+          type="password"
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          autoComplete="current-password"
+          required
+        />
+      </Field>
+      <Field label={t('auth.newPassword')} htmlFor="acc-new" hint={t('auth.passwordHint')}>
+        <Input
+          id="acc-new"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
+          minLength={8}
+          required
+        />
+      </Field>
+      <Field label={t('settings.account.confirmPassword')} htmlFor="acc-confirm">
+        <Input
+          id="acc-confirm"
+          type="password"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          autoComplete="new-password"
+          minLength={8}
+          required
+        />
+      </Field>
+
+      {error && (
+        <p role="alert" className="text-xs text-[var(--status-error-text)]">
+          {error}
+        </p>
+      )}
+      {saved && (
+        <p className="text-xs text-[var(--status-success-text)]">{t('settings.account.passwordChanged')}</p>
+      )}
+
+      <div className="flex gap-2">
+        <Button type="submit" loading={saving}>
+          {t('settings.account.savePassword')}
+        </Button>
+        <Button type="button" variant="ghost" onClick={onDone} disabled={saving}>
+          {t('common.cancel')}
+        </Button>
+      </div>
+    </form>
   );
 }
 

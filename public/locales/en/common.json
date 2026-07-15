@@ -37,7 +37,18 @@
     "submitLogin": "Sign in",
     "submitRegister": "Create account",
     "toggleToRegister": "No account? Register",
-    "toggleToLogin": "Already have an account? Sign in"
+    "toggleToLogin": "Already have an account? Sign in",
+    "forgotPassword": "Forgot password?",
+    "forgotTitle": "Reset your password",
+    "forgotIntro": "Enter the e-mail you sign in with. We will send a six-digit code to set a new password.",
+    "forgotSent": "If an account exists for {{email}}, we have sent it a six-digit code. It is valid for 15 minutes.",
+    "forgotSubmit": "Send code",
+    "forgotAnotherEmail": "Use a different e-mail",
+    "resetSubmit": "Set password and sign in",
+    "backToLogin": "Back to sign in",
+    "code": "Code from the e-mail",
+    "newPassword": "New password",
+    "passwordHint": "At least 8 characters."
   },
   "company": {
     "select": "Select company",
@@ -236,7 +247,13 @@
       "delete": "Delete company"
     },
     "account": {
-      "title": "Account"
+      "title": "Account",
+      "changePassword": "Change password",
+      "currentPassword": "Current password",
+      "confirmPassword": "Repeat new password",
+      "savePassword": "Save password",
+      "passwordMismatch": "The passwords do not match.",
+      "passwordChanged": "Your password has been changed."
     },
     "accounting": {
       "title": "Accounting",

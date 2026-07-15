@@ -37,7 +37,18 @@
     "submitLogin": "Přihlásit se",
     "submitRegister": "Vytvořit účet",
     "toggleToRegister": "Nemáte účet? Zaregistrujte se",
-    "toggleToLogin": "Máte už účet? Přihlaste se"
+    "toggleToLogin": "Máte už účet? Přihlaste se",
+    "forgotPassword": "Zapomenuté heslo?",
+    "forgotTitle": "Obnova hesla",
+    "forgotIntro": "Zadejte e-mail, kterým se přihlašujete. Pošleme na něj šestimístný kód pro nastavení nového hesla.",
+    "forgotSent": "Pokud u nás účet {{email}} existuje, poslali jsme na něj šestimístný kód. Platí 15 minut.",
+    "forgotSubmit": "Poslat kód",
+    "forgotAnotherEmail": "Zadat jiný e-mail",
+    "resetSubmit": "Nastavit heslo a přihlásit",
+    "backToLogin": "Zpět na přihlášení",
+    "code": "Kód z e-mailu",
+    "newPassword": "Nové heslo",
+    "passwordHint": "Alespoň 8 znaků."
   },
   "company": {
     "select": "Vybrat firmu",
@@ -236,7 +247,13 @@
       "delete": "Smazat firmu"
     },
     "account": {
-      "title": "Účet"
+      "title": "Účet",
+      "changePassword": "Změnit heslo",
+      "currentPassword": "Současné heslo",
+      "confirmPassword": "Nové heslo znovu",
+      "savePassword": "Uložit heslo",
+      "passwordMismatch": "Hesla se neshodují.",
+      "passwordChanged": "Heslo bylo změněno."
     },
     "accounting": {
       "title": "Zaúčtování",

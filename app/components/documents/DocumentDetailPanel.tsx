@@ -20,10 +20,7 @@ import type { DocumentEdit } from '~/types';
 interface DocumentDetailPanelProps {
   companyId: string;
   docId: string;
-  /**
-   * Admin role. Members may add documents but not change or remove them, so
-   * they get the document and its data read-only — mirrors the route guards.
-   */
+  /** Admin role. Members may add, fix and resend documents, but not delete them. */
   canManage: boolean;
   onClose: () => void;
   onRetried: () => void;
@@ -117,9 +114,10 @@ export function DocumentDetailPanel({
   const inAbra = Boolean(doc?.abraCode || doc?.abraUrl);
   // Once exported, ABRA Flexi is the source of truth — editing here would only
   // make Foldera disagree with it. Mirrors the guard on PATCH.
+  // Fixing and resending is open to members — only deleting stays with admins.
   const canEdit =
-    canManage && Boolean(doc?.extracted) && doc?.status !== 'exported' && doc?.status !== 'processing';
-  const canResend = canManage && doc?.status === 'export_failed';
+    Boolean(doc?.extracted) && doc?.status !== 'exported' && doc?.status !== 'processing';
+  const canResend = doc?.status === 'export_failed';
   const canPreview = Boolean(doc?.hasFile || doc?.hasText);
 
   // Everything read off the document that has no column of its own. This used to

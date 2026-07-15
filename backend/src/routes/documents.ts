@@ -23,7 +23,7 @@ import {
 import { logger } from '../utils/logger.js';
 import { sha256Hex, decryptSecret } from '../utils/crypto.js';
 import { deleteExportedDocument } from '../services/abraflexi/export.js';
-import { ENTITY_FAKTURA_PRIJATA } from '../services/abraflexi/helpers.js';
+import { ENTITY_FAKTURA_PRIJATA, humanizeAbraError } from '../services/abraflexi/helpers.js';
 import { documentColumnsFromExtracted } from '../services/documentFields.js';
 import { removeStored, resolveStoredPath, storedFileExists } from '../services/storage.js';
 import { AppError, ErrorCodes } from '../utils/errors.js';
@@ -32,6 +32,21 @@ import { ensureTmpDir } from '../utils/tmpDir.js';
 
 const router = Router({ mergeParams: true });
 router.use(requireAuth, requireCompany);
+
+/**
+ * Translate a stored ABRA rejection on the way out.
+ *
+ * Done on read, not only on write: documents that failed before a given
+ * translation existed keep the raw English text in the database forever, and
+ * that text is exactly what the user is staring at. Unknown errors pass through
+ * unchanged, and a message that was already humanized does not match the
+ * patterns again, so this is safe to apply twice.
+ */
+function withReadableError<T extends { errorMessage: string | null }>(row: T): T {
+  return row.errorMessage
+    ? { ...row, errorMessage: humanizeAbraError(row.errorMessage) }
+    : row;
+}
 
 const MAX_UPLOAD_SIZE = 25 * 1024 * 1024;
 const MAX_UPLOAD_FILES = 10;
@@ -362,7 +377,12 @@ router.get('/', async (req, res, next) => {
       db.select({ value: count() }).from(documents).where(where),
     ]);
 
-    res.json({ documents: rows, total: total?.value ?? 0, page: q.page, pageSize: q.pageSize });
+    res.json({
+      documents: rows.map(withReadableError),
+      total: total?.value ?? 0,
+      page: q.page,
+      pageSize: q.pageSize,
+    });
   } catch (err) {
     next(err);
   }
@@ -441,13 +461,13 @@ router.get('/:documentId', async (req, res, next) => {
     // /text for the reader that actually wants it.
     const extracted = row.extracted ? { ...row.extracted, rawText: null } : null;
     res.json({
-      document: {
+      document: withReadableError({
         ...row,
         extracted,
         // Whether the original can still be shown — the file may have expired.
         hasFile: await storedFileExists(row.storageKey),
         hasText: Boolean(row.extracted?.rawText),
-      },
+      }),
     });
   } catch (err) {
     next(err);
@@ -551,8 +571,12 @@ const documentEditSchema = z
  * here is what makes a resend behave differently (see retryExport). Blocked for
  * documents already in ABRA Flexi: Foldera would then claim something the
  * accounting system doesn't say.
+ *
+ * Open to members, like the upload it usually follows — fixing a misread field
+ * on a document you just added is the same job. Changing the payee still cannot
+ * shortcut the redirection hold: a member's resend re-runs the bank review.
  */
-router.patch('/:documentId', requireAdminRole, async (req, res, next) => {
+router.patch('/:documentId', async (req, res, next) => {
   try {
     const patch = documentEditSchema.parse(req.body);
     const [row] = await db
@@ -594,20 +618,26 @@ router.patch('/:documentId', requireAdminRole, async (req, res, next) => {
     if (!updated) throw new AppError(ErrorCodes.NOT_FOUND, 'Document not found', 404);
 
     res.json({
-      document: {
+      document: withReadableError({
         ...updated,
         extracted: { ...edited, rawText: null },
         hasFile: await storedFileExists(updated.storageKey),
         hasText: Boolean(edited.rawText),
-      },
+      }),
     });
   } catch (err) {
     next(err);
   }
 });
 
-/** Retry export to ABRA Flexi from stored extracted data (export_failed only) */
-router.post('/:documentId/retry', requireAdminRole, async (req, res, next) => {
+/**
+ * Retry export to ABRA Flexi from stored extracted data (export_failed only).
+ *
+ * Open to members, so whoever fixed the data can send it. A member's resend
+ * re-runs the bank-account review (see retryExport) — otherwise editing the
+ * payee and resending would walk straight past the redirection hold.
+ */
+router.post('/:documentId/retry', async (req, res, next) => {
   try {
     const [row] = await db
       .select({ id: documents.id, status: documents.status, extracted: documents.extracted })
@@ -627,7 +657,11 @@ router.post('/:documentId/retry', requireAdminRole, async (req, res, next) => {
       .set({ status: DOCUMENT_STATUS.PROCESSING, errorMessage: null })
       .where(and(eq(documents.id, row.id), eq(documents.companyId, req.company!.id)));
 
-    await enqueueExportRetry({ documentId: row.id, companyId: req.company!.id });
+    await enqueueExportRetry({
+      documentId: row.id,
+      companyId: req.company!.id,
+      reviewRequired: req.companyRole !== 'admin',
+    });
     res.json({ ok: true });
   } catch (err) {
     next(err);

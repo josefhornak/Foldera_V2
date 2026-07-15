@@ -12,7 +12,7 @@ import { requireAuth, signAuthToken } from '../middleware/auth.js';
 import { isAdminEmail } from '../middleware/admin.js';
 import { AppError, ErrorCodes } from '../utils/errors.js';
 import { generateId } from '../utils/ids.js';
-import { sendVerificationCode } from '../utils/email.js';
+import { sendPasswordResetCode, sendVerificationCode } from '../utils/email.js';
 
 const router = Router();
 
@@ -39,6 +39,17 @@ const emailSchema = z.object({ email: z.string().email().toLowerCase() });
 const loginSchema = z.object({
   email: z.string().email().toLowerCase(),
   password: z.string().min(1).max(200),
+});
+
+const resetPasswordSchema = z.object({
+  email: z.string().email().toLowerCase(),
+  code: z.string().regex(/^\d{6}$/),
+  password: z.string().min(8).max(200),
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1).max(200),
+  password: z.string().min(8).max(200),
 });
 
 /** Cryptographically-random 6-digit verification code. */
@@ -182,6 +193,102 @@ router.post('/login', authLimiter, async (req, res, next) => {
 
     const token = await signAuthToken({ userId: user.id, email: user.email });
     res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Start a password reset: e-mail a 6-digit code.
+ *
+ * Always answers 200, whether or not the address exists — the response must not
+ * become a way to test which e-mails have accounts.
+ */
+router.post('/forgot-password', authLimiter, async (req, res, next) => {
+  try {
+    const body = emailSchema.parse(req.body);
+    const [user] = await db.select().from(users).where(eq(users.email, body.email)).limit(1);
+    // Unverified accounts finish signup instead — that flow already proves the
+    // address, and a reset here would hand out a second way to claim it.
+    if (user && user.emailVerified) {
+      const code = sixDigitCode();
+      await db
+        .update(users)
+        .set({ resetCode: code, resetCodeExpires: codeExpiry(), resetAttempts: 0 })
+        .where(eq(users.id, user.id));
+      await sendPasswordResetCode(user.email, user.name, code);
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Finish a password reset: verify the code, set the new password, sign in.
+ *
+ * Mirrors verify-email's brute-force cap — without it the 10^6 code space is
+ * walkable inside the 15-minute window, and here that costs the account.
+ */
+router.post('/reset-password', authLimiter, async (req, res, next) => {
+  try {
+    const body = resetPasswordSchema.parse(req.body);
+    const [user] = await db.select().from(users).where(eq(users.email, body.email)).limit(1);
+    const invalid = () => new AppError(ErrorCodes.BAD_REQUEST, 'Neplatný nebo expirovaný kód.', 400);
+
+    if (!user || !user.resetCode || !user.resetCodeExpires) throw invalid();
+    if (user.resetCodeExpires.getTime() < Date.now()) throw invalid();
+
+    if (!safeEqual(user.resetCode, body.code)) {
+      const attempts = user.resetAttempts + 1;
+      if (attempts >= MAX_VERIFY_ATTEMPTS) {
+        await db
+          .update(users)
+          .set({ resetCode: null, resetCodeExpires: null, resetAttempts: 0 })
+          .where(eq(users.id, user.id));
+        throw new AppError(ErrorCodes.BAD_REQUEST, 'Příliš mnoho pokusů. Vyžádejte si nový kód.', 400);
+      }
+      await db.update(users).set({ resetAttempts: attempts }).where(eq(users.id, user.id));
+      throw invalid();
+    }
+
+    await db
+      .update(users)
+      .set({
+        passwordHash: await bcrypt.hash(body.password, 12),
+        resetCode: null,
+        resetCodeExpires: null,
+        resetAttempts: 0,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, user.id));
+
+    const token = await signAuthToken({ userId: user.id, email: user.email });
+    res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Change the password of the signed-in user (requires the current one). */
+router.post('/change-password', requireAuth, authLimiter, async (req, res, next) => {
+  try {
+    const body = changePasswordSchema.parse(req.body);
+    const [user] = await db.select().from(users).where(eq(users.id, req.auth!.userId)).limit(1);
+    if (!user) throw new AppError(ErrorCodes.UNAUTHORIZED, 'User not found', 401);
+
+    // Proves the session belongs to whoever knows the password, not just to
+    // whoever got hold of an unattended browser.
+    if (!(await bcrypt.compare(body.currentPassword, user.passwordHash))) {
+      throw new AppError(ErrorCodes.BAD_REQUEST, 'Současné heslo není správné.', 400);
+    }
+
+    await db
+      .update(users)
+      .set({ passwordHash: await bcrypt.hash(body.password, 12), updatedAt: new Date() })
+      .where(eq(users.id, user.id));
+
+    res.json({ ok: true });
   } catch (err) {
     next(err);
   }

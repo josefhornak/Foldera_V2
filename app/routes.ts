@@ -8,6 +8,7 @@ export default [
   route('zpracovani-udaju', 'routes/dpa.tsx'),
   route('pozvanka/:token', 'routes/invite-accept.tsx'),
   route('login', 'routes/login.tsx'),
+  route('zapomenute-heslo', 'routes/forgot-password.tsx'),
   route('register', 'routes/register.tsx'),
   route('vitejte', 'routes/onboarding.tsx'),
   // Authenticated app

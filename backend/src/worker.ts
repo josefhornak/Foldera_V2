@@ -118,7 +118,7 @@ async function main(): Promise<void> {
   const retryWorker = new Worker<ExportRetryJobData>(
     QUEUE_NAMES.EXPORT_RETRY,
     async (job) => {
-      await retryExport(job.data.documentId, job.data.companyId);
+      await retryExport(job.data.documentId, job.data.companyId, job.data.reviewRequired);
     },
     { connection: createRedisConnection(), concurrency: env.WORKER_RETRY_CONCURRENCY }
   );

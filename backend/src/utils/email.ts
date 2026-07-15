@@ -135,6 +135,22 @@ export async function sendVerificationCode(to: string, name: string, code: strin
   });
 }
 
+/** Send the 6-digit password-reset code. */
+export async function sendPasswordResetCode(to: string, name: string, code: string): Promise<void> {
+  const safeName = name ? escapeHtml(name) : '';
+  const inner = `
+    <p style="font-size:15px;margin:0 0 8px">Dobrý den${safeName ? ` ${safeName}` : ''},</p>
+    <p style="font-size:15px;color:#56566a;margin:0 0 20px">kód pro nastavení nového hesla do Foldera je:</p>
+    <div style="font-size:34px;font-weight:700;letter-spacing:8px;text-align:center;background:#f4f4f7;border:1px solid #e6e6ec;border-radius:10px;padding:18px 0;color:#16161d">${code}</div>
+    <p style="font-size:13px;color:#8a8a99;margin:18px 0 0">Kód platí 15 minut. Pokud jste o změnu hesla nežádali, e-mail ignorujte - vaše heslo zůstává beze změny.</p>`;
+  await sendMail({
+    to,
+    subject: `Foldera – kód pro obnovu hesla ${code}`,
+    html: SHELL(inner),
+    text: `Kód pro obnovu hesla do Foldera je ${code}. Platí 15 minut. Pokud jste o změnu nežádali, e-mail ignorujte.`,
+  });
+}
+
 /** Alert a company admin that a document failed to process or export. */
 export async function sendDocumentFailureAlert(
   to: string,

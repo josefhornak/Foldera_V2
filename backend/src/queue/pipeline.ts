@@ -617,8 +617,18 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
  * Retry path — re-export from stored extracted data, which the user may have
  * corrected in the meantime. The original is re-attached when it is still in
  * the store; a document whose file has already been swept exports without one.
+ *
+ * `reviewRequired` re-runs the bank-account check. The redirection protection
+ * lives in the main pipeline, so without this a member could edit the payee on
+ * a document and resend it straight past the hold. An admin's resend skips the
+ * check — they are the ones the hold asks, and re-running it on approval would
+ * park the document right back where it started.
  */
-export async function retryExport(documentId: string, companyId: string): Promise<void> {
+export async function retryExport(
+  documentId: string,
+  companyId: string,
+  reviewRequired = false
+): Promise<void> {
   const [row] = await db
     .select()
     .from(documents)
@@ -628,6 +638,29 @@ export async function retryExport(documentId: string, companyId: string): Promis
 
   const [company] = await db.select().from(companies).where(eq(companies.id, companyId)).limit(1);
   if (!company) return;
+
+  if (reviewRequired) {
+    const cfg = getAbraConfig(company);
+    const reason = cfg
+      ? await reviewBeforeExport(cfg, row.extracted, {
+          newSupplier: company.newSupplierMode,
+          bank: company.bankAccountMode,
+        })
+      : null;
+    if (reason) {
+      await db
+        .update(documents)
+        .set({ status: DOCUMENT_STATUS.NEEDS_REVIEW, errorMessage: reason, processedAt: new Date() })
+        .where(and(eq(documents.id, documentId), eq(documents.companyId, companyId)));
+      logger.warn({ documentId, supplierIco: row.extracted.supplierIco }, '[Pipeline] Resend held for bank-account review');
+      await notifyBankReview(company, {
+        fileName: row.fileName,
+        supplierName: row.extracted.supplierName,
+        reason,
+      });
+      return;
+    }
+  }
 
   const attachment = (await storedFileExists(row.storageKey))
     ? {

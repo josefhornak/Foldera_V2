@@ -32,6 +32,13 @@ export interface ProcessDocumentJobData {
 export interface ExportRetryJobData {
   documentId: string;
   companyId: string;
+  /**
+   * Re-run the bank-account review before exporting. Set when a plain member
+   * asks for the resend: they may have corrected the payee, and the redirection
+   * check must not be skippable by editing a held document and resending it.
+   * Admins are the ones who approve that review, so their resend skips it.
+   */
+  reviewRequired?: boolean;
 }
 
 let pollQueue: Queue<PollSourcesJobData> | null = null;
