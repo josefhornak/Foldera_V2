@@ -21,7 +21,7 @@ import { Button } from '~/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/Card';
 import { StateWrapper } from '~/components/ui/StateWrapper';
 import { Switch } from '~/components/ui/Switch';
-import { CloudCredentials } from '~/components/settings/CloudCredentials';
+import { CloudCredentials, type Provider } from '~/components/settings/CloudCredentials';
 import {
   createCollectionEmailSource,
   deleteSource,
@@ -46,7 +46,7 @@ export function SourcesSection({ companyId }: SourcesSectionProps) {
   const [searchParams] = useSearchParams();
   const connected = searchParams.get('connected');
 
-  const [oauthLoading, setOauthLoading] = useState<string | null>(null);
+  const [oauthLoading, setOauthLoading] = useState<Provider | null>(null);
   const [creatingEmail, setCreatingEmail] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 

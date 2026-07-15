@@ -117,10 +117,33 @@
       "invoice": "Faktura",
       "receipt": "Účtenka",
       "credit_note": "Dobropis",
-      "other": "Jiný doklad"
+      "other": "Jiný doklad",
+      "advance_invoice": "Zálohová faktura",
+      "tax_payment": "Daňový doklad k platbě"
     },
     "whyFailed": "Proč se nepodařilo odeslat",
-    "resend": "Odeslat znovu"
+    "resend": "Odeslat znovu",
+    "supplierDic": "DIČ dodavatele",
+    "supplierAddress": "Adresa dodavatele",
+    "taxDate": "Datum zdanitelného plnění",
+    "constantSymbol": "Konstantní symbol",
+    "specificSymbol": "Specifický symbol",
+    "orderNumber": "Číslo objednávky",
+    "bankAccount": "Bankovní účet",
+    "bankCode": "Kód banky",
+    "iban": "IBAN",
+    "currency": "Měna",
+    "description": "Popis",
+    "preview": {
+      "textOnly": "Originál už není k dispozici — níže je text, který z dokladu přečetla AI.",
+      "unavailable": "Náhled dokladu není k dispozici."
+    },
+    "edit": {
+      "trigger": "Upravit údaje",
+      "save": "Uložit",
+      "saveAndResend": "Uložit a odeslat znovu",
+      "amountInvalid": "Zadejte částku jako číslo, například 1611.72."
+    }
   },
   "status": {
     "processing": "Zpracovává se",

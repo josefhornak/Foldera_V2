@@ -11,7 +11,7 @@ import {
   type OAuthProviderInfo,
 } from '~/hooks/useSources';
 
-type Provider = 'google_drive' | 'onedrive';
+export type Provider = 'google_drive' | 'onedrive';
 
 interface Props {
   companyId: string;

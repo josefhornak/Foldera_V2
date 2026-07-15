@@ -1,6 +1,6 @@
 import useSWR from 'swr';
-import { api } from '~/lib/api';
-import type { DocumentDetail, DocumentsResponse } from '~/types';
+import { api, apiBlob } from '~/lib/api';
+import type { DocumentDetail, DocumentEdit, DocumentsResponse } from '~/types';
 
 interface DocumentsQuery {
   page?: number;
@@ -45,6 +45,31 @@ export function useDocumentDetail(companyId: string | null, docId: string | null
     isLoading,
     mutate,
   };
+}
+
+/** The OCR transcript — loaded on demand, it is far too big for the detail payload. */
+export function useDocumentText(companyId: string | null, docId: string | null, enabled: boolean) {
+  const key = companyId && docId && enabled ? `/api/companies/${companyId}/documents/${docId}/text` : null;
+  const { data, error, isLoading } = useSWR<{ text: string | null }>(key);
+
+  return { text: data?.text ?? null, error, isLoading };
+}
+
+/**
+ * Correct what the AI read. The saved data is what a resend sends, so this is
+ * what makes the retry below do something different.
+ */
+export function updateDocument(companyId: string, docId: string, patch: DocumentEdit) {
+  return api<{ document: DocumentDetail }>(`/api/companies/${companyId}/documents/${docId}`, {
+    method: 'PATCH',
+    body: patch,
+  });
+}
+
+/** The original file, as an object URL the caller owns and must revoke. */
+export async function fetchDocumentFileUrl(companyId: string, docId: string): Promise<string> {
+  const blob = await apiBlob(`/api/companies/${companyId}/documents/${docId}/file`);
+  return URL.createObjectURL(blob);
 }
 
 export function retryDocument(companyId: string, docId: string) {

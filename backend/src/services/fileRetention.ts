@@ -33,7 +33,10 @@ const ORPHAN_MIN_AGE_MS = DAY_MS;
 
 /** Drop files of settled documents past their retention window. */
 async function sweepSettled(): Promise<number> {
-  const cutoff = new Date(Date.now() - env.FILE_RETENTION_DAYS * DAY_MS);
+  // ISO string, not a Date: a raw Date bound into a sql template throws in the
+  // driver ("The string argument must be of type string ... Received an
+  // instance of Date"), which would silently disable retention.
+  const cutoff = new Date(Date.now() - env.FILE_RETENTION_DAYS * DAY_MS).toISOString();
   const expired = await db
     .select({ id: documents.id, storageKey: documents.storageKey })
     .from(documents)
@@ -41,7 +44,7 @@ async function sweepSettled(): Promise<number> {
       and(
         isNotNull(documents.storageKey),
         notInArray(documents.status, [...FILE_RETAINED_STATUSES]),
-        sql`coalesce(${documents.processedAt}, ${documents.createdAt}) <= ${cutoff}`
+        sql`coalesce(${documents.processedAt}, ${documents.createdAt}) <= ${cutoff}::timestamptz`
       )
     );
 

@@ -112,6 +112,38 @@ export async function apiUpload<T>(path: string, formData: FormData): Promise<T>
   return data as T;
 }
 
+/**
+ * Fetch a binary response (a document's original file) with the same auth as
+ * `api()`. Needed because the token lives in a header, not a cookie — the
+ * browser cannot authenticate an <iframe src> or <img src> on its own, so the
+ * bytes are fetched here and handed to the DOM as an object URL.
+ */
+export async function apiBlob(path: string): Promise<Blob> {
+  const token = useAuthStore.getState().token;
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(path, { headers });
+
+  if (res.status === 401) {
+    useAuthStore.getState().logout();
+    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+      window.location.assign('/login');
+    }
+    throw new ApiError('Unauthorized', 401, undefined);
+  }
+  if (!res.ok) {
+    let data: unknown;
+    try {
+      data = JSON.parse(await res.text());
+    } catch {
+      data = undefined;
+    }
+    throw new ApiError(extractErrorMessage(data, res.status), res.status, data);
+  }
+  return res.blob();
+}
+
 /** Default SWR fetcher — cache keys are API endpoint paths. */
 export function swrFetcher<T>(path: string): Promise<T> {
   return api<T>(path);

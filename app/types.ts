@@ -71,12 +71,68 @@ export interface DocumentRow {
   createdAt: string;
 }
 
-export type DocumentKind = 'invoice' | 'receipt' | 'credit_note' | 'other';
+export type DocumentKind =
+  | 'invoice'
+  | 'advance_invoice'
+  | 'tax_payment'
+  | 'receipt'
+  | 'credit_note'
+  | 'other';
+
+export const DOCUMENT_KINDS: readonly DocumentKind[] = [
+  'invoice',
+  'advance_invoice',
+  'tax_payment',
+  'receipt',
+  'credit_note',
+  'other',
+];
+
+/**
+ * What the extractor read off the document — mirrors ExtractedInvoice on the
+ * backend, minus the parts the UI has no use for. This is what an export
+ * actually sends, so the edit form writes straight into it.
+ */
+export interface ExtractedDocument {
+  documentType?: DocumentKind;
+  supplierName?: string | null;
+  supplierIco?: string | null;
+  supplierDic?: string | null;
+  supplierAddress?: string | null;
+  invoiceNumber?: string | null;
+  variableSymbol?: string | null;
+  constantSymbol?: string | null;
+  specificSymbol?: string | null;
+  orderNumber?: string | null;
+  issueDate?: string | null;
+  taxDate?: string | null;
+  dueDate?: string | null;
+  totalAmount?: number | null;
+  totalWithoutVat?: number | null;
+  currency?: string | null;
+  bankAccount?: string | null;
+  bankCode?: string | null;
+  iban?: string | null;
+  swift?: string | null;
+  description?: string | null;
+  /** Stripped from the detail payload — fetched separately from /text. */
+  rawText?: string | null;
+}
+
+/** The subset of `ExtractedDocument` a user may correct (see PATCH /documents/:id). */
+export type DocumentEdit = Omit<ExtractedDocument, 'rawText'>;
 
 /** Detail endpoint additionally returns the full extracted object. */
 export interface DocumentDetail extends DocumentRow {
-  extractedFields?: Record<string, string | number | null> | null;
-  extracted?: ({ documentType?: DocumentKind } & Record<string, unknown>) | null;
+  extracted?: ExtractedDocument | null;
+  /** Drives how the original is rendered (inline image vs. embedded PDF). */
+  mimeType?: string;
+  /** The original is still stored and can be previewed. */
+  hasFile?: boolean;
+  /** An OCR transcript exists (the fallback once the file expires). */
+  hasText?: boolean;
+  /** When a human last corrected the data; null while untouched. */
+  editedAt?: string | null;
 }
 
 export interface DocumentsResponse {

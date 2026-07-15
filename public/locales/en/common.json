@@ -117,10 +117,33 @@
       "invoice": "Invoice",
       "receipt": "Receipt",
       "credit_note": "Credit note",
-      "other": "Other"
+      "other": "Other",
+      "advance_invoice": "Advance invoice",
+      "tax_payment": "Tax payment document"
     },
     "whyFailed": "Why the export failed",
-    "resend": "Resend"
+    "resend": "Resend",
+    "supplierDic": "Supplier VAT ID",
+    "supplierAddress": "Supplier address",
+    "taxDate": "Tax point date",
+    "constantSymbol": "Constant symbol",
+    "specificSymbol": "Specific symbol",
+    "orderNumber": "Order number",
+    "bankAccount": "Bank account",
+    "bankCode": "Bank code",
+    "iban": "IBAN",
+    "currency": "Currency",
+    "description": "Description",
+    "preview": {
+      "textOnly": "The original is no longer available — below is the text the AI read from it.",
+      "unavailable": "No preview available for this document."
+    },
+    "edit": {
+      "trigger": "Edit fields",
+      "save": "Save",
+      "saveAndResend": "Save and resend",
+      "amountInvalid": "Enter the amount as a number, for example 1611.72."
+    }
   },
   "status": {
     "processing": "Processing",
