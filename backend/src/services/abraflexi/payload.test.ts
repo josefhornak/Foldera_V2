@@ -196,11 +196,14 @@ describe('buildInvoicePayload', () => {
     expect(f.polozkyFaktury).toBeUndefined();
   });
 
-  it('falls back duzpPuv to issue date and skips malformed dates', () => {
+  // ABRA rejects a faktura-prijata without datSplat, so a date it cannot parse
+  // must fall back rather than be dropped — an export that books beats an export
+  // that fails on a date the document only stated in Czech format.
+  it('falls back duzpPuv and datSplat to the issue date when the dates are missing or malformed', () => {
     const invoice: ExtractedInvoice = { ...baseInvoice, taxDate: null, dueDate: '15.06.2026' };
     const f = buildInvoicePayload(invoice, emptyDefaults, null).winstrom['faktura-prijata'];
     expect(f.duzpPuv).toBe('2026-06-01');
-    expect(f.datSplat).toBeUndefined();
+    expect(f.datSplat).toBe('2026-06-01');
   });
 });
 

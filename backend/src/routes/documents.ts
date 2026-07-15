@@ -24,6 +24,7 @@ import { logger } from '../utils/logger.js';
 import { sha256Hex, decryptSecret } from '../utils/crypto.js';
 import { deleteExportedDocument } from '../services/abraflexi/export.js';
 import { ENTITY_FAKTURA_PRIJATA } from '../services/abraflexi/helpers.js';
+import { documentColumnsFromExtracted } from '../services/documentFields.js';
 import { removeStored, resolveStoredPath, storedFileExists } from '../services/storage.js';
 import { AppError, ErrorCodes } from '../utils/errors.js';
 import { escapeLikePattern } from '../utils/sqlUtils.js';
@@ -430,9 +431,170 @@ router.get('/:documentId', async (req, res, next) => {
       .where(and(eq(documents.id, String(req.params.documentId)), eq(documents.companyId, req.company!.id)))
       .limit(1);
     if (!row) throw new AppError(ErrorCodes.NOT_FOUND, 'Document not found', 404);
-    // rawText can be large — strip it from the detail payload
+    // rawText can be large — strip it from the detail payload; it is served by
+    // /text for the reader that actually wants it.
     const extracted = row.extracted ? { ...row.extracted, rawText: null } : null;
-    res.json({ document: { ...row, extracted } });
+    res.json({
+      document: {
+        ...row,
+        extracted,
+        // Whether the original can still be shown — the file may have expired.
+        hasFile: await storedFileExists(row.storageKey),
+        hasText: Boolean(row.extracted?.rawText),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * The original file, for previewing the document being corrected. Streamed
+ * through the API (never a public path) so company scoping and auth apply, and
+ * inline so the browser renders it instead of downloading.
+ */
+router.get('/:documentId/file', async (req, res, next) => {
+  try {
+    const [row] = await db
+      .select({
+        storageKey: documents.storageKey,
+        fileName: documents.fileName,
+        mimeType: documents.mimeType,
+      })
+      .from(documents)
+      .where(and(eq(documents.id, String(req.params.documentId)), eq(documents.companyId, req.company!.id)))
+      .limit(1);
+    if (!row) throw new AppError(ErrorCodes.NOT_FOUND, 'Document not found', 404);
+    if (!(await storedFileExists(row.storageKey))) {
+      throw new AppError(ErrorCodes.NOT_FOUND, 'Originál dokladu už není k dispozici.', 404);
+    }
+
+    res.setHeader('Content-Type', row.mimeType);
+    res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(row.fileName)}`);
+    // The file is someone's invoice — never let a shared cache hold it.
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.sendFile(resolveStoredPath(row.storageKey!), (err) => {
+      if (err) next(err);
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * What the OCR actually read. Kept out of the detail payload (it is large) and
+ * out of the list entirely; this is the fallback preview once the original has
+ * expired, and the reference when checking a correction.
+ */
+router.get('/:documentId/text', async (req, res, next) => {
+  try {
+    const [row] = await db
+      .select({ extracted: documents.extracted })
+      .from(documents)
+      .where(and(eq(documents.id, String(req.params.documentId)), eq(documents.companyId, req.company!.id)))
+      .limit(1);
+    if (!row) throw new AppError(ErrorCodes.NOT_FOUND, 'Document not found', 404);
+    res.json({ text: row.extracted?.rawText ?? null });
+  } catch (err) {
+    next(err);
+  }
+});
+
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Datum musí být ve tvaru RRRR-MM-DD');
+
+/**
+ * What a human may correct.
+ *
+ * A whitelist, and `.strict()`, on purpose: `rawText` is the OCR record of what
+ * the document actually said and must stay exactly as read, and `lineItems` /
+ * `vatBreakdown` are structured sets the form cannot express yet. `isInvoice`
+ * and `confidence` are the extractor's own verdict — an edit corrects the data,
+ * it doesn't rewrite history.
+ */
+const documentEditSchema = z
+  .object({
+    documentType: z.enum(['invoice', 'advance_invoice', 'tax_payment', 'receipt', 'credit_note', 'other']),
+    supplierName: z.string().max(255).nullable(),
+    supplierIco: z.string().max(32).nullable(),
+    supplierDic: z.string().max(32).nullable(),
+    supplierAddress: z.string().max(500).nullable(),
+    invoiceNumber: z.string().max(64).nullable(),
+    variableSymbol: z.string().max(32).nullable(),
+    constantSymbol: z.string().max(32).nullable(),
+    specificSymbol: z.string().max(32).nullable(),
+    orderNumber: z.string().max(64).nullable(),
+    issueDate: isoDate.nullable(),
+    taxDate: isoDate.nullable(),
+    dueDate: isoDate.nullable(),
+    totalAmount: z.number().finite().nullable(),
+    totalWithoutVat: z.number().finite().nullable(),
+    currency: z.string().max(8).nullable(),
+    bankAccount: z.string().max(64).nullable(),
+    bankCode: z.string().max(8).nullable(),
+    iban: z.string().max(64).nullable(),
+    swift: z.string().max(32).nullable(),
+    description: z.string().max(2000).nullable(),
+  })
+  .partial()
+  .strict();
+
+/**
+ * Correct what the AI read.
+ *
+ * The stored `extracted` JSON is exactly what an export sends, so editing it
+ * here is what makes a resend behave differently (see retryExport). Blocked for
+ * documents already in ABRA Flexi: Foldera would then claim something the
+ * accounting system doesn't say.
+ */
+router.patch('/:documentId', requireAdminRole, async (req, res, next) => {
+  try {
+    const patch = documentEditSchema.parse(req.body);
+    const [row] = await db
+      .select()
+      .from(documents)
+      .where(and(eq(documents.id, String(req.params.documentId)), eq(documents.companyId, req.company!.id)))
+      .limit(1);
+    if (!row) throw new AppError(ErrorCodes.NOT_FOUND, 'Document not found', 404);
+    if (row.status === DOCUMENT_STATUS.EXPORTED) {
+      throw new AppError(
+        ErrorCodes.CONFLICT,
+        'Doklad už je založený v ABRA Flexi — upravte ho přímo tam, jinak by se údaje rozešly.',
+        409
+      );
+    }
+    if (row.status === DOCUMENT_STATUS.PROCESSING) {
+      throw new AppError(ErrorCodes.CONFLICT, 'Doklad se právě zpracovává. Počkejte na dokončení.', 409);
+    }
+    if (!row.extracted) {
+      throw new AppError(
+        ErrorCodes.CONFLICT,
+        'U tohoto dokladu se nepodařilo přečíst žádná data, není co upravit.',
+        409
+      );
+    }
+
+    const edited = { ...row.extracted, ...patch };
+    const [updated] = await db
+      .update(documents)
+      .set({
+        ...documentColumnsFromExtracted(edited),
+        // Capture the model's own answer the first time a human overrides it —
+        // the only ground truth we get about where extraction goes wrong.
+        extractedOriginal: row.extractedOriginal ?? row.extracted,
+        editedAt: new Date(),
+      })
+      .where(and(eq(documents.id, row.id), eq(documents.companyId, req.company!.id)))
+      .returning();
+    if (!updated) throw new AppError(ErrorCodes.NOT_FOUND, 'Document not found', 404);
+
+    res.json({
+      document: {
+        ...updated,
+        extracted: { ...edited, rawText: null },
+        hasFile: await storedFileExists(updated.storageKey),
+        hasText: Boolean(edited.rawText),
+      },
+    });
   } catch (err) {
     next(err);
   }

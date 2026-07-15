@@ -39,6 +39,7 @@ import {
 import { humanizeAbraError, isKnownCzBankCode } from '../services/abraflexi/helpers.js';
 import { blockMessage, decideBilling, recordDocumentUsage } from '../services/billing.js';
 import { notifyBankReview, notifyDocumentFailure } from '../services/notifications.js';
+import { documentColumnsFromExtracted } from '../services/documentFields.js';
 import { persistOriginal, resolveStoredPath, storedFileExists } from '../services/storage.js';
 import { extractInvoice } from '../services/extraction/index.js';
 import { summarizeLineItems } from '../services/extraction/summarize.js';
@@ -505,16 +506,8 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
     }
 
     const baseFields = {
-      supplierName: invoice.supplierName,
-      supplierIco: invoice.supplierIco,
-      invoiceNumber: invoice.invoiceNumber,
-      variableSymbol: invoice.variableSymbol,
-      issueDate: invoice.issueDate,
-      dueDate: invoice.dueDate,
-      totalAmount: invoice.totalAmount != null ? String(invoice.totalAmount) : null,
-      currency: invoice.currency,
+      ...documentColumnsFromExtracted(invoice),
       confidence: extraction.confidence,
-      extracted: invoice,
     };
 
     // Received invoices and credit notes export to faktura-prijata; receipts
