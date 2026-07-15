@@ -41,8 +41,20 @@ app.use(
           'https://*.google-analytics.com',
           'https://*.analytics.google.com',
         ],
-        // GA may fall back to image-pixel beacons.
-        'img-src': ["'self'", 'data:', 'https://www.googletagmanager.com', 'https://*.google-analytics.com'],
+        // GA may fall back to image-pixel beacons. `blob:` is the document
+        // preview: the API authenticates with a Bearer header, so the file
+        // cannot be pointed at with a plain <img src> — it is fetched by our own
+        // JS and handed to the DOM as an object URL, which CSP treats as blob:.
+        'img-src': [
+          "'self'",
+          'data:',
+          'blob:',
+          'https://www.googletagmanager.com',
+          'https://*.google-analytics.com',
+        ],
+        // Same reason, for previewing a PDF in an <iframe>. Without this the
+        // directive falls back to default-src 'self' and the preview is blocked.
+        'frame-src': ["'self'", 'blob:'],
         // The SPA loads Plus Jakarta Sans from Google Fonts
         'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         'font-src': ["'self'", 'https://fonts.gstatic.com'],

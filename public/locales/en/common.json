@@ -63,7 +63,7 @@
   },
   "documents": {
     "title": "Documents",
-    "subtitle": "Documents processed into ABRA Flexi - files are never stored in the app",
+    "subtitle": "Documents processed into ABRA Flexi - originals are kept only as long as needed",
     "searchPlaceholder": "Search supplier, document number…",
     "statusFilter": "Status",
     "allStatuses": "All statuses",
