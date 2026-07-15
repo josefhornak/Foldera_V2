@@ -76,7 +76,7 @@ const FEATURES = [
 ];
 
 const FAQ = [
-  { q: 'Kam putují moje data?', a: 'Vytěžení dokladů běží na evropské AI s OCR (Mistral, Francie) a servery i databázi hostujeme v EU (Německo). Pro odesílání e-mailů využíváme službu Resend (USA) - přenos je ošetřen standardními smluvními doložkami. Řídíme se GDPR a soubory trvale neukládáme: po vytěžení a nahrání do ABRA Flexi se originál smaže. Podrobnosti najdete v zásadách ochrany osobních údajů.' },
+  { q: 'Kam putují moje data?', a: 'Vytěžení dokladů běží na evropské AI s OCR (Mistral, Francie) a servery i databázi hostujeme v EU (Německo). Pro odesílání e-mailů využíváme službu Resend (USA) - přenos je ošetřen standardními smluvními doložkami. Řídíme se GDPR a originály dokladů držíme jen po nezbytně nutnou dobu: u úspěšně zpracovaných dokladů se soubor maže do 24 hodin, u těch, které skončily chybou, ho necháme, dokud je neopravíte a neodešlete - jinak byste neměli podle čeho. Podrobnosti najdete v zásadách ochrany osobních údajů.' },
   { q: 'Ukládáte naše soubory?', a: 'Ne. Soubor se jen zpracuje, nahraje jako příloha do ABRA Flexi a poté smaže. V aplikaci zůstanou pouze vytěžená metadata, abyste mohli export případně zopakovat.' },
   { q: 'Funguje to s mojí verzí ABRA Flexi?', a: 'Ano. Připojujeme se přes REST API ABRA Flexi (FlexiBee). Stačí zadat adresu instance, firmu a přihlašovací údaje.' },
   { q: 'Co když se doklad nerozpozná správně?', a: 'Nízká přesnost se označí a doklad lze znovu exportovat z uložených dat. Nepovedený export jde kdykoli zopakovat, nic se neztratí.' },

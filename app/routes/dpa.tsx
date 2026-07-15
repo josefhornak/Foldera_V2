@@ -14,7 +14,7 @@ export function meta() {
   ];
 }
 
-const UPDATED = '13. 6. 2026';
+const UPDATED = '15. 7. 2026';
 
 function H2({ children }: { children: React.ReactNode }) {
   return <h2 className="mt-10 font-heading text-xl font-bold tracking-tight">{children}</h2>;
@@ -122,25 +122,44 @@ export default function Dpa() {
         <H2>5. Zabezpečení</H2>
         <P>
           Zpracovatel uplatňuje zejména: šifrované uložení přístupových údajů (k ABRA Flexi a e-mailovým schránkám),
-          šifrovaný přenos (TLS), řízení přístupu, oddělení dat jednotlivých zákazníků a zásadu, že{' '}
-          <Strong>originální soubory dokladů se po zpracování trvale neukládají</Strong>. V aplikaci zůstávají pouze
-          vytěžená metadata nezbytná pro provoz.
+          šifrovaný přenos (TLS), řízení přístupu, oddělení dat jednotlivých zákazníků a zásadu{' '}
+          <Strong>minimalizace uchovávání originálních souborů</Strong> dokladů - viz čl. 6.
         </P>
 
-        <H2>6. Předání do třetích zemí</H2>
+        <H2>6. Uchovávání originálních souborů dokladů</H2>
+        <P>
+          Originální soubor dokladu zpracovatel uchovává pouze po dobu, po kterou je potřebný k poskytování služby:
+        </P>
+        <ul className="mt-3 list-disc pl-5 marker:text-[var(--text-tertiary)]">
+          <Li>
+            u dokladů, které byly úspěšně zpracovány (založeny do účetnictví správce, nebo přeskočeny), nejdéle{' '}
+            <Strong>24 hodin</Strong> od zpracování;
+          </Li>
+          <Li>
+            u dokladů, které skončily chybou nebo čekají na schválení správcem, do doby, než je správce úspěšně odešle
+            do účetnictví nebo je smaže - originál je nezbytný k tomu, aby správce mohl chybu posoudit a údaje opravit;
+          </Li>
+          <Li>smaže-li správce doklad ve službě, zpracovatel originální soubor smaže neprodleně.</Li>
+        </ul>
+        <P>
+          Po uplynutí těchto lhůt zůstávají v aplikaci pouze vytěžená metadata nezbytná pro provoz. Originální soubory
+          jsou po celou dobu uloženy výhradně na serverech v EU (viz čl. 7).
+        </P>
+
+        <H2>7. Předání do třetích zemí</H2>
         <P>
           Vytěžení i hosting probíhají v EU. Odesílání e-mailů přes službu Resend (USA) může zahrnovat přenos údajů
           nezbytných pro doručení; tento přenos je ošetřen nástrojem dle čl. 46 GDPR (standardní smluvní doložky,
           případně EU–US Data Privacy Framework).
         </P>
 
-        <H2>7. Porušení zabezpečení</H2>
+        <H2>8. Porušení zabezpečení</H2>
         <P>
           Zjistí-li zpracovatel porušení zabezpečení osobních údajů, ohlásí je správci bez zbytečného odkladu a poskytne
           součinnost potřebnou k případnému splnění ohlašovacích povinností správce.
         </P>
 
-        <H2>8. Po skončení smlouvy</H2>
+        <H2>9. Po skončení smlouvy</H2>
         <P>
           Po ukončení poskytování služby zpracovatel osobní údaje vymaže (případně vrátí), nevyžadují-li právní předpisy
           jejich další uchování.

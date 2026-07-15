@@ -14,7 +14,7 @@ export function meta() {
   ];
 }
 
-const UPDATED = '13. 6. 2026';
+const UPDATED = '15. 7. 2026';
 
 function H2({ children }: { children: React.ReactNode }) {
   return <h2 className="mt-10 font-heading text-xl font-bold tracking-tight">{children}</h2>;
@@ -73,9 +73,10 @@ export default function Privacy() {
         </P>
         <P>
           <Strong>Obsah dokladů</Strong> (faktury, účtenky a další doklady, které do služby vložíte) - ty zpracováváme
-          jménem vaší firmy jako zpracovatel. Originální soubory po vytěžení a nahrání do vašeho účetnictví
-          <Strong> trvale neukládáme</Strong>; v aplikaci zůstávají jen vytěžená metadata nezbytná pro provoz a případné
-          zopakování exportu.
+          jménem vaší firmy jako zpracovatel. Originální soubor dokladu uchováváme{' '}
+          <Strong>jen po nezbytně nutnou dobu</Strong>, abyste si mohli doklad zobrazit a případně opravit vytěžené
+          údaje a odeslat jej do účetnictví znovu; podrobné lhůty uvádíme v čl. 5. V aplikaci pak zůstávají vytěžená
+          metadata nezbytná pro provoz a případné zopakování exportu.
         </P>
 
         <H2>3. Komu údaje předáváme</H2>
@@ -108,6 +109,11 @@ export default function Privacy() {
                 <td className="px-4 py-2.5">Odesílání transakčních e-mailů</td>
                 <td className="px-4 py-2.5">USA</td>
               </tr>
+              <tr className="border-t border-[var(--border-subtle)]">
+                <td className="px-4 py-2.5">Google Ireland Ltd.</td>
+                <td className="px-4 py-2.5">Analytika návštěvnosti webu (jen s vaším souhlasem, viz čl. 7)</td>
+                <td className="px-4 py-2.5">Irsko (EU), zčásti USA</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -118,17 +124,44 @@ export default function Privacy() {
 
         <H2>4. Předání mimo EU</H2>
         <P>
-          Vytěžení dokladů i hosting probíhají v rámci EU. Výjimkou je odesílání e-mailů přes službu Resend (USA), kam se
-          dostávají údaje nezbytné pro doručení zprávy (e-mailová adresa, předmět a obsah, např. údaje z faktury). Tento
-          přenos do třetí země je ošetřen odpovídajícím nástrojem dle čl. 46 GDPR (standardní smluvní doložky, případně
-          mechanismus EU–US Data Privacy Framework).
+          <Strong>Doklady a jejich obsah zpracováváme výhradně v EU</Strong> - hosting i vytěžení (OCR) probíhají na
+          serverech v Německu a ve Francii. Originální soubory dokladů se mimo EU nedostávají.
+        </P>
+        <P>
+          Mimo EU směřují jen dvě dílčí zpracování: odesílání e-mailů přes službu <Strong>Resend</Strong> (USA), kam se
+          dostávají údaje nezbytné pro doručení zprávy (e-mailová adresa, předmět a obsah, např. údaje z faktury), a -
+          pokud k tomu dáte souhlas - analytika <Strong>Google Analytics</Strong> (viz čl. 7). Oba přenosy do třetí země
+          jsou ošetřeny odpovídajícím nástrojem dle čl. 46 GDPR (standardní smluvní doložky, případně mechanismus
+          EU–US Data Privacy Framework).
         </P>
 
         <H2>5. Jak dlouho údaje uchováváme</H2>
         <P>
           Údaje účtu zpracováváme po dobu trvání účtu. Fakturační a účetní doklady uchováváme po dobu stanovenou právními
-          předpisy (zejména zákonem o účetnictví, až 10 let). Originální soubory dokladů neukládáme - mažou se ihned po
-          zpracování. Po zrušení účtu osobní údaje, které nemusíme uchovávat ze zákona, vymažeme.
+          předpisy (zejména zákonem o účetnictví, až 10 let).
+        </P>
+        <P>
+          <Strong>Originální soubory dokladů</Strong> uchováváme co nejkratší dobu a řídíme se tím, zda je ještě
+          potřebujete:
+        </P>
+        <ul className="mt-3 space-y-2 pl-5 text-sm leading-relaxed text-[var(--text-secondary)]">
+          <li className="list-disc">
+            <Strong>Doklad se podařilo zpracovat</Strong> (byl založen do vašeho účetnictví, nebo jsme jej přeskočili) -
+            originál mažeme po uplynutí <Strong>24 hodin</Strong> od zpracování. Úklid probíhá průběžně, každou hodinu.
+          </li>
+          <li className="list-disc">
+            <Strong>Doklad skončil chybou nebo čeká na vaše schválení</Strong> - originál ponecháme, dokud doklad
+            úspěšně neodešlete do účetnictví nebo jej nesmažete. Bez originálu byste nemohli zkontrolovat, co se
+            nepovedlo, a údaje opravit.
+          </li>
+          <li className="list-disc">
+            <Strong>Smažete doklad ve službě</Strong> - originální soubor mažeme okamžitě, bez čekání na lhůtu výše.
+          </li>
+        </ul>
+        <P>
+          Vytěžená metadata dokladu (dodavatel, částka, čísla a data) zůstávají v aplikaci po dobu trvání účtu, abyste
+          měli přehled o zpracovaných dokladech. Po zrušení účtu osobní údaje, které nemusíme uchovávat ze zákona,
+          vymažeme.
         </P>
 
         <H2>6. Vaše práva</H2>

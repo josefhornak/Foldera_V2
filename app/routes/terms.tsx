@@ -14,7 +14,7 @@ export function meta() {
   ];
 }
 
-const UPDATED = '13. 6. 2026';
+const UPDATED = '15. 7. 2026';
 
 function H2({ children }: { children: React.ReactNode }) {
   return <h2 className="mt-10 font-heading text-xl font-bold tracking-tight">{children}</h2>;
@@ -91,9 +91,11 @@ export default function Terms() {
 
         <H2>7. Zpracování souborů a ochrana údajů</H2>
         <P>
-          Originální soubory faktur se zpracují, nahrají jako příloha do ABRA Flexi zákazníka a poté smažou - poskytovatel
-          je trvale neukládá. V aplikaci zůstávají pouze vytěžená metadata nezbytná pro provoz služby a případné
-          zopakování exportu. Přístupové údaje k ABRA Flexi a e-mailovým schránkám jsou v databázi uloženy šifrovaně.
+          Originální soubory faktur se zpracují a nahrají jako příloha do ABRA Flexi zákazníka. Poskytovatel je poté
+          uchovává jen po nezbytně nutnou dobu - u úspěšně zpracovaných dokladů nejdéle 24 hodin, u dokladů, které
+          skončily chybou nebo čekají na schválení, do doby, než je zákazník odešle do účetnictví nebo smaže. Pak
+          v aplikaci zůstávají pouze vytěžená metadata nezbytná pro provoz služby a případné zopakování exportu.
+          Přístupové údaje k ABRA Flexi a e-mailovým schránkám jsou v databázi uloženy šifrovaně.
         </P>
         <P>
           Poskytovatel zpracovává osobní údaje v rozsahu nezbytném pro poskytování služby a v souladu s nařízením GDPR.
