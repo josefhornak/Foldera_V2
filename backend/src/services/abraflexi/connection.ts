@@ -10,7 +10,8 @@ import { z } from 'zod';
 import { logger } from '../../utils/logger.js';
 import { toError } from '../../utils/errors.js';
 import type { AbraConnectionTestResult, AbraFlexiConfig } from '../../types/contracts.js';
-import { abraRequest } from './client.js';
+import { abraRequest, parseAbraErrorMessages } from './client.js';
+import { humanizeAbraError } from './helpers.js';
 
 /** `/c/{company}.json` returns `{"company": {..., "nazev": "..."}}` (no winstrom envelope). */
 const companyResponseSchema = z.object({
@@ -37,14 +38,34 @@ export async function testAbraConnection(cfg: AbraFlexiConfig): Promise<AbraConn
   try {
     const res = await abraRequest(cfg, { path: '.json', timeoutMs: 15_000 });
 
-    if (res.status === 401 || res.status === 403) {
-      return { ok: false, error: 'Neplatné přihlašovací údaje k ABRA Flexi' };
+    // 401 is the only status that actually means "wrong credentials". A 403 got
+    // past authentication and was refused anyway — a blocked request, an API
+    // user without rights to the company — and reporting it as a bad password
+    // sends the user rewriting credentials that were right all along.
+    if (res.status === 401) {
+      return { ok: false, error: 'Neplatné přihlašovací údaje k ABRA Flexi - zkontrolujte uživatele a heslo' };
+    }
+    if (res.status === 403) {
+      const detail = parseAbraErrorMessages(res.text);
+      return {
+        ok: false,
+        error: humanizeAbraError(
+          detail
+            ? `ABRA Flexi požadavek odmítla (403)${detail}`
+            : 'ABRA Flexi požadavek odmítla (403 přístup odmítnut). Přihlášení proběhlo, ale server požadavek nepovolil - ověřte oprávnění API uživatele k této firmě.'
+        ),
+      };
     }
     if (res.status === 404) {
       return { ok: false, error: 'Firma (company) v ABRA Flexi nebyla nalezena - zkontrolujte URL' };
     }
     if (!res.ok) {
-      return { ok: false, error: `ABRA Flexi vrátila chybu ${res.status} ${res.statusText}` };
+      return {
+        ok: false,
+        error: humanizeAbraError(
+          `ABRA Flexi vrátila chybu ${res.status}${parseAbraErrorMessages(res.text)}`
+        ),
+      };
     }
 
     let json: unknown;

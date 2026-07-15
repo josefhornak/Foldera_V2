@@ -22,6 +22,7 @@ import {
   documents,
   DOCUMENT_STATUS,
   type Company,
+  type DocumentStatus,
 } from '../db/schema/index.js';
 import {
   exportPurchaseInvoice,
@@ -72,6 +73,22 @@ function getAbraConfig(company: Company): AbraFlexiConfig | null {
     apiPassword: decryptSecret(company.abraApiPasswordEnc),
     companyId: company.id,
   };
+}
+
+/**
+ * Received invoices and credit notes export to faktura-prijata; receipts
+ * (účtenky) export to the cash register (pokladni-pohyb). Everything else
+ * (orders, delivery notes, …) is skipped. Shared by the first pass and the
+ * resend, which re-checks it because the user may have corrected the type.
+ */
+function isExportable(invoice: ExtractedInvoice): boolean {
+  return (
+    invoice.isInvoice ||
+    invoice.documentType === 'credit_note' ||
+    invoice.documentType === 'receipt' ||
+    invoice.documentType === 'advance_invoice' ||
+    invoice.documentType === 'tax_payment'
+  );
 }
 
 async function safeUnlink(filePath: string): Promise<void> {
@@ -510,16 +527,7 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
       confidence: extraction.confidence,
     };
 
-    // Received invoices and credit notes export to faktura-prijata; receipts
-    // (účtenky) export to the cash register (pokladni-pohyb). Everything else
-    // (orders, delivery notes, …) is skipped.
-    const exportable =
-      invoice.isInvoice ||
-      invoice.documentType === 'credit_note' ||
-      invoice.documentType === 'receipt' ||
-      invoice.documentType === 'advance_invoice' ||
-      invoice.documentType === 'tax_payment';
-    if (!exportable) {
+    if (!isExportable(invoice)) {
       await db
         .update(documents)
         .set({ ...baseFields, status: DOCUMENT_STATUS.SKIPPED_NOT_INVOICE, processedAt: new Date() })
@@ -618,16 +626,18 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
  * corrected in the meantime. The original is re-attached when it is still in
  * the store; a document whose file has already been swept exports without one.
  *
- * `reviewRequired` re-runs the bank-account check. The redirection protection
- * lives in the main pipeline, so without this a member could edit the payee on
- * a document and resend it straight past the hold. An admin's resend skips the
- * check — they are the ones the hold asks, and re-running it on approval would
- * park the document right back where it started.
+ * A resend runs the same gates as the first pass: the data it sends may have
+ * been edited since, so anything the first pass checked has to be checked
+ * again. Only the extraction is not repeated (the stored result is the point).
+ *
+ * `skipReview` exists solely for the approve route: that click *is* the answer
+ * to the bank-account hold, and re-asking would park the document straight back
+ * where it started. Every other gate still runs.
  */
 export async function retryExport(
   documentId: string,
   companyId: string,
-  reviewRequired = false
+  skipReview = false
 ): Promise<void> {
   const [row] = await db
     .select()
@@ -639,7 +649,29 @@ export async function retryExport(
   const [company] = await db.select().from(companies).where(eq(companies.id, companyId)).limit(1);
   if (!company) return;
 
-  if (reviewRequired) {
+  const setStatus = (status: DocumentStatus, errorMessage: string | null) =>
+    db
+      .update(documents)
+      .set({ status, errorMessage, processedAt: new Date() })
+      .where(and(eq(documents.id, documentId), eq(documents.companyId, companyId)));
+
+  // The type may have been corrected to something we don't book at all.
+  if (!isExportable(row.extracted)) {
+    await setStatus(DOCUMENT_STATUS.SKIPPED_NOT_INVOICE, null);
+    logger.info({ documentId, documentType: row.extracted.documentType }, '[Pipeline] Resend — not a purchase invoice, skipped');
+    return;
+  }
+
+  // A failed export never counted towards usage, so the limit still applies —
+  // a resend must not be a way around it.
+  const decision = decideBilling(company);
+  if (!decision.allowed) {
+    await setStatus(DOCUMENT_STATUS.SKIPPED_LIMIT, blockMessage(decision.reason!));
+    logger.info({ documentId, reason: decision.reason }, '[Pipeline] Resend skipped — billing limit reached');
+    return;
+  }
+
+  if (!skipReview) {
     const cfg = getAbraConfig(company);
     const reason = cfg
       ? await reviewBeforeExport(cfg, row.extracted, {
@@ -648,10 +680,7 @@ export async function retryExport(
         })
       : null;
     if (reason) {
-      await db
-        .update(documents)
-        .set({ status: DOCUMENT_STATUS.NEEDS_REVIEW, errorMessage: reason, processedAt: new Date() })
-        .where(and(eq(documents.id, documentId), eq(documents.companyId, companyId)));
+      await setStatus(DOCUMENT_STATUS.NEEDS_REVIEW, reason);
       logger.warn({ documentId, supplierIco: row.extracted.supplierIco }, '[Pipeline] Resend held for bank-account review');
       await notifyBankReview(company, {
         fileName: row.fileName,

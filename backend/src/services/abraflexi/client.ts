@@ -43,9 +43,22 @@ export interface AbraHttpResponse {
   text: string;
 }
 
+/**
+ * Identify ourselves to ABRA Flexi.
+ *
+ * Node's fetch sends no User-Agent, and ABRA's WAF answers a request without
+ * one with `403 "Request blocked, please contact our support"` — before it ever
+ * looks at the credentials. Every call was being turned away, and the rejection
+ * reads like a permissions problem, so it sent us hunting for the wrong thing.
+ * Any User-Agent gets through; sending an honest one is also just good manners
+ * towards an API we call on a schedule.
+ */
+const USER_AGENT = 'Foldera/2.0 (+https://foldera.cz)';
+
 function buildHeaders(cfg: AbraFlexiConfig, contentType?: string): Record<string, string> {
   const headers: Record<string, string> = {
     Accept: 'application/json',
+    'User-Agent': USER_AGENT,
     Authorization: `Basic ${Buffer.from(`${cfg.apiUser}:${cfg.apiPassword}`).toString('base64')}`,
   };
   if (contentType) headers['Content-Type'] = contentType;

@@ -633,9 +633,9 @@ router.patch('/:documentId', async (req, res, next) => {
 /**
  * Retry export to ABRA Flexi from stored extracted data (export_failed only).
  *
- * Open to members, so whoever fixed the data can send it. A member's resend
- * re-runs the bank-account review (see retryExport) — otherwise editing the
- * payee and resending would walk straight past the redirection hold.
+ * Open to members, so whoever fixed the data can send it. The resend re-runs
+ * every gate the first pass ran (see retryExport) — the data may have been
+ * edited since, including the payee.
  */
 router.post('/:documentId/retry', async (req, res, next) => {
   try {
@@ -657,11 +657,7 @@ router.post('/:documentId/retry', async (req, res, next) => {
       .set({ status: DOCUMENT_STATUS.PROCESSING, errorMessage: null })
       .where(and(eq(documents.id, row.id), eq(documents.companyId, req.company!.id)));
 
-    await enqueueExportRetry({
-      documentId: row.id,
-      companyId: req.company!.id,
-      reviewRequired: req.companyRole !== 'admin',
-    });
+    await enqueueExportRetry({ documentId: row.id, companyId: req.company!.id });
     res.json({ ok: true });
   } catch (err) {
     next(err);
@@ -687,7 +683,8 @@ router.post('/:documentId/approve', requireAdminRole, async (req, res, next) => 
       .update(documents)
       .set({ status: DOCUMENT_STATUS.PROCESSING, errorMessage: null })
       .where(and(eq(documents.id, row.id), eq(documents.companyId, req.company!.id)));
-    await enqueueExportRetry({ documentId: row.id, companyId: req.company!.id });
+    // The only caller that skips the bank review — this click is the answer to it.
+    await enqueueExportRetry({ documentId: row.id, companyId: req.company!.id, skipReview: true });
     res.json({ ok: true });
   } catch (err) {
     next(err);
