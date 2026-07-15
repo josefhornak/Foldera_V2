@@ -24,6 +24,7 @@ import { logger } from '../utils/logger.js';
 import { sha256Hex, decryptSecret } from '../utils/crypto.js';
 import { deleteExportedDocument } from '../services/abraflexi/export.js';
 import { ENTITY_FAKTURA_PRIJATA } from '../services/abraflexi/helpers.js';
+import { removeStored, resolveStoredPath, storedFileExists } from '../services/storage.js';
 import { AppError, ErrorCodes } from '../utils/errors.js';
 import { escapeLikePattern } from '../utils/sqlUtils.js';
 import { ensureTmpDir } from '../utils/tmpDir.js';
@@ -534,6 +535,9 @@ router.delete('/:documentId', requireAdminRole, async (req, res, next) => {
     await db
       .delete(documents)
       .where(and(eq(documents.id, row.id), eq(documents.companyId, req.company!.id)));
+
+    // Deleting the document means deleting the file — don't wait for retention.
+    await removeStored(row.storageKey);
 
     res.json({ ok: true, abra });
   } catch (err) {

@@ -4,8 +4,9 @@
  * For every incoming file: dedup by content hash → extract (Mistral OCR /
  * ISDOC) → consult ABRA Flexi (duplicate check, supplier defaults from
  * previous documents) → create faktura-prijata → upload the original as an
- * attachment → record metadata. The file itself is deleted afterwards and is
- * never stored by the application.
+ * attachment → record metadata. The original is then handed to
+ * `services/storage.ts`, which keeps it only as long as it is useful (see
+ * FILE_RETAINED_STATUSES) and sweeps it afterwards.
  *
  * Everything is automatic: low-confidence documents are exported too and only
  * flagged in the list. Only hard failures (ABRA rejection) end up retryable.
@@ -38,6 +39,7 @@ import {
 import { humanizeAbraError, isKnownCzBankCode } from '../services/abraflexi/helpers.js';
 import { blockMessage, decideBilling, recordDocumentUsage } from '../services/billing.js';
 import { notifyBankReview, notifyDocumentFailure } from '../services/notifications.js';
+import { persistOriginal, resolveStoredPath, storedFileExists } from '../services/storage.js';
 import { extractInvoice } from '../services/extraction/index.js';
 import { summarizeLineItems } from '../services/extraction/summarize.js';
 import type {
@@ -90,7 +92,7 @@ interface ExportOutcome {
 /**
  * Export an extracted invoice to ABRA Flexi: duplicate check → supplier
  * context → create document. Shared by the main pipeline and the retry path.
- * `attachmentPath` is null on retry (the original file no longer exists).
+ * `attachmentPath` is null when the original is no longer in the store.
  */
 async function runAbraExport(
   company: Company,
@@ -386,9 +388,39 @@ async function reviewBeforeExport(
   }
 }
 
+/**
+ * Hand the processed file to the store and record its key, so the user can see
+ * the document and a resend can re-attach it. Best-effort: failing to keep a
+ * file costs a preview, never the document itself.
+ */
+async function retainOriginal(
+  documentId: string,
+  companyId: string,
+  file: ProcessDocumentJobData['file'],
+  log: typeof logger
+): Promise<void> {
+  try {
+    const storageKey = await persistOriginal(file.filePath, documentId, file.fileName);
+    if (!storageKey) return;
+    await db
+      .update(documents)
+      .set({ storageKey })
+      .where(and(eq(documents.id, documentId), eq(documents.companyId, companyId)));
+  } catch (error) {
+    log.warn(
+      { documentId, error: toError(error).message },
+      '[Pipeline] Could not retain the original file'
+    );
+    await safeUnlink(file.filePath);
+  }
+}
+
 export async function processIncomingFile(data: ProcessDocumentJobData): Promise<void> {
   const { companyId, sourceId, file } = data;
   const log = logger.child({ companyId, sourceId, fileName: file.fileName });
+  // Hoisted: the finally block keeps the file against this id, and there is
+  // nothing to keep it against until the row exists.
+  let documentId: string | null = null;
 
   try {
     const buffer = await fs.readFile(file.filePath);
@@ -410,7 +442,7 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
       return;
     }
 
-    const documentId = generateId('doc');
+    documentId = generateId('doc');
     await db.insert(documents).values({
       id: documentId,
       companyId,
@@ -577,12 +609,22 @@ export async function processIncomingFile(data: ProcessDocumentJobData): Promise
       '[Pipeline] Document processed'
     );
   } finally {
-    await safeUnlink(file.filePath);
+    if (documentId) {
+      await retainOriginal(documentId, companyId, file, log);
+    } else {
+      // No row was created (duplicate content, unknown company) — nothing would
+      // ever reference the file.
+      await safeUnlink(file.filePath);
+    }
     if (file.originalEmailPath) await safeUnlink(file.originalEmailPath);
   }
 }
 
-/** Retry path — re-export from stored extracted data (file no longer exists). */
+/**
+ * Retry path — re-export from stored extracted data, which the user may have
+ * corrected in the meantime. The original is re-attached when it is still in
+ * the store; a document whose file has already been swept exports without one.
+ */
 export async function retryExport(documentId: string, companyId: string): Promise<void> {
   const [row] = await db
     .select()
@@ -594,13 +636,17 @@ export async function retryExport(documentId: string, companyId: string): Promis
   const [company] = await db.select().from(companies).where(eq(companies.id, companyId)).limit(1);
   if (!company) return;
 
+  const attachment = (await storedFileExists(row.storageKey))
+    ? {
+        filePath: resolveStoredPath(row.storageKey!),
+        fileName: row.fileName,
+        mimeType: row.mimeType,
+      }
+    : null;
+
   let outcome: ExportOutcome;
   try {
-    outcome = await runAbraExport(company, row.extracted, null);
-    if (outcome.status === DOCUMENT_STATUS.EXPORTED && !outcome.errorMessage) {
-      // Original file is gone on retry — note the missing attachment
-      outcome.errorMessage = null;
-    }
+    outcome = await runAbraExport(company, row.extracted, attachment);
   } catch (error) {
     outcome = { status: DOCUMENT_STATUS.EXPORT_FAILED, errorMessage: humanizeAbraError(toError(error).message) };
   }

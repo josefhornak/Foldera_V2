@@ -79,6 +79,16 @@ const envSchema = z.object({
 
   SOURCE_POLL_INTERVAL_MIN: z.coerce.number().default(5),
 
+  // How long a settled document's original file is kept, so it can still be
+  // previewed shortly after processing. Documents the user must still act on
+  // (failed export/extraction, held for review) ignore this and keep their file
+  // until they are exported or deleted — see FILE_RETAINED_STATUSES. Deliberately
+  // short: we store other people's invoices, so we keep them no longer than the
+  // product actually needs. 0 disables retention (file dropped once settled).
+  FILE_RETENTION_DAYS: z.coerce.number().default(1),
+  /** How often the retention sweep runs. */
+  FILE_SWEEP_INTERVAL_MIN: z.coerce.number().default(60),
+
   // Worker concurrency. Document processing (OCR → extract → export) is I/O-bound
   // — it mostly waits on the Mistral and ABRA APIs — so a value well above the
   // core count is fine. Tunable without a rebuild via env.

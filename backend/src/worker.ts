@@ -6,6 +6,7 @@
  *   process-document jobs. Manual per-source polls arrive on the same queue.
  * - process-document: full pipeline (extract → ABRA Flexi → cleanup).
  * - export-retry: re-export from stored extraction after an ABRA failure.
+ * - file retention: timer sweep dropping original files once they expire.
  */
 
 import { Worker } from 'bullmq';
@@ -17,6 +18,7 @@ import { sources, SOURCE_STATUS } from './db/schema/index.js';
 import { pollSource } from './services/sources/index.js';
 import { startMaildirWatchers } from './services/sources/maildirWatcher.js';
 import { runMonthlyInvoicing } from './services/invoicing.js';
+import { startFileRetentionSweep } from './services/fileRetention.js';
 import { runTrialEndNotifications } from './services/notifications.js';
 import { createRedisConnection } from './queue/connection.js';
 import { processIncomingFile, retryExport } from './queue/pipeline.js';
@@ -162,14 +164,23 @@ async function main(): Promise<void> {
     void enqueuePollSource(sourceId);
   });
 
+  // Retention runs on a plain timer rather than a queue: it is idempotent local
+  // maintenance, so a missed or doubled pass costs nothing.
+  const stopRetentionSweep = startFileRetentionSweep();
+
   logger.info(
-    { pollIntervalMin: env.SOURCE_POLL_INTERVAL_MIN, tmpDir: TMP_DIR },
+    {
+      pollIntervalMin: env.SOURCE_POLL_INTERVAL_MIN,
+      tmpDir: TMP_DIR,
+      fileRetentionDays: env.FILE_RETENTION_DAYS,
+    },
     'Foldera V2 worker started'
   );
 
   const shutdown = async () => {
     logger.info('Worker shutting down…');
     stopMaildirWatchers();
+    stopRetentionSweep();
     await Promise.all([pollWorker.close(), processWorker.close(), retryWorker.close(), invoicesWorker.close()]);
     process.exit(0);
   };
