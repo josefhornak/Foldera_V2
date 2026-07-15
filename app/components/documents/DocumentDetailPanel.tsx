@@ -20,12 +20,24 @@ import type { DocumentEdit } from '~/types';
 interface DocumentDetailPanelProps {
   companyId: string;
   docId: string;
+  /**
+   * Admin role. Members may add documents but not change or remove them, so
+   * they get the document and its data read-only — mirrors the route guards.
+   */
+  canManage: boolean;
   onClose: () => void;
   onRetried: () => void;
   onDeleted?: () => void;
 }
 
-export function DocumentDetailPanel({ companyId, docId, onClose, onRetried, onDeleted }: DocumentDetailPanelProps) {
+export function DocumentDetailPanel({
+  companyId,
+  docId,
+  canManage,
+  onClose,
+  onRetried,
+  onDeleted,
+}: DocumentDetailPanelProps) {
   const { t } = useTranslation();
   const { document: doc, error, isLoading, mutate } = useDocumentDetail(companyId, docId);
   const [retrying, setRetrying] = useState(false);
@@ -106,8 +118,8 @@ export function DocumentDetailPanel({ companyId, docId, onClose, onRetried, onDe
   // Once exported, ABRA Flexi is the source of truth — editing here would only
   // make Foldera disagree with it. Mirrors the guard on PATCH.
   const canEdit =
-    Boolean(doc?.extracted) && doc?.status !== 'exported' && doc?.status !== 'processing';
-  const canResend = doc?.status === 'export_failed';
+    canManage && Boolean(doc?.extracted) && doc?.status !== 'exported' && doc?.status !== 'processing';
+  const canResend = canManage && doc?.status === 'export_failed';
   const canPreview = Boolean(doc?.hasFile || doc?.hasText);
 
   // Everything read off the document that has no column of its own. This used to
@@ -354,9 +366,11 @@ export function DocumentDetailPanel({ companyId, docId, onClose, onRetried, onDe
                       </>
                     )
                   ) : (
-                    <Button variant="ghost" onClick={() => setConfirmingDelete(true)} icon={<Trash2 />}>
-                      {t('documents.delete')}
-                    </Button>
+                    canManage && (
+                      <Button variant="ghost" onClick={() => setConfirmingDelete(true)} icon={<Trash2 />}>
+                        {t('documents.delete')}
+                      </Button>
+                    )
                   )}
                 </div>
               </div>

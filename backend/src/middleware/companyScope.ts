@@ -57,7 +57,8 @@ export async function requireCompanyAdmin(req: Request, res: Response, next: Nex
 
 /**
  * Role gate for routers that already ran requireCompany (so req.companyRole is
- * set) — avoids re-querying membership. A plain member is read-only.
+ * set) — avoids re-querying membership. A plain member may add documents
+ * (POST /documents/upload) but otherwise cannot change anything.
  */
 export function requireAdminRole(req: Request, _res: Response, next: NextFunction): void {
   if (req.companyRole !== 'admin') {

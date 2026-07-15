@@ -236,11 +236,17 @@ function carveEmbeddedPdf(buffer: Buffer, fallbackName: string): ReadyFile | nul
 }
 
 /**
- * Manual upload (drag & drop in the UI). Files go through the exact same
- * pipeline as documents from polled sources: written to the shared temp dir,
- * queued for processing, deleted afterwards — never stored by the app.
+ * Manual upload (button + drag & drop in the UI). Files go through the exact
+ * same pipeline as documents from polled sources: written to the shared temp
+ * dir, queued for processing, then retained under the file-retention policy.
+ *
+ * Open to any member, unlike the other mutating routes here: handing invoices
+ * in is the job, and a colleague who may only ever add documents shouldn't need
+ * the admin role that also lets them delete documents or rewire the ABRA
+ * connection. Everything a member uploads still goes through extraction and the
+ * usual review gates before it reaches ABRA Flexi.
  */
-router.post('/upload', requireAdminRole, uploadLimiter, upload.array('files', MAX_UPLOAD_FILES), async (req, res, next) => {
+router.post('/upload', uploadLimiter, upload.array('files', MAX_UPLOAD_FILES), async (req, res, next) => {
   try {
     const files = (req.files ?? []) as Express.Multer.File[];
     if (files.length === 0) {

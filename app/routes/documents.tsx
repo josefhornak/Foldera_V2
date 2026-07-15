@@ -76,6 +76,8 @@ export default function DocumentsPage() {
   const { t } = useTranslation();
   const companyId = useCompanyStore((s) => s.companyId);
   const { companies } = useCompanies();
+  // Members may add documents, but resending and approving stay with admins —
+  // mirrors the route guards, so we don't offer a button the API would 403.
   const isAdmin = companies?.find((c) => c.id === companyId)?.role === 'admin';
 
   const [page, setPage] = useState(1);
@@ -143,7 +145,8 @@ export default function DocumentsPage() {
           </h1>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">{t('documents.subtitle')}</p>
         </div>
-        {companyId && isAdmin && <UploadDropzone companyId={companyId} onUploaded={refresh} />}
+        {/* Uploading is open to members too — see POST /documents/upload. */}
+        {companyId && <UploadDropzone companyId={companyId} onUploaded={refresh} />}
       </header>
 
       {/* Toolbar: search + filter tabs */}
@@ -309,7 +312,7 @@ export default function DocumentsPage() {
                           <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                         </a>
                       )}
-                      {doc.status === 'export_failed' && (
+                      {doc.status === 'export_failed' && isAdmin && (
                         <Button
                           variant="secondary"
                           size="sm"
@@ -321,7 +324,7 @@ export default function DocumentsPage() {
                           {t('documents.resend')}
                         </Button>
                       )}
-                      {doc.status === 'needs_review' && (
+                      {doc.status === 'needs_review' && isAdmin && (
                         <Button
                           variant="primary"
                           size="sm"
@@ -375,6 +378,7 @@ export default function DocumentsPage() {
         <DocumentDetailPanel
           companyId={companyId}
           docId={selectedDocId}
+          canManage={isAdmin}
           onClose={() => setSelectedDocId(null)}
           onRetried={refresh}
           onDeleted={refresh}
